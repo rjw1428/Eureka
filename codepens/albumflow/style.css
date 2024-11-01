@@ -1,0 +1,146 @@
+body {
+    background-color: rgb(10, 10, 10);
+    margin: unset
+}
+
+main {
+    height: 100vh;
+    width: 100vw;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+header {
+    position: absolute;
+    top: 0;
+}
+
+footer {
+    position: absolute;
+    width: 90vw;
+    bottom: 1em;
+    display: flex;
+    justify-content: flex-end;
+
+    font-style: italic;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+h1 {
+    font-size: 6rem;
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+    font-style: italic;
+    margin-bottom: 1rem;
+
+    background: linear-gradient(to right, red, blue);
+    background-clip: text;
+    color: transparent
+}
+
+p {
+    color: white;
+}
+
+.container {
+    width: min-content;
+}
+
+.typewrite {
+    display: flex;
+
+    font-family: 'Courier New', Courier, monospace;
+    /* margin-inline: auto; */
+    
+    overflow: hidden;
+    width: 0;
+    white-space: nowrap;
+    border-right: 1px solid rgb(10, 10, 10);
+
+}
+
+.one {
+    transition: opacity 10ms;
+    animation: 
+        typing 10s steps(100) 100ms forwards, 
+        appear 10ms linear normal forwards,
+        appear 10ms linear 11s reverse forwards;
+}
+
+.two {
+    animation: 
+        typing 7s steps(75) 11s forwards,
+        appear 10ms linear 11s normal forwards,
+        appear 10ms linear 19s reverse forwards;
+}
+
+.three {
+    animation: 
+        typing 4s steps(48) 20s forwards,
+        appear 10ms linear 20s normal forwards,
+        blink 1s steps(1) 24s infinite;
+}
+
+@keyframes typing {
+    from { width: 0; }
+    to { width: 100%; }
+}
+
+@keyframes blink {
+    50% { border-color: rgb(10, 10, 10); };
+}
+
+@keyframes appear {
+    from { border-color:  rgb(10, 10, 10); }
+    to { border-color:  white }
+}
+
+.ablums {
+    display: flex;
+    justify-content: center;
+    transform-style: preserve-3d;
+    transform: perspective(1000px);
+}
+
+.ablums img {
+    height: 150px;
+    width: 150px;
+    filter: brightness(.1);
+    transition: .5s;
+}
+
+.ablums img:hover {
+    filter: brightness(1);
+    transform: translateZ(200px);
+}
+
+.ablums img:hover + * {
+    filter: brightness(0.6);
+    transform: translateZ(150px) rotateY(40deg)
+}
+
+.ablums img:hover + * + * {
+    filter: brightness(0.4);
+    transform: translateZ(70px) rotateY(20deg)
+}
+
+.ablums img:hover + * + * + * {
+    filter: brightness(0.2);
+    transform: translateZ(30px) rotateY(10deg)
+}
+
+.ablums img:has(+ img:hover) {
+    filter: brightness(0.6);
+    transform: translateZ(150px) rotateY(-40deg)
+}
+
+.ablums img:has(+ img + img:hover) {
+    filter: brightness(0.4);
+    transform: translateZ(70px) rotateY(-20deg)
+}
+
+.ablums img:has(+ img + img + img:hover) {
+    filter: brightness(0.2);
+    transform: translateZ(30px) rotateY(-10deg)
+}
