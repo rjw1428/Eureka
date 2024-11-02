@@ -1,0 +1,87 @@
+<html>
+
+<head>
+    <title>Text/Image Overaly</title>
+    <link href="style.css" rel="stylesheet">
+    </link>
+</head>
+
+<body>
+    <main>
+        <section>
+            <img src="./assets/philly.jpg">
+            <svg class="gradient-overlay" width="100%" height="100%">
+                <defs>
+                    <mask id="text-mask-one">
+                        <rect width="100%" height="50%" fill="white" />
+                        <text x="100%" y="0" text-anchor="end" dominant-baseline="hanging" fill="black"
+                            font-size="20rem" font-family="Arial">Philly</text>
+                    </mask>
+                    <linearGradient id="gradient-one" gradientTransform="rotate(90)">
+                        <stop offset="0%" stop-color="#666666" />
+                        <stop offset="40%" stop-color="transparent" />
+                    </linearGradient>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#gradient-one)" mask="url(#text-mask-one)" />
+            </svg>
+        </section>
+
+
+        <section>
+            <img src="./assets/darmstadt.jpg">
+            <svg class="gradient-overlay" width="100%" height="100%">
+                <defs>
+                    <mask id="text-mask-two">
+                        <rect width="100%" height="100%" fill="white" />
+                        <text x="100%" y="0" text-anchor="end" dominant-baseline="hanging" font-size="10rem"
+                            font-family="Impact">Darmstadt</text>
+                    </mask>
+                    <linearGradient id="gradient-two">
+                        <stop offset="0%" stop-color="transparent" />
+                        <stop offset="100%" stop-color="#111111" />
+                    </linearGradient>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#gradient-two)" mask="url(#text-mask-two)" />
+            </svg>
+
+            <div>
+                <p>
+                    This is the place I studied for a year, receiving my second bachelor degree in Mechanical
+                    Engineering.
+                </p>
+            </div>
+        </section>
+
+        <section>
+            <img src="./assets/san_diego.jpg">
+            <svg class="gradient-overlay" width="100%" height="50%">
+                <defs>
+                    <mask id="text-mask-three">
+                        <rect width="100%" height="100%" fill="white" />
+                        <text x="1rem" y="95%" text-anchor="start" dominant-baseline="ideographic" font-size="10rem"
+                            font-family="Arial">San Diego</text>
+
+
+                        <text y="50%" font-size="2rem" text-anchor="start" font-family="Arial">
+                            <tspan x="60%">A little piece of paradise</tspan>
+                            <tspan x="5rem" dy="4.2em">Downtown</tspan>
+                        </text>
+                    </mask>
+                    <linearGradient id="gradient-three" gradientTransform="rotate(90)">
+                        <stop offset="0%" stop-color="transparent" />
+                        <stop offset="100%" stop-color="black" />
+                    </linearGradient>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#gradient-three)" mask="url(#text-mask-three)" />
+            </svg>
+        </section>
+
+
+    </main>
+
+    <footer>
+        <h4>By Ryan Wilk</h4>
+    </footer>
+</body>
+
+</html>
