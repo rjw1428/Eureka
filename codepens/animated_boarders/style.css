@@ -1,0 +1,141 @@
+body {
+    background-color: #0b0d15;
+    margin: unset;
+    padding: unset;
+}
+
+main {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+
+    padding-top: 1em;
+}
+
+.card {
+    margin: 0 auto;
+    padding: 2em;
+    width: 300px;
+    background: #1c1f2b;
+    border-radius: 10px;
+    position: relative
+}
+
+h1, h2, h3, p {
+    font-family: Arial, Helvetica, sans-serif;
+    line-height: 1.4em;
+    color: white;
+}
+
+.card h2 {
+    color: white;
+    text-align: center;
+}
+
+.card p {
+    color: #bbb
+}
+
+@property --angle {
+    syntax: "<angle>";
+    initial-value: 0deg;
+    inherits: false;
+}
+
+/* Before is the shadow, after is sharply defined */
+.card::before,
+.card::after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 50%;
+    left: 50%;
+    translate: -50% -50%;
+    padding: 3px;
+    z-index: -1;
+    border-radius: inherit
+}
+
+.card::before {
+    filter: blur(1.5rem);
+}
+
+
+@property --angle {
+    syntax: "<angle>";
+    initial-value: 0deg;
+    inherits: false;
+}
+.one.card::before,
+.one.card::after {
+    animation: 3s spin linear infinite;
+    background: conic-gradient(from var(--angle), transparent 80%, rgb(0, 255, 0));
+}
+
+@property --angle {
+    syntax: "<angle>";
+    initial-value: 0deg;
+    inherits: false;
+}
+.two.card::before,
+.two.card::after {
+    animation: 3s spin linear infinite reverse;
+    background-image: conic-gradient(from var(--angle),red, orange, yellow, green, cyan, blue, indigo, violet, red );
+}
+
+.two.card::before {
+    opacity: .5;
+}
+
+@keyframes spin {
+    from {--angle: 0deg;}
+    to {--angle: 360deg;}
+}
+
+#hover-icons {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.icon-group {
+    display: flex;
+    gap: 1em;
+    justify-content: center;
+}
+
+a {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 4rem;
+    aspect-ratio: 1;
+    font-size: 1.5rem;
+    color: #7a7a7a;
+    background-color: #373737;
+    border-radius: 50%;
+    transition: color 0.5s ease-in-out;
+}
+
+@property --fill {
+    syntax: "<percentage>";
+    inherits: true;
+    initial-value: 0%;
+}
+a:hover {
+    color: rgb(0, 118, 221);
+    --fill: 100%;
+}
+
+a::after {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    inset: -3px;
+    border-radius: inherit;
+
+    background: conic-gradient(rgb(0, 118, 221) var(--fill), transparent var(--fill));
+    transition: --fill 0.6s ease-in-out;
+}
