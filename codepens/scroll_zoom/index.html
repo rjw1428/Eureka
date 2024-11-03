@@ -1,0 +1,65 @@
+<html>
+
+<head>
+    <title>Scroll Zoom</title>
+    <link href="style.css" rel="stylesheet">
+    </link>
+</head>
+
+<body>
+    <div class="container">
+        <img src="./assets/sr-71.webp">
+
+        <svg id="cover">
+            <defs>
+                <mask id="mask">
+                    <rect width="100vw" height="100vh" fill="white" />
+                    <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="20rem"
+                        font-family="Courier New" font-weight="bold">SR-71</text>
+                </mask>
+            </defs>
+            <rect width="100vw" height="100vh" fill="black" mask="url(#mask)" />
+        </svg>
+
+        <div id="details">
+            <h1>SR-71</h1>
+            <p>
+                The SR-71 "Blackbird" was developed as a black project reconnaissance aircraft 
+                during the 1960s by Lockheed's Skunk Works division, initially as a bomber 
+                variant of the Lockheed A-12, requested by Curtis LeMay, before the program 
+                focused solely on reconnaissance.
+            </p>
+        </div>
+    </div>
+
+    <script type="text/javascript">
+        let wheel = 1;
+        let yOffset = -100;
+        const maxZoom = 3900
+        const maxTranslate = 20
+        const bg = document.getElementById('cover')
+        const details = document.getElementById('details')
+        window.addEventListener('wheel', (event) => {
+            if (event.deltaY > 0) {
+                wheel = wheel * 2
+                wheel = wheel > maxZoom ? maxZoom : wheel
+
+                yOffset += 5
+                yOffset = yOffset > 0 ? 0 : yOffset
+            } else {
+                wheel = wheel * 0.5
+                wheel = wheel >= 1 ? wheel : 1
+
+                yOffset -= 5
+                yOffset = yOffset < -100 ? -100 : yOffset
+            }
+            const translateY = (yOffset + 100 )/4 > maxTranslate 
+                ? maxTranslate 
+                : (yOffset + 100 )/4
+            bg.style.transform = `scale(${99 + wheel}%) translateY(${translateY}px)`
+            details.style.bottom = yOffset + '%'
+        })
+    </script>
+</body>
+
+</html>

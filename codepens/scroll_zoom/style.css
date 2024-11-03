@@ -1,0 +1,60 @@
+body {
+    margin: unset;
+    padding: unset;
+}
+
+.container {
+    width: 100vw;
+    height: 100vh;
+    position: fixed;
+    overflow: hidden;
+    background-color: black;
+}
+
+img {
+    height: 100%;
+    width: 100%;
+    object-fit: cover;
+    animation: fadeIn 3s ease-in forwards;
+}
+
+#cover {
+    height: calc(100%);
+    width: 100%;
+    position: absolute;
+    top: 0px;
+    left: 0;
+
+    box-sizing: border-box;
+    transition: transform .5s linear;
+}
+
+#details {
+    display: flex;
+    gap: 3em;
+    align-items: center;
+    
+    position: absolute;
+    bottom: -100%;
+    padding: 0 4rem;
+    transition: bottom .5s linear;
+}
+
+h1 {
+    font-size: 5rem;
+    flex-shrink: 0;
+}
+
+p {
+    font-size: 2rem;
+}
+
+p, h1 {
+    color: white;
+    font-family: 'Courier New', Courier, monospace;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0;}
+    to {opacity: 1;}
+}
