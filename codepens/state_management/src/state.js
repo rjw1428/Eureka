@@ -1,9 +1,8 @@
-import { scan, shareReplay, startWith, take } from "rxjs";
+import { catchError, distinctUntilChanged, map, scan, shareReplay, startWith, take } from "rxjs";
 import EventService from "./eventService";
 
 
 const DEFAULT_STATE = {
-    text: ''
 }
 
 export default class StateManager {
@@ -12,13 +11,25 @@ export default class StateManager {
      * @param {EventService} eventService 
      */
     constructor(eventService) {
-        eventService.getStream().subscribe(console.log)
+        this.eventService = eventService
+        // this.eventService.getStream().subscribe(console.log)
 
-        this.state = eventService.getStream().pipe(
-            scan((acc, cur) => ({...acc, text: cur}), DEFAULT_STATE),
+        this.state =  this.eventService.getStream().pipe(
+            scan((acc, cur) => ({...acc, ...cur}), DEFAULT_STATE),
             startWith(DEFAULT_STATE),
             shareReplay(1)
         )
+    }
+
+    watchState(key) {
+        return this.state.pipe(
+            map(s => s[key]),
+            distinctUntilChanged()
+        )
+    }
+
+    publish(value) {
+        this.eventService.events.next(value)
     }
 
     outputState() {
