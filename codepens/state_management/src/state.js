@@ -28,10 +28,6 @@ export default class StateManager {
         )
     }
 
-    publish(value) {
-        this.eventService.events.next(value)
-    }
-
     outputState() {
         this.state.pipe(take(1)).subscribe(state => console.log(state))
     }

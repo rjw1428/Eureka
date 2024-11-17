@@ -5,19 +5,25 @@ let instance = null
 export default class GithubService {
     /**
      * 
-     * @param {StateManager} stateManager 
+     * @param {StateManager} stateManager
+     * @param {EventService} eventService 
      */
-    constructor(stateManager) {
+    constructor(stateManager, eventService) {
         console.log('GithubService initialized')
 
         stateManager.watchState('text').pipe(
             map((v) => this.isMatch(v)),
             filter(match => !!match)
-        ).subscribe(() => stateManager.publish({match: this.getType()}))
+        ).subscribe(() => eventService.publish({match: this.getType()}))
     }
 
-    static get(state) {
-        return instance || new GithubService(state)
+    /**
+     * 
+     * @param {StateManager} stateManager
+     * @param {EventService} eventService 
+     */
+    static get(stateManager, eventService) {
+        return instance || new GithubService(stateManager, eventService)
     }
 
     /**

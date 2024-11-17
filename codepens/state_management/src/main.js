@@ -1,20 +1,18 @@
-import { combineLatest, map, skip, take, filter } from "rxjs";
+import { take, filter } from "rxjs";
 import EventService from "./eventService";
-import EmailService from "./matchingServices/emailService";
-import GithubService from "./matchingServices/githubService";
-import LinkedinService from "./matchingServices/linkedinService";
-import YoutubeService from "./matchingServices/youtubeService";
 import StateManager from "./state";
+import MatchingService from "./matchingServices/matchingService";
 
 class App {
     /**
      * 
      *
      * @param {StateManager} stateManager
+     * @param {EventService} eventService 
      */
-    constructor(stateManager) {
+    constructor(stateManager, eventService) {
         this.stateManager = stateManager
-
+        this.eventService = eventService
         
     }
 
@@ -27,15 +25,11 @@ class App {
      * @param {HTMLElement} target 
      */
     start(button, input, debug, bgButtons, target) {
+        const textMatchingService = MatchingService.get(this.stateManager, this.eventService)
+
         button.addEventListener('click', () => {
-            // Clear ui state if it's a new input value
-            this.stateManager.watchState('text').pipe(
-                take(1),
-                filter(previousInput => previousInput !== input.value)
-            ).subscribe(() => this.stateManager.publish({ match: null }))
-            
             // Broadcast new value
-            this.stateManager.publish({ text: input.value })
+            this.eventService.publish({ text: input.value })
         });
 
         if (debug) {
@@ -43,31 +37,10 @@ class App {
         }
 
         bgButtons.forEach((bgButton) => {
-            bgButton.addEventListener('click', () => this.stateManager.publish({ background: bgButton.name }))
+            bgButton.addEventListener('click', () => this.eventService.publish({ background: bgButton.name }))
         })
 
-        // Determine UI Value
-        combineLatest([
-            this.stateManager.watchState('match'),
-            this.stateManager.watchState('text')
-        ]).pipe(
-            skip(1),
-            map(([result, inputText]) => {
-                if (inputText === '') {
-                    return 'Empty'
-                }
-                if (result) {
-                    return `Result: ${result}`
-                }
-                return 'No Match'
-            })
-        ).subscribe(innerText => target.innerText = innerText)
-
-        
-    }
-
-    registerMatchers(matcherServices = []) {
-        matcherServices.map(service => service.get(this.stateManager))
+        textMatchingService.uiValue.subscribe(innerText => target.innerText = innerText)
     }
 }
 
@@ -86,14 +59,5 @@ const bgButtons = [
 
 const eventService = new EventService()
 const stateManager = new StateManager(eventService)
-const app = new App(stateManager)
-
+const app = new App(stateManager, eventService)
 app.start(button, input, debug, bgButtons, resultTarget)
-
-const matcherServices = [
-    YoutubeService,
-    GithubService,
-    LinkedinService,
-    EmailService
-]
-app.registerMatchers(matcherServices)

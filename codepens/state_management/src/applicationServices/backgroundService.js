@@ -1,10 +1,20 @@
 let instance = null
 export default class BackgroundService {
-    constructor(state) {
+    /**
+     * 
+     * @param {StateManager} stateManager
+     * @param {EventService} eventService 
+     */
+    constructor(stateManager, eventService) {
         console.log('BackgroundService initialized')
     }
 
-    static get(state) {
-        return instance || new BackgroundService(state)
+    /**
+     * 
+     * @param {StateManager} stateManager
+     * @param {EventService} eventService 
+     */
+    static get(stateManager, eventService) {
+        return instance || new BackgroundService(stateManager, eventService)
     }
 }
