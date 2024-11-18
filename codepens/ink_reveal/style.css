@@ -1,0 +1,29 @@
+body {
+    margin: unset;
+    padding: unset;
+
+    background-color: black;
+    color: white;
+}
+
+.container {
+    height: 100vh;
+    display: grid;
+    align-items: center;
+
+    background-image: url('./assets/forest-magic.jpg');
+    background-size: cover;
+    background-position: center;
+
+    mask-image: url('./assets/smoke.gif');
+    mask-position: center;
+    mask-size: cover;
+}
+
+h1 {
+    font-family: 'Mystery Quest', system-ui;
+    text-align: center;
+    font-size: 6rem;
+    letter-spacing: .3rem;
+    text-shadow: 4px 4px 2px black;
+}
