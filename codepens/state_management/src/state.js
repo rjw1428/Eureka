@@ -1,21 +1,37 @@
-import { catchError, distinctUntilChanged, map, scan, shareReplay, startWith, take } from "rxjs";
+import { catchError, distinctUntilChanged, map, scan, shareReplay, startWith, take, tap } from "rxjs";
 import EventService from "./eventService";
 
 
 const DEFAULT_STATE = {
+    input: {
+        text: null,
+        matcher: null,
+        result: null
+    },
+    style: {
+        background: 'white'
+    }
 }
-
 export default class StateManager {
     /**
      * 
      * @param {EventService} eventService 
      */
     constructor(eventService) {
-        this.eventService = eventService
-        // this.eventService.getStream().subscribe(console.log)
-
-        this.state =  this.eventService.getStream().pipe(
-            scan((acc, cur) => ({...acc, ...cur}), DEFAULT_STATE),
+        this.state = eventService.getStream().pipe(
+            tap((e) => console.log(`EVENT: ${JSON.stringify(e)}`)),
+            scan((acc, cur) => {
+                const [path, value] = Object.entries(cur)[0]
+                const keys = path.split('.');
+                // Recursively construct a new object tree
+                const updateNestedObject = (obj, keys) => {
+                    const [key, ...rest] = keys;
+                    return rest.length === 0
+                        ? { ...obj, [key]: value }
+                        : { ...obj, [key]: updateNestedObject(obj[key] || {}, rest)};
+                };
+                return updateNestedObject(acc, keys);
+            }, DEFAULT_STATE),
             startWith(DEFAULT_STATE),
             shareReplay(1)
         )
@@ -23,9 +39,14 @@ export default class StateManager {
 
     watchState(key) {
         return this.state.pipe(
-            map(s => s[key]),
-            distinctUntilChanged()
-        )
+                map(s => key.split('.').reduce((result, key) => result[key], s)),
+                catchError((err, caught) => {
+                    console.log(err)
+                    return caught.pipe({})
+                }),
+                distinctUntilChanged(),
+                tap((v) => `   Reading ${key}: ${v}`)
+            )
     }
 
     outputState() {
