@@ -1,7 +1,9 @@
-import { take, filter } from "rxjs";
 import EventService from "./eventService";
 import StateManager from "./state";
 import MatchingService from "./matchingServices/matchingService";
+import { filter } from 'rxjs'
+import BackgroundService from "./applicationServices/backgroundService";
+import FontService from "./applicationServices/fontService";
 
 class App {
     /**
@@ -24,30 +26,26 @@ class App {
      * @param {HTMLElement[]} bgButtons 
      * @param {HTMLElement} target 
      */
-    start(button, input, debug, bgButtons, target) {
-        const textMatchingService = MatchingService.get(this.stateManager, this.eventService)
-
+    start(button, input, debug, bgButtons) {
         button.addEventListener('click', () => {
-            // Broadcast new value
-            this.eventService.publish({ text: input.value })
+            this.eventService.publish({ 'input.text': input.value })
         });
+
+        bgButtons.forEach((bgButton) => {
+            bgButton.addEventListener('click', () => {
+                this.eventService.publish({ 'style.background': bgButton.name })
+            })
+        })
 
         if (debug) {
             debug.addEventListener('click', () => this.stateManager.outputState())
         }
-
-        bgButtons.forEach((bgButton) => {
-            bgButton.addEventListener('click', () => this.eventService.publish({ background: bgButton.name }))
-        })
-
-        textMatchingService.uiValue.subscribe(innerText => target.innerText = innerText)
     }
 }
 
 
 const input = document.getElementById('input');
 const button = document.getElementById('action');
-const resultTarget = document.getElementById('result')
 const debug = document.getElementById('debug')
 
 const bgButtons = [
@@ -60,4 +58,8 @@ const bgButtons = [
 const eventService = new EventService()
 const stateManager = new StateManager(eventService)
 const app = new App(stateManager, eventService)
-app.start(button, input, debug, bgButtons, resultTarget)
+MatchingService.get(stateManager, eventService)
+BackgroundService.get(stateManager, eventService)
+FontService.get(stateManager, eventService)
+app.start(button, input, debug, bgButtons)
+

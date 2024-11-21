@@ -1,4 +1,4 @@
-import { combineLatest, map, skip } from "rxjs"
+import { combineLatest, map, skip, take, filter, pairwise, withLatestFrom, tap, defaultIfEmpty, switchMap } from "rxjs"
 import StateManager from "../state"
 import EmailService from "./emailService";
 import GithubService from "./githubService";
@@ -21,34 +21,40 @@ export default class MatchingService {
      * @param {EventService} eventService 
      */
     constructor(stateManager, eventService) {
-        console.log('Matching initialized')
+        stateManager.watchState('input.result').pipe(filter(v => !!v)).subscribe(innerText => {
+            console.log(`SETTING RESULT: ${JSON.stringify(innerText)}`)
+            document.getElementById('result').innerText = innerText
+        })
 
-        // USE PAIRWISE TO HANDLE THIS (CURRENT VS PREVIOUS INPUT)
         // Clear ui state if it's a new input value
-        this.stateManager.watchState('text').pipe(
-            take(1),
-            filter(previousInput => previousInput !== input.value)
-        ).subscribe(() => this.eventService.publish({ match: null }))
+        stateManager.watchState('input.text').pipe(
+            pairwise(),
+            filter(([previous, current]) => {
+                return previous != current
+            }),
+            tap(() => console.log("CLEARING"))
+        ).subscribe(() => eventService.publish({ 'input.matcher': null }))
+
 
         // Determine UI Value
-        this.uiValue = combineLatest([
-            stateManager.watchState('match'),
-            stateManager.watchState('text')
-        ]).pipe(
+        stateManager.watchState('input.matcher').pipe(
             skip(1),
-            map(([result, inputText]) => {
-                console.log(result, inputText)
-                if (inputText === '') {
+            withLatestFrom(stateManager.watchState('input.text')),
+            map(([matcher, text]) => {
+                console.log(`text=${text}, matcher=${matcher}`)
+                if (text === '') {
                     return 'Empty'
                 }
-                if (result) {
-                    return `Result: ${result}`
+                if (matcher) {
+                    return `Result: ${matcher}`
                 }
                 return 'No Match'
             })
-        )
+        ).subscribe((val) => eventService.publish({ 'input.result': val}))
 
         this.registerMatchers(matcherServices, stateManager, eventService)
+
+
     }
 
     /**

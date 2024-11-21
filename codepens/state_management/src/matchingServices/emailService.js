@@ -9,12 +9,10 @@ export default class EmailService {
      * @param {EventService} eventService 
      */
     constructor(stateManager, eventService) {
-        console.log('EmailService initialized')
-
-        stateManager.watchState('text').pipe(
+        stateManager.watchState('input.text').pipe(
             map((v) => this.isMatch(v)),
             filter(match => !!match)
-        ).subscribe(() => eventService.publish({match: this.getType()}))
+        ).subscribe(() => eventService.publish({ 'input.matcher': this.getType() }))
     }
 
     /**
