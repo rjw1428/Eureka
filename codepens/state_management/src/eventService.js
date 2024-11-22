@@ -9,7 +9,7 @@ export default class EventService {
         return this.events.asObservable()//.pipe(shareReplay(1))
     }
 
-    publish(value) {
+    setState(value) {
         this.events.next(value)
         return this
     }

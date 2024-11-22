@@ -28,12 +28,12 @@ class App {
      */
     start(button, input, debug, bgButtons) {
         button.addEventListener('click', () => {
-            this.eventService.publish({ 'input.text': input.value })
+            this.eventService.setState({ 'input.text': input.value })
         });
 
         bgButtons.forEach((bgButton) => {
             bgButton.addEventListener('click', () => {
-                this.eventService.publish({ 'style.background': bgButton.name })
+                this.eventService.setState({ 'style.background': bgButton.name })
             })
         })
 
