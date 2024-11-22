@@ -12,7 +12,7 @@ export default class EmailService {
         stateManager.watchState('input.text').pipe(
             map((v) => this.isMatch(v)),
             filter(match => !!match)
-        ).subscribe(() => eventService.publish({ 'input.matcher': this.getType() }))
+        ).subscribe(() => eventService.setState({ 'input.matcher': this.getType() }))
     }
 
     /**

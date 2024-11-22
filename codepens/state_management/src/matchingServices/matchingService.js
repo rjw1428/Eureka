@@ -33,7 +33,7 @@ export default class MatchingService {
                 return previous != current
             }),
             tap(() => console.log("CLEARING"))
-        ).subscribe(() => eventService.publish({ 'input.matcher': null }))
+        ).subscribe(() => eventService.setState({ 'input.matcher': null }))
 
 
         // Determine UI Value
@@ -50,7 +50,7 @@ export default class MatchingService {
                 }
                 return 'No Match'
             })
-        ).subscribe((val) => eventService.publish({ 'input.result': val}))
+        ).subscribe((val) => eventService.setState({ 'input.result': val}))
 
         this.registerMatchers(matcherServices, stateManager, eventService)
 
