@@ -17,6 +17,7 @@ class Dice extends StatefulWidget {
 class _DiceState extends State<Dice> {
   int dice1 = 2;
   int dice2 = 3;
+  int? value;
 
   @override
   Widget build(BuildContext context) {
@@ -24,11 +25,23 @@ class _DiceState extends State<Dice> {
       children: [
         Padding(
           padding: const EdgeInsets.only(bottom: 64.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          child: Column(
             children: [
-              Image.asset('assets/images/dice-$dice1.png', width: 200),
-              Image.asset('assets/images/dice-$dice2.png', width: 200)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Image.asset('assets/images/dice-$dice1.png', width: 200),
+                  Image.asset('assets/images/dice-$dice2.png', width: 200)
+                ],
+              ),
+              if (value != null)
+                Text(
+                  'You rolled a $value',
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      shadows: [Shadow(color: Colors.black, offset: Offset(2, 2), blurRadius: 2)]),
+                ),
             ],
           ),
         ),
@@ -51,6 +64,7 @@ class _DiceState extends State<Dice> {
     setState(() {
       dice1 = randomizer.nextInt(6) + 1;
       dice2 = randomizer.nextInt(6) + 1;
+      value = dice1 + dice2;
     });
   }
 }

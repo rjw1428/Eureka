@@ -16,6 +16,7 @@ void main() {
   // adding commas will cause formatter to break lines
 }
 
+// Just a demo of defaulting values for position arguments
 int add(int a, [int b = 10]) {
   return a + b;
 }
