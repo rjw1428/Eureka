@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen(this.startTrigger, {super.key});
@@ -25,11 +26,11 @@ class HomeScreen extends StatelessWidget {
             width: 400,
             color: Colors.white.withAlpha(100),
           ),
-          const Padding(
-            padding: EdgeInsets.all(36.0),
+          Padding(
+            padding: const EdgeInsets.all(36.0),
             child: Text(
               'Can you answer them all?!',
-              style: TextStyle(color: Colors.white, fontSize: 24),
+              style: GoogleFonts.oswald(color: Colors.white, fontSize: 24),
             ),
           ),
           OutlinedButton.icon(
