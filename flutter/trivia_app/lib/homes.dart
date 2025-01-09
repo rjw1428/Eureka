@@ -9,7 +9,7 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           // Opacity is performance intensive:
           // - renders in an offscreen buffer, does the blending, and then adds to screen)
@@ -26,12 +26,9 @@ class HomeScreen extends StatelessWidget {
             width: 400,
             color: Colors.white.withAlpha(100),
           ),
-          Padding(
-            padding: const EdgeInsets.all(36.0),
-            child: Text(
-              'Can you answer them all?!',
-              style: GoogleFonts.oswald(color: Colors.white, fontSize: 24),
-            ),
+          Text(
+            'Can you answer them all?!',
+            style: GoogleFonts.oswald(color: Colors.white, fontSize: 24),
           ),
           OutlinedButton.icon(
             onPressed: startTrigger,
