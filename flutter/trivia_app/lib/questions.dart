@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:trivia_app/models/quiz_question.dart';
-import 'package:trivia_app/quizes/dart_quiz.dart';
+import 'package:trivia_app/quizzes/dart_quiz.dart';
 
 class QuestionScreen extends StatefulWidget {
-  QuestionScreen({
+  const QuestionScreen({
     super.key,
     required this.onStoreAnswer,
   });
 
-  void Function(String) onStoreAnswer;
+  final void Function(String) onStoreAnswer;
 
   @override
   State<QuestionScreen> createState() {

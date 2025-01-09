@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:trivia_app/homes.dart';
 import 'package:trivia_app/questions.dart';
-import 'package:trivia_app/quizes/dart_quiz.dart';
+import 'package:trivia_app/quizzes/dart_quiz.dart';
 import 'package:trivia_app/results.dart';
 
 // COMPONENT LIFECYCLE:

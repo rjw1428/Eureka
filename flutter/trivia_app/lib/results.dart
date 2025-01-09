@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:trivia_app/quizes/dart_quiz.dart';
+import 'package:trivia_app/quizzes/dart_quiz.dart';
 
 class Results extends StatelessWidget {
-  Results({super.key, required this.resultsList, required this.onBack});
+  const Results({super.key, required this.resultsList, required this.onBack});
 
-  List<String> resultsList;
-  void Function() onBack;
+  final List<String> resultsList;
+  final void Function() onBack;
 
   List<Map<String, String>> getSummaryData() {
     final List<Map<String, String>> summary = [];
