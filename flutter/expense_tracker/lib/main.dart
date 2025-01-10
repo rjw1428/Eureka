@@ -62,7 +62,7 @@ void main() {
         ),
       ),
       home: const Expenses(),
-      themeMode: ThemeMode.light,
+      themeMode: ThemeMode.system,
     ),
   );
 }

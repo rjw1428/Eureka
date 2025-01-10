@@ -122,6 +122,7 @@ class ChartBar extends StatelessWidget {
                 child: Text(
                   amount > 0 ? '\$${amount.toStringAsFixed(2)}' : '',
                   textAlign: TextAlign.center,
+                  style: TextStyle(color: Theme.of(context).primaryColor),
                 ),
               ),
             ),
