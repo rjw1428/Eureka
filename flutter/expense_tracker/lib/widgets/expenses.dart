@@ -33,6 +33,11 @@ class _ExpensesState extends State<Expenses> {
       date: DateTime.now().add(const Duration(hours: -2)),
       category: Category.HOME_RENO,
     ),
+    Expense(
+        amount: 45.00,
+        date: DateTime.now().add(const Duration(hours: -2)),
+        category: Category.HOME_RENO,
+        note: 'Here is one with a very long title just to see how it renders'),
   ];
 
   void _openAddExpenseOverlay([Expense? expense]) {
@@ -168,8 +173,9 @@ class ExpenseItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
+    return LayoutBuilder(
+      builder: (ctx, constraints) => Card(
+        child: Padding(
           padding: const EdgeInsets.symmetric(
             horizontal: 20,
             vertical: 16,
@@ -190,16 +196,21 @@ class ExpenseItem extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.start,
                     children: [
                       Text(expense.formattedDate, style: Theme.of(context).textTheme.titleSmall),
-                      Text(expense.title),
+                      SizedBox(
+                        width: constraints.maxWidth - 200,
+                        child: Text(expense.title),
+                      ),
                     ],
                   ),
                 ],
               ),
               Text(
-                'Amount: \$${expense.amount.toStringAsFixed(2)}',
+                '\$${expense.amount.toStringAsFixed(2)}',
               ),
             ],
-          )),
+          ),
+        ),
+      ),
     );
   }
 }
