@@ -1,7 +1,9 @@
 import 'package:dotted_border/dotted_border.dart';
+import 'package:expense_tracker/services/categories.service.dart';
 import 'package:flutter/material.dart';
-
 import 'package:expense_tracker/models/expense.dart';
+
+final CategoryConfig categories = CategoriesService().getCategories();
 
 class Chart extends StatelessWidget {
   const Chart({super.key, required this.expenses});

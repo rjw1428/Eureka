@@ -1,57 +1,22 @@
+import 'package:expense_tracker/constants/categories.dart';
+import 'package:expense_tracker/services/categories.service.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 import 'package:intl/intl.dart';
 
 const uuid = Uuid();
 final dateFormatter = DateFormat.yMd();
-
-enum Category { EATING_OUT, SNACKS, GAS, SHOPPING, HOME_RENO }
-
-class CategoryData {
-  final String label;
-  final IconData icon;
-  final double budget;
-
-  const CategoryData({required this.label, required this.icon, required this.budget});
-}
-
-const Map<Category, CategoryData> categories = {
-  Category.EATING_OUT: CategoryData(
-    label: 'Eating Out',
-    icon: Icons.lunch_dining_outlined,
-    budget: 500.0,
-  ),
-  Category.SNACKS: CategoryData(
-    label: 'Snacks',
-    icon: Icons.icecream_outlined,
-    budget: 100.0,
-  ),
-  Category.GAS: CategoryData(
-    label: 'Gas',
-    icon: Icons.local_gas_station_outlined,
-    budget: 200.0,
-  ),
-  Category.SHOPPING: CategoryData(
-    label: 'Shopping',
-    icon: Icons.shopping_basket_outlined,
-    budget: 100.0,
-  ),
-  Category.HOME_RENO: CategoryData(
-    label: 'Home Reno',
-    icon: Icons.construction_outlined,
-    budget: 100.0,
-  ),
-};
+final CategoryConfig categories = CategoriesService().getCategories();
 
 class Expense {
   Expense({required this.amount, required this.date, required this.category, this.note})
       : id = uuid.v4();
 
   final String id;
-  final Category category;
-  final String? note;
-  final double amount;
-  final DateTime date;
+  Category category;
+  String? note;
+  double amount;
+  DateTime date;
 
   String get formattedDate {
     return dateFormatter.format(date);
@@ -59,6 +24,23 @@ class Expense {
 
   IconData get icon {
     return categories.containsKey(category) ? categories[category]!.icon : Icons.attach_money;
+  }
+
+  String get title {
+    return '${categories[category]!.label}${note == null ? '' : ':'} ${note ?? ''}';
+  }
+
+  update({
+    required double amount,
+    required DateTime date,
+    required Category category,
+    required String? note,
+  }) {
+    this.amount = amount;
+    this.date = date;
+    this.category = category;
+    this.note = note;
+    return this;
   }
 }
 

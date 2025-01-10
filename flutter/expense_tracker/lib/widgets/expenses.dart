@@ -1,3 +1,6 @@
+import 'package:expense_tracker/constants/categories.dart';
+import 'package:expense_tracker/models/category.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:expense_tracker/models/expense.dart';
 import 'package:expense_tracker/widgets/chart.dart';
 import 'package:expense_tracker/widgets/expense_form.dart';
@@ -33,41 +36,47 @@ class _ExpensesState extends State<Expenses> {
     ),
   ];
 
-  void _openAddExpenseOverlay() {
+  void _openAddExpenseOverlay([Expense? expense]) {
     showModalBottomSheet(
         isScrollControlled: true,
         context: context,
         builder: (ctx) {
-          return ExpenseForm(onSubmit: _addExpense);
+          return ExpenseForm(
+            onSubmit: expense == null ? _addExpense : _updateExpense,
+            initialExpense: expense,
+            onRemove: _removeExpense,
+          );
         });
   }
 
   void _addExpense(Expense expense) {
-    setState(() {
-      _registeredExpenses.insert(0, expense);
-    });
+    setState(() => _registeredExpenses.insert(0, expense));
+  }
+
+  void _updateExpense(Expense expense) {
+    final index = _registeredExpenses.map((e) => e.id).toList().indexOf(expense.id);
+    setState(() => _registeredExpenses[index] = expense);
   }
 
   void _removeExpense(Expense expense) {
     ScaffoldMessenger.of(context).clearSnackBars();
 
     final index = _registeredExpenses.indexOf(expense);
-    setState(() {
-      _registeredExpenses.remove(expense);
-    });
+    setState(() => _registeredExpenses.remove(expense));
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-          duration: const Duration(seconds: 3),
-          content: Text('${expense.category} deleted!'),
-          action: SnackBarAction(
-            label: 'Undo',
-            onPressed: () {
-              setState(() {
-                _registeredExpenses.insert(index, expense);
-              });
-            },
-          )),
+        duration: const Duration(seconds: 3),
+        content: Text('Expense for ${expense.title}  deleted!'),
+        action: SnackBarAction(
+          label: 'Undo',
+          onPressed: () {
+            setState(() {
+              _registeredExpenses.insert(index, expense);
+            });
+          },
+        ),
+      ),
     );
   }
 
@@ -75,7 +84,11 @@ class _ExpensesState extends State<Expenses> {
   Widget build(BuildContext context) {
     Widget listContent = _registeredExpenses.isEmpty
         ? const Center(child: Text('No expenses found 💩'))
-        : ExpenseList(list: _registeredExpenses, onRemove: _removeExpense);
+        : ExpenseList(
+            list: _registeredExpenses,
+            onRemove: _removeExpense,
+            onEdit: _openAddExpenseOverlay,
+          );
 
     return Scaffold(
       appBar: AppBar(title: const Text('Expense Tracker'), actions: [
@@ -97,28 +110,53 @@ class _ExpensesState extends State<Expenses> {
 }
 
 class ExpenseList extends StatelessWidget {
-  const ExpenseList({super.key, required this.list, required this.onRemove});
+  const ExpenseList({
+    super.key,
+    required this.list,
+    required this.onRemove,
+    required this.onEdit,
+  });
 
   final List<Expense> list;
   final void Function(Expense) onRemove;
+  final void Function(Expense) onEdit;
 
   @override
   Widget build(BuildContext context) {
     return ListView.builder(
       itemCount: list.length,
-      itemBuilder: (ctx, i) => Dismissible(
-        key: ValueKey(list[i].id),
-        onDismissed: (direction) => onRemove(list[i]),
-        child: ExpenseItem(expense: list[i]),
-      ),
+      itemBuilder: (ctx, i) {
+        return kIsWeb
+            ? ExpenseItem(
+                expense: list[i],
+                onEdit: onEdit,
+              )
+            : GestureDetector(
+                onLongPress: () => onEdit(list[i]),
+                child: ExpenseItem(
+                  expense: list[i],
+                  onEdit: (e) => {},
+                ),
+              );
+        // return Dismissible(
+        //   key: ValueKey(list[i].id),
+        //   onDismissed: (direction) => onRemove(list[i]),
+        //   child: ExpenseItem(expense: list[i]),
+        // );
+      },
     );
   }
 }
 
 class ExpenseItem extends StatelessWidget {
-  const ExpenseItem({super.key, required this.expense});
+  const ExpenseItem({
+    super.key,
+    required this.expense,
+    required this.onEdit,
+  });
 
   final Expense expense;
+  final void Function(Expense) onEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -131,13 +169,18 @@ class ExpenseItem extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.start,
+              Row(
                 children: [
-                  Text(expense.formattedDate, style: Theme.of(context).textTheme.titleSmall),
-                  Text(
-                      '${categories[expense.category]!.label}${expense.note == null ? '' : ':'} ${expense.note ?? ''}'),
+                  if (kIsWeb)
+                    IconButton(onPressed: () => onEdit(expense), icon: const Icon(Icons.edit)),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: [
+                      Text(expense.formattedDate, style: Theme.of(context).textTheme.titleSmall),
+                      Text(expense.title),
+                    ],
+                  ),
                 ],
               ),
               Row(

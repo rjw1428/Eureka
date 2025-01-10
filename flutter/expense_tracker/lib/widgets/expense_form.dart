@@ -1,10 +1,21 @@
+import 'package:expense_tracker/constants/categories.dart';
 import 'package:expense_tracker/models/expense.dart';
+import 'package:expense_tracker/services/categories.service.dart';
 import 'package:flutter/material.dart';
 
+final CategoryConfig categories = CategoriesService().getCategories();
+
 class ExpenseForm extends StatefulWidget {
-  const ExpenseForm({super.key, required this.onSubmit});
+  const ExpenseForm({
+    super.key,
+    required this.onSubmit,
+    required this.onRemove,
+    this.initialExpense,
+  });
 
   final void Function(Expense) onSubmit;
+  final void Function(Expense) onRemove;
+  final Expense? initialExpense;
 
   @override
   State<StatefulWidget> createState() {
@@ -13,6 +24,8 @@ class ExpenseForm extends StatefulWidget {
 }
 
 class _ExpenseFormState extends State<ExpenseForm> {
+  String formTitle = 'Add Expense';
+  String actionButtonLabel = 'Save';
   final _note = TextEditingController();
   final _amount = TextEditingController();
   Category? _selectedCategory;
@@ -57,13 +70,24 @@ class _ExpenseFormState extends State<ExpenseForm> {
       return;
     }
 
-    final newExpense = Expense(
+    if (widget.initialExpense != null) {
+      final updatedExpense = widget.initialExpense!.update(
         amount: enteredAmount,
         note: _note.text.trim().isNotEmpty ? _note.text : null,
         date: _selectedDate,
-        category: _selectedCategory!);
+        category: _selectedCategory!,
+      );
+      widget.onSubmit(updatedExpense);
+    } else {
+      final newExpense = Expense(
+        amount: enteredAmount,
+        note: _note.text.trim().isNotEmpty ? _note.text : null,
+        date: _selectedDate,
+        category: _selectedCategory!,
+      );
+      widget.onSubmit(newExpense);
+    }
 
-    widget.onSubmit(newExpense);
     Navigator.pop(context);
     return;
   }
@@ -77,11 +101,22 @@ class _ExpenseFormState extends State<ExpenseForm> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.initialExpense != null) {
+      _selectedCategory = widget.initialExpense!.category;
+      _amount.text = widget.initialExpense!.amount.toString();
+      _note.text = widget.initialExpense!.note ?? '';
+      _selectedDate = widget.initialExpense!.date;
+      formTitle = 'Edit Expense';
+      actionButtonLabel = 'Update';
+    }
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 48, 16, 16),
       child: Column(
         children: [
-          Text('Add Expense', style: Theme.of(context).textTheme.titleLarge),
+          Text(
+            formTitle,
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
           Row(children: [
             Expanded(
               child: DropdownButton(
@@ -151,8 +186,16 @@ class _ExpenseFormState extends State<ExpenseForm> {
             children: [
               ElevatedButton(
                 onPressed: _submit,
-                child: const Text('Save'),
+                child: Text(actionButtonLabel),
               ),
+              if (widget.initialExpense != null)
+                TextButton(
+                  onPressed: () {
+                    widget.onRemove(widget.initialExpense!);
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Remove'),
+                ),
               TextButton(
                 onPressed: () => Navigator.pop(context),
                 child: const Text('Cancel'),

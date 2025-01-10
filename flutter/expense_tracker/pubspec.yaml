@@ -38,6 +38,7 @@ dependencies:
   uuid: ^4.5.1
   intl: ^0.20.1
   dotted_border: ^2.1.0
+  foundation: ^0.0.5
 
 dev_dependencies:
   flutter_test:
