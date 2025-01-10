@@ -1,5 +1,4 @@
 import 'package:expense_tracker/constants/categories.dart';
-import 'package:expense_tracker/models/category.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:expense_tracker/models/expense.dart';
 import 'package:expense_tracker/widgets/chart.dart';
@@ -38,6 +37,7 @@ class _ExpensesState extends State<Expenses> {
 
   void _openAddExpenseOverlay([Expense? expense]) {
     showModalBottomSheet(
+        useSafeArea: true,
         isScrollControlled: true,
         context: context,
         builder: (ctx) {
@@ -71,9 +71,7 @@ class _ExpensesState extends State<Expenses> {
         action: SnackBarAction(
           label: 'Undo',
           onPressed: () {
-            setState(() {
-              _registeredExpenses.insert(index, expense);
-            });
+            setState(() => _registeredExpenses.insert(index, expense));
           },
         ),
       ),
@@ -91,21 +89,31 @@ class _ExpensesState extends State<Expenses> {
           );
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Expense Tracker'), actions: [
-        IconButton(
-          icon: const Icon(Icons.add),
-          onPressed: _openAddExpenseOverlay,
-        ),
-      ]),
-      body: Column(
-        children: [
-          Chart(expenses: _registeredExpenses),
-          Expanded(
-            child: listContent,
+        resizeToAvoidBottomInset: false,
+        appBar: AppBar(title: const Text('Expense Tracker'), actions: [
+          IconButton(
+            icon: const Icon(Icons.add),
+            onPressed: _openAddExpenseOverlay,
           ),
-        ],
-      ),
-    );
+        ]),
+        body: LayoutBuilder(builder: (ctx, constraints) {
+          return constraints.maxWidth < 600
+              ? Column(
+                  children: [
+                    SizedBox(
+                      height: 200,
+                      child: Chart(expenses: _registeredExpenses),
+                    ),
+                    Expanded(child: listContent)
+                  ],
+                )
+              : Row(
+                  children: [
+                    Expanded(child: Chart(expenses: _registeredExpenses)),
+                    Expanded(child: listContent)
+                  ],
+                );
+        }));
   }
 }
 
@@ -173,6 +181,10 @@ class ExpenseItem extends StatelessWidget {
                 children: [
                   if (kIsWeb)
                     IconButton(onPressed: () => onEdit(expense), icon: const Icon(Icons.edit)),
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: Icon(expense.icon),
+                  ),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.start,
@@ -183,17 +195,9 @@ class ExpenseItem extends StatelessWidget {
                   ),
                 ],
               ),
-              Row(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: Icon(expense.icon),
-                  ),
-                  Text(
-                    'Amount: \$${expense.amount.toStringAsFixed(2)}',
-                  ),
-                ],
-              )
+              Text(
+                'Amount: \$${expense.amount.toStringAsFixed(2)}',
+              ),
             ],
           )),
     );

@@ -109,100 +109,98 @@ class _ExpenseFormState extends State<ExpenseForm> {
       formTitle = 'Edit Expense';
       actionButtonLabel = 'Update';
     }
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 48, 16, 16),
-      child: Column(
-        children: [
-          Text(
-            formTitle,
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          Row(children: [
-            Expanded(
-              child: DropdownButton(
-                hint: const Text('Category'),
-                isExpanded: true,
-                value: _selectedCategory,
-                items: categories.entries
-                    .map((category) => DropdownMenuItem(
-                          value: category.key,
-                          child: Text(category.value.label),
-                        ))
-                    .toList(),
-                onChanged: (value) => setState(() => _selectedCategory = value),
-              ),
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+        child: Column(
+          children: [
+            Text(
+              formTitle,
+              style: Theme.of(context).textTheme.titleLarge,
             ),
-          ]),
-          Row(
-            children: [
+            Row(children: [
               Expanded(
-                child: TextField(
-                  controller: _amount,
-                  decoration: const InputDecoration(
-                    prefixText: '\$',
-                    label: Text('Amount'),
-                  ),
-                  keyboardType: const TextInputType.numberWithOptions(signed: true, decimal: true),
+                child: DropdownButton(
+                  hint: const Text('Category'),
+                  isExpanded: true,
+                  value: _selectedCategory,
+                  items: categories.entries
+                      .map((category) => DropdownMenuItem(
+                            value: category.key,
+                            child: Text(category.value.label),
+                          ))
+                      .toList(),
+                  onChanged: (value) => setState(() => _selectedCategory = value),
                 ),
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Text(
-                      'Date Occurred: ${dateFormatter.format(_selectedDate)}',
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(left: 8.0),
-                      child: IconButton(
-                        icon: const Icon(Icons.calendar_month),
-                        onPressed: _showDatePicker,
-                      ),
-                    ),
-                  ],
-                ),
-              )
-            ],
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            ]),
+            Row(
               children: [
                 Expanded(
+                  flex: 1,
                   child: TextField(
-                    controller: _note,
-                    maxLength: 50,
-                    decoration: const InputDecoration(label: Text('Notes'), helperText: 'Optional'),
+                    controller: _amount,
+                    decoration: const InputDecoration(
+                      prefixText: '\$',
+                      label: Text('Amount'),
+                    ),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(signed: true, decimal: true),
                   ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  flex: 2,
+                  child: TextButton.icon(
+                    onPressed: _showDatePicker,
+                    icon: const Icon(Icons.calendar_month),
+                    iconAlignment: IconAlignment.start,
+                    label: Text(
+                      'Date Occurred: ${dateFormatter.format(_selectedDate)}',
+                    ),
+                  ),
+                )
+              ],
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _note,
+                      maxLength: 50,
+                      decoration:
+                          const InputDecoration(label: Text('Notes'), helperText: 'Optional'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton(
+                  onPressed: _submit,
+                  child: Text(actionButtonLabel),
+                ),
+                if (widget.initialExpense != null)
+                  TextButton(
+                    onPressed: () {
+                      widget.onRemove(widget.initialExpense!);
+                      Navigator.pop(context);
+                    },
+                    child: const Text('Remove'),
+                  ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
                 ),
               ],
             ),
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              ElevatedButton(
-                onPressed: _submit,
-                child: Text(actionButtonLabel),
-              ),
-              if (widget.initialExpense != null)
-                TextButton(
-                  onPressed: () {
-                    widget.onRemove(widget.initialExpense!);
-                    Navigator.pop(context);
-                  },
-                  child: const Text('Remove'),
-                ),
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-            ],
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

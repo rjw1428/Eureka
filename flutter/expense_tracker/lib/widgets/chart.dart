@@ -24,14 +24,15 @@ class Chart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = MediaQuery.of(context).platformBrightness == Brightness.dark;
+    final width = MediaQuery.of(context).size.width;
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+      margin: EdgeInsets.symmetric(horizontal: 8, vertical: width < 600 ? 16 : 0),
       padding: const EdgeInsets.symmetric(
         vertical: 16,
         horizontal: 8,
       ),
       width: double.infinity,
-      height: 180,
+      height: double.infinity,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8),
         gradient: LinearGradient(
@@ -128,7 +129,7 @@ class ChartBar extends StatelessWidget {
               DottedBorder(
                 borderType: BorderType.RRect,
                 color: Colors.red[800]!,
-                dashPattern: const [4, 4],
+                dashPattern: const [6, 6],
                 strokeWidth: 2,
                 customPath: (size) {
                   return Path()
