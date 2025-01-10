@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import 'package:expense_tracker/constants/categories.dart';
 import 'package:expense_tracker/models/expense.dart';
 import 'package:expense_tracker/services/categories.service.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 final CategoryConfig categories = CategoriesService().getCategories();
@@ -38,21 +41,38 @@ class _ExpenseFormState extends State<ExpenseForm> {
     setState(() => _selectedDate = date ?? _selectedDate);
   }
 
+  void _showDialog(String title, String content) {
+    if (Platform.isIOS) {
+      showCupertinoDialog(
+          context: context,
+          builder: (ctx) => CupertinoAlertDialog(
+                title: Text(title),
+                content: Text(content),
+                actions: [
+                  TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Okay'))
+                ],
+              ));
+    } else {
+      showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+                title: Text(title),
+                content: Text(content),
+                actions: [
+                  TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Okay'))
+                ],
+              ));
+    }
+  }
+
   void _submit() {
     final enteredAmount = double.tryParse(_amount.text);
     if (enteredAmount == null || enteredAmount == 0) {
-      showDialog(
-        context: context,
-        builder: (ctx) {
-          return AlertDialog(
-            title: const Text('Invalid Amount'),
-            content: Text(enteredAmount == 0
-                ? 'Make sure the amount is not 0'
-                : 'Make sure the amount is a number'),
-            actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Okay'))],
-          );
-        },
-      );
+      _showDialog(
+          'Invalid Amount',
+          enteredAmount == 0
+              ? 'Make sure the amount is not 0'
+              : 'Make sure the amount is a number');
       return;
     }
 
