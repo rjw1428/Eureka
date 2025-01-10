@@ -58,7 +58,10 @@ class _ExpenseFormState extends State<ExpenseForm> {
     }
 
     final newExpense = Expense(
-        amount: enteredAmount, note: _note.text, date: _selectedDate, category: _selectedCategory!);
+        amount: enteredAmount,
+        note: _note.text.trim().isNotEmpty ? _note.text : null,
+        date: _selectedDate,
+        category: _selectedCategory!);
 
     widget.onSubmit(newExpense);
     Navigator.pop(context);

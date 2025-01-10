@@ -10,16 +10,37 @@ enum Category { EATING_OUT, SNACKS, GAS, SHOPPING, HOME_RENO }
 class CategoryData {
   final String label;
   final IconData icon;
+  final double budget;
 
-  const CategoryData({required this.label, required this.icon});
+  const CategoryData({required this.label, required this.icon, required this.budget});
 }
 
 const Map<Category, CategoryData> categories = {
-  Category.EATING_OUT: CategoryData(label: 'Eating Out', icon: Icons.lunch_dining_outlined),
-  Category.SNACKS: CategoryData(label: 'Snacks', icon: Icons.icecream_outlined),
-  Category.GAS: CategoryData(label: 'Gas', icon: Icons.local_gas_station_outlined),
-  Category.SHOPPING: CategoryData(label: 'Shopping', icon: Icons.shopping_basket_outlined),
-  Category.HOME_RENO: CategoryData(label: 'Home Reno', icon: Icons.construction_outlined),
+  Category.EATING_OUT: CategoryData(
+    label: 'Eating Out',
+    icon: Icons.lunch_dining_outlined,
+    budget: 500.0,
+  ),
+  Category.SNACKS: CategoryData(
+    label: 'Snacks',
+    icon: Icons.icecream_outlined,
+    budget: 100.0,
+  ),
+  Category.GAS: CategoryData(
+    label: 'Gas',
+    icon: Icons.local_gas_station_outlined,
+    budget: 200.0,
+  ),
+  Category.SHOPPING: CategoryData(
+    label: 'Shopping',
+    icon: Icons.shopping_basket_outlined,
+    budget: 100.0,
+  ),
+  Category.HOME_RENO: CategoryData(
+    label: 'Home Reno',
+    icon: Icons.construction_outlined,
+    budget: 100.0,
+  ),
 };
 
 class Expense {
@@ -42,13 +63,15 @@ class Expense {
 }
 
 class ExpenseBucket {
-  const ExpenseBucket({required this.category, required this.expenses});
+  const ExpenseBucket({required this.category, required this.expenses, required this.budgetLimit});
 
   ExpenseBucket.forCategory(List<Expense> allExpenses, this.category)
-      : expenses = allExpenses.where((expense) => expense.category == category).toList();
+      : expenses = allExpenses.where((expense) => expense.category == category).toList(),
+        budgetLimit = categories[category]!.budget;
 
   final Category category;
   final List<Expense> expenses;
+  final double budgetLimit;
 
   double get totalExpenses {
     return expenses.fold(0, (sum, val) => sum + val.amount);

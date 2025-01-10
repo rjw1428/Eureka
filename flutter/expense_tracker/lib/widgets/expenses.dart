@@ -28,7 +28,7 @@ class _ExpensesState extends State<Expenses> {
     ),
     Expense(
       amount: 45.00,
-      date: DateTime.now().add(const Duration(hours: -1)),
+      date: DateTime.now().add(const Duration(hours: -2)),
       category: Category.HOME_RENO,
     ),
   ];
@@ -44,7 +44,7 @@ class _ExpensesState extends State<Expenses> {
 
   void _addExpense(Expense expense) {
     setState(() {
-      _registeredExpenses.add(expense);
+      _registeredExpenses.insert(0, expense);
     });
   }
 
@@ -109,7 +109,6 @@ class ExpenseList extends StatelessWidget {
       itemBuilder: (ctx, i) => Dismissible(
         key: ValueKey(list[i].id),
         onDismissed: (direction) => onRemove(list[i]),
-        // background: Container(color: Theme.of(context).colorScheme.onError),
         child: ExpenseItem(expense: list[i]),
       ),
     );
@@ -148,7 +147,7 @@ class ExpenseItem extends StatelessWidget {
                     child: Icon(expense.icon),
                   ),
                   Text(
-                    'Amount: \$${expense.amount.toString()}',
+                    'Amount: \$${expense.amount.toStringAsFixed(2)}',
                   ),
                 ],
               )
