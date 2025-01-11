@@ -129,9 +129,11 @@ class _ExpenseFormState extends State<ExpenseForm> {
       formTitle = 'Edit Expense';
       actionButtonLabel = 'Update';
     }
+
+    final keyboardSpace = MediaQuery.of(context).viewInsets.bottom;
     return SingleChildScrollView(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+        padding: EdgeInsets.fromLTRB(16, 16, 16, keyboardSpace + 16),
         child: Column(
           children: [
             Text(
