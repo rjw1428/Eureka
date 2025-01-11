@@ -38,12 +38,12 @@ class _ExpensesState extends State<Expenses> {
         });
   }
 
-  void _addExpense(Expense expense) {
+  void _addExpense(Expense expense, [int index = 0]) {
     setState(() {
       if (!_filterList.contains(expense.category)) {
         _filterList.add(expense.category);
       }
-      _registeredExpenses.insert(0, expense);
+      _registeredExpenses.insert(index, expense);
     });
   }
 
@@ -83,9 +83,7 @@ class _ExpensesState extends State<Expenses> {
         content: Text('Expense for ${expense.title}  deleted!'),
         action: SnackBarAction(
           label: 'Undo',
-          onPressed: () {
-            setState(() => _registeredExpenses.insert(index, expense));
-          },
+          onPressed: () => _addExpense(expense, index),
         ),
       ),
     );
