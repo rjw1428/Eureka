@@ -1,17 +1,22 @@
 import 'package:dotted_border/dotted_border.dart';
+import 'package:expense_tracker/constants/categories.dart';
 import 'package:expense_tracker/services/categories.service.dart';
 import 'package:flutter/material.dart';
 import 'package:expense_tracker/models/expense.dart';
 
-final CategoryConfig categories = CategoriesService().getCategories();
+final CategoryConfig categoryConfig = CategoriesService().getCategories();
 
 class Chart extends StatelessWidget {
-  const Chart({super.key, required this.expenses});
+  const Chart({super.key, required this.expenses, required this.selectedFilters});
 
   final List<Expense> expenses;
+  final List<Category> selectedFilters;
 
   List<ExpenseBucket> get buckets {
-    return categories.keys.map((key) => ExpenseBucket.forCategory(expenses, key)).toList();
+    return categoryConfig.keys
+        .where((key) => selectedFilters.contains(key))
+        .map((key) => ExpenseBucket.forCategory(expenses, key))
+        .toList();
   }
 
   double get maxTotalExpense {
@@ -71,10 +76,10 @@ class Chart extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 4),
                       child: Column(
                         children: [
-                          Text(categories[bucket.category]!.label,
+                          Text(categoryConfig[bucket.category]!.label,
                               style: Theme.of(context).textTheme.labelSmall),
                           Icon(
-                            categories[bucket.category]!.icon,
+                            categoryConfig[bucket.category]!.icon,
                             color: isDarkMode
                                 ? Theme.of(context).colorScheme.secondary
                                 : Theme.of(context).colorScheme.primary.withOpacity(0.7),
@@ -122,7 +127,7 @@ class ChartBar extends StatelessWidget {
                 child: Text(
                   amount > 0 ? '\$${amount.toStringAsFixed(2)}' : '',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Theme.of(context).primaryColor),
+                  style: Theme.of(context).textTheme.labelSmall,
                 ),
               ),
             ),

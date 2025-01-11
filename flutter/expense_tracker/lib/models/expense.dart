@@ -9,10 +9,14 @@ final dateFormatter = DateFormat.yMd();
 final CategoryConfig categories = CategoriesService().getCategories();
 
 class Expense {
-  Expense({required this.amount, required this.date, required this.category, this.note})
-      : id = uuid.v4();
+  Expense({
+    required this.amount,
+    required this.date,
+    required this.category,
+    this.note,
+  }) : id = uuid.v4();
 
-  final String id;
+  String id;
   Category category;
   String? note;
   double amount;
@@ -30,17 +34,8 @@ class Expense {
     return '${categories[category]!.label}${note == null ? '' : ':'} ${note ?? ''}';
   }
 
-  update({
-    required double amount,
-    required DateTime date,
-    required Category category,
-    required String? note,
-  }) {
-    this.amount = amount;
-    this.date = date;
-    this.category = category;
-    this.note = note;
-    return this;
+  updateId(String oldId) {
+    id = oldId;
   }
 }
 

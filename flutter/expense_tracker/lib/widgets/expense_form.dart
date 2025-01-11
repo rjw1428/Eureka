@@ -1,12 +1,11 @@
 import 'dart:io';
-
 import 'package:expense_tracker/constants/categories.dart';
 import 'package:expense_tracker/models/expense.dart';
 import 'package:expense_tracker/services/categories.service.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
-final CategoryConfig categories = CategoriesService().getCategories();
+final CategoryConfig categoryConfig = CategoriesService().getCategories();
 
 class ExpenseForm extends StatefulWidget {
   const ExpenseForm({
@@ -97,21 +96,17 @@ class _ExpenseFormState extends State<ExpenseForm> {
       return;
     }
 
+    final newExpense = Expense(
+      amount: enteredAmount,
+      note: _note.text.trim().isNotEmpty ? _note.text : null,
+      date: _selectedDate,
+      category: _selectedCategory!,
+    );
+
     if (widget.initialExpense != null) {
-      final updatedExpense = widget.initialExpense!.update(
-        amount: enteredAmount,
-        note: _note.text.trim().isNotEmpty ? _note.text : null,
-        date: _selectedDate,
-        category: _selectedCategory!,
-      );
-      widget.onSubmit(updatedExpense);
+      newExpense.updateId(widget.initialExpense!.id);
+      widget.onSubmit(newExpense);
     } else {
-      final newExpense = Expense(
-        amount: enteredAmount,
-        note: _note.text.trim().isNotEmpty ? _note.text : null,
-        date: _selectedDate,
-        category: _selectedCategory!,
-      );
       widget.onSubmit(newExpense);
     }
 
@@ -127,7 +122,7 @@ class _ExpenseFormState extends State<ExpenseForm> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  void initState() {
     if (widget.initialExpense != null) {
       _selectedCategory = widget.initialExpense!.category;
       _amount.text = widget.initialExpense!.amount.toString();
@@ -136,7 +131,11 @@ class _ExpenseFormState extends State<ExpenseForm> {
       formTitle = 'Edit Expense';
       actionButtonLabel = 'Update';
     }
+    super.initState();
+  }
 
+  @override
+  Widget build(BuildContext context) {
     final keyboardSpace = MediaQuery.of(context).viewInsets.bottom;
     return SingleChildScrollView(
       child: Padding(
@@ -153,7 +152,7 @@ class _ExpenseFormState extends State<ExpenseForm> {
                   hint: const Text('Category'),
                   isExpanded: true,
                   value: _selectedCategory,
-                  items: categories.entries
+                  items: categoryConfig.entries
                       .map((category) => DropdownMenuItem(
                             value: category.key,
                             child: Text(category.value.label),
