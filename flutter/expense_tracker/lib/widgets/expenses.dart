@@ -71,31 +71,71 @@ class _ExpensesState extends State<Expenses> {
           );
 
     return Scaffold(
-        resizeToAvoidBottomInset: false,
-        appBar: AppBar(title: const Text('Expense Tracker'), actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: _openAddExpenseOverlay,
+      resizeToAvoidBottomInset: false,
+      appBar: AppBar(
+        title: const Text('Expense Tracker'),
+        actions: [
+          PopupMenuButton(
+            tooltip: 'Menu',
+            position: PopupMenuPosition.under,
+            onSelected: (value) {
+              if (value == "SETTINGS") {
+                print(value);
+                return;
+              }
+              if (value == "HELP") {
+                print(value);
+                return;
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                  value: "SETTINGS",
+                  child: Row(
+                    children: [
+                      Icon(Icons.settings),
+                      Padding(padding: EdgeInsets.only(left: 8), child: Text('Settings'))
+                    ],
+                  )),
+              const PopupMenuItem(
+                  value: "HELP",
+                  child: Row(
+                    children: [
+                      Icon(Icons.help),
+                      Padding(padding: EdgeInsets.only(left: 8), child: Text('Help'))
+                    ],
+                  )),
+            ],
           ),
-        ]),
-        body: LayoutBuilder(builder: (ctx, constraints) {
-          return constraints.maxWidth < 600
-              ? Column(
-                  children: [
-                    SizedBox(
-                      height: 200,
-                      child: Chart(expenses: _registeredExpenses),
-                    ),
-                    Expanded(child: listContent)
-                  ],
-                )
-              : Row(
-                  children: [
-                    Expanded(child: Chart(expenses: _registeredExpenses)),
-                    Expanded(child: listContent)
-                  ],
-                );
-        }));
+        ],
+      ),
+      body: LayoutBuilder(builder: (ctx, constraints) {
+        return constraints.maxWidth < 600
+            ? Column(
+                children: [
+                  SizedBox(
+                    height: 200,
+                    child: Chart(expenses: _registeredExpenses),
+                  ),
+                  Expanded(child: listContent)
+                ],
+              )
+            : Row(
+                children: [
+                  Expanded(child: Chart(expenses: _registeredExpenses)),
+                  Expanded(child: listContent)
+                ],
+              );
+      }),
+      floatingActionButton: IconButton.filled(
+        color: Theme.of(context).cardTheme.color,
+        onPressed: _openAddExpenseOverlay,
+        icon: Icon(
+          Icons.add,
+          color: Theme.of(context).appBarTheme.foregroundColor,
+        ),
+      ),
+    );
   }
 }
 

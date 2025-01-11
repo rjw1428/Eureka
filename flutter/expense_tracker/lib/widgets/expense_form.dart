@@ -42,7 +42,14 @@ class _ExpenseFormState extends State<ExpenseForm> {
   }
 
   void _showDialog(String title, String content) {
-    if (Platform.isIOS) {
+    bool isIos = false;
+    try {
+      isIos = Platform.isIOS;
+    } catch (e) {
+      isIos = false;
+    }
+
+    if (isIos) {
       showCupertinoDialog(
           context: context,
           builder: (ctx) => CupertinoAlertDialog(
