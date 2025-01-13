@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:expense_tracker/constants/icons.dart';
 import 'package:expense_tracker/models/category.dart';
 import 'package:expense_tracker/services/categories.service.dart';
 import 'package:flutter/cupertino.dart';
@@ -27,6 +28,7 @@ class CategoryForm extends StatefulWidget {
 class _CategoryFormState extends State<CategoryForm> {
   String formTitle = 'Add Category';
   String actionButtonLabel = 'Save';
+  IconData _selectedIcon = categoryIcons[0];
   final _label = TextEditingController();
   final _budget = TextEditingController();
 
@@ -86,7 +88,7 @@ class _CategoryFormState extends State<CategoryForm> {
     final newCategory = CategoryDataWithId(
       budget: enteredBudget,
       label: enteredLabel,
-      icon: Icons.multiline_chart,
+      icon: _selectedIcon,
       id: enteredLabel.toUpperCase(),
     );
 
@@ -135,6 +137,25 @@ class _CategoryFormState extends State<CategoryForm> {
               padding: const EdgeInsets.all(8.0),
               child: Row(
                 children: [
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8.0, top: 16),
+                    child: DropdownButton<IconData>(
+                      onChanged: (el) {
+                        setState(() {
+                          _selectedIcon = el!;
+                        });
+                      },
+                      value: _selectedIcon,
+                      items: categoryIcons
+                          .map(
+                            (el) => DropdownMenuItem<IconData>(
+                              value: el,
+                              child: Icon(el),
+                            ),
+                          )
+                          .toList(),
+                    ),
+                  ),
                   Expanded(
                     child: TextField(
                       controller: _label,
@@ -158,26 +179,29 @@ class _CategoryFormState extends State<CategoryForm> {
                 ],
               ),
             ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ElevatedButton(
-                  onPressed: _submit,
-                  child: Text(actionButtonLabel),
-                ),
-                if (widget.initialCategory != null)
-                  TextButton(
-                    onPressed: () {
-                      widget.onRemove(widget.initialCategory!);
-                      Navigator.pop(context);
-                    },
-                    child: const Text('Remove'),
+            Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ElevatedButton(
+                    onPressed: _submit,
+                    child: Text(actionButtonLabel),
                   ),
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel'),
-                ),
-              ],
+                  if (widget.initialCategory != null)
+                    TextButton(
+                      onPressed: () {
+                        widget.onRemove(widget.initialCategory!);
+                        Navigator.pop(context);
+                      },
+                      child: const Text('Remove'),
+                    ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancel'),
+                  ),
+                ],
+              ),
             ),
           ],
         ),

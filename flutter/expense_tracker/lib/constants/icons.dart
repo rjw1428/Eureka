@@ -1,0 +1,32 @@
+import 'package:flutter/material.dart';
+
+const List<IconData> categoryIcons = [
+  Icons.access_time_outlined,
+  Icons.account_balance_outlined,
+  Icons.add_business_outlined,
+  Icons.call_outlined,
+  Icons.gavel_outlined,
+  Icons.airplanemode_active_outlined,
+  Icons.downhill_skiing_outlined,
+  Icons.pets_outlined,
+  Icons.coffee_outlined,
+  Icons.car_repair_outlined,
+  Icons.carpenter_outlined,
+  Icons.beach_access_outlined,
+  Icons.face_3_outlined,
+  Icons.attach_money_outlined,
+  Icons.egg_alt_outlined,
+  Icons.brunch_dining_outlined,
+  Icons.dining_outlined,
+  Icons.dinner_dining_outlined,
+  Icons.diamond_outlined,
+  Icons.headset_rounded,
+  Icons.monitor_heart_outlined,
+  Icons.health_and_safety_sharp,
+  Icons.local_laundry_service_outlined,
+  Icons.tv_outlined,
+  Icons.gps_fixed_outlined,
+  Icons.whatshot_outlined,
+  Icons.work_outline_outlined,
+  Icons.yard_outlined
+];

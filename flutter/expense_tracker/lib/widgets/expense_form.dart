@@ -148,9 +148,16 @@ class _ExpenseFormState extends State<ExpenseForm> {
                   items: categoryConfig
                       .where((category) => !category.deleted || category.id == _selectedCategory)
                       .map((category) => DropdownMenuItem(
-                            value: category.id,
-                            child: Text(category.label),
-                          ))
+                          value: category.id,
+                          child: Row(
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.only(right: 8.0),
+                                child: Icon(category.icon),
+                              ),
+                              Text(category.label),
+                            ],
+                          )))
                       .toList(),
                   onChanged: (value) => setState(() => _selectedCategory = value),
                 ),
