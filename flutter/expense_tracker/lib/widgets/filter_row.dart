@@ -68,8 +68,13 @@ class _FilterState extends State<FilterRow> {
                   ),
                 ),
               ),
+              dropdownDecoration: DropdownDecoration(
+                backgroundColor: Theme.of(context).cardTheme.color!,
+              ),
               dropdownItemDecoration: DropdownItemDecoration(
-                selectedIcon: const Icon(Icons.check_box, color: Colors.green),
+                selectedBackgroundColor: Theme.of(context).cardTheme.color,
+                selectedIcon:
+                    Icon(Icons.check_box, color: Theme.of(context).appBarTheme.backgroundColor),
                 disabledIcon: Icon(Icons.lock, color: Colors.grey.shade300),
               ),
               onSelectionChange: (selection) {
@@ -78,11 +83,8 @@ class _FilterState extends State<FilterRow> {
               },
             ),
           ),
-          // const Expanded(
-          //     child: Text(
-          //   'Time Selection',
-          //   textAlign: TextAlign.end,
-          // )),
+          TextButton(onPressed: controller.selectAll, child: const Text('SelectAll')),
+          TextButton(onPressed: controller.clearAll, child: const Text('Clear All')),
         ],
       ),
     );

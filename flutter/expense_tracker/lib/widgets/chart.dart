@@ -135,7 +135,7 @@ class ChartBar extends StatelessWidget {
               DottedBorder(
                 borderType: BorderType.RRect,
                 color: Colors.red[800]!,
-                dashPattern: const [6, 6],
+                dashPattern: const [4, 6],
                 strokeWidth: 2,
                 customPath: (size) {
                   return Path()

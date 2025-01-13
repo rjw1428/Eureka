@@ -2,7 +2,9 @@ import 'package:expense_tracker/constants/categories.dart';
 import 'package:expense_tracker/models/category.dart';
 import 'package:expense_tracker/services/categories.service.dart';
 import 'package:expense_tracker/services/expense.service.dart';
+import 'package:expense_tracker/widgets/app_bar_action_menu.dart';
 import 'package:expense_tracker/widgets/filter_row.dart';
+import 'package:expense_tracker/widgets/total_row.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:expense_tracker/models/expense.dart';
 import 'package:expense_tracker/widgets/chart.dart';
@@ -140,6 +142,10 @@ class _ExpensesState extends State<Expenses> {
       );
     }).toList();
 
+    final double totalExpenses = _registeredExpenses
+        .where((expense) => _filterList.contains(expense.category))
+        .fold(0, (sum, exp) => exp.amount + sum);
+
     Widget listContent = ExpenseList(
       list: _registeredExpenses,
       onRemove: _removeExpense,
@@ -151,45 +157,20 @@ class _ExpensesState extends State<Expenses> {
       resizeToAvoidBottomInset: false,
       appBar: AppBar(
         title: const Text('Expense Tracker'),
-        actions: [
-          PopupMenuButton(
-            tooltip: 'Menu',
-            position: PopupMenuPosition.under,
-            onSelected: (value) {
-              if (value == "SETTINGS") {
-                print(value);
-                return;
-              }
-              if (value == "HELP") {
-                print(value);
-                return;
-              }
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                  value: "SETTINGS",
-                  child: Row(
-                    children: [
-                      Icon(Icons.settings),
-                      Padding(padding: EdgeInsets.only(left: 8), child: Text('Settings'))
-                    ],
-                  )),
-              const PopupMenuItem(
-                  value: "HELP",
-                  child: Row(
-                    children: [
-                      Icon(Icons.help),
-                      Padding(padding: EdgeInsets.only(left: 8), child: Text('Help'))
-                    ],
-                  )),
-            ],
-          ),
+        actions: const [
+          AppBarActionMenu(),
         ],
       ),
       body: LayoutBuilder(builder: (ctx, constraints) {
         return constraints.maxWidth < 600
             ? Column(
                 children: [
+                  FilterRow(
+                    options: _categoryOptions,
+                    onFilter: _filterExpenses,
+                    selectedFilters: _filterList,
+                  ),
+                  TotalRow(sum: totalExpenses),
                   SizedBox(
                     height: 200,
                     child: Chart(
@@ -197,32 +178,38 @@ class _ExpensesState extends State<Expenses> {
                       selectedFilters: _filterList,
                     ),
                   ),
-                  FilterRow(
-                    options: _categoryOptions,
-                    onFilter: _filterExpenses,
-                    selectedFilters: _filterList,
-                  ),
+                  const Text('Time Filter'),
                   Expanded(child: listContent)
                 ],
               )
             : Row(
                 children: [
                   Expanded(
-                      child: Chart(
-                    expenses: _registeredExpenses,
-                    selectedFilters: _filterList,
-                  )),
+                    child: Column(
+                      children: [
+                        TotalRow(sum: totalExpenses),
+                        Expanded(
+                          child: Chart(
+                            expenses: _registeredExpenses,
+                            selectedFilters: _filterList,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                   Expanded(
-                      child: Column(
-                    children: [
-                      FilterRow(
-                        options: _categoryOptions,
-                        onFilter: _filterExpenses,
-                        selectedFilters: _filterList,
-                      ),
-                      Expanded(child: listContent)
-                    ],
-                  ))
+                    child: Column(
+                      children: [
+                        FilterRow(
+                          options: _categoryOptions,
+                          onFilter: _filterExpenses,
+                          selectedFilters: _filterList,
+                        ),
+                        const Text('Time Filter'),
+                        Expanded(child: listContent)
+                      ],
+                    ),
+                  )
                 ],
               );
       }),
