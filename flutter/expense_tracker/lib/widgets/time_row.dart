@@ -42,6 +42,7 @@ class _TimeRowState extends State<TimeRow> {
       onSelected: (selectedDate) {
         widget.onTimeSelect(selectedDate!.id);
       },
+      menuHeight: 200,
       dropdownMenuEntries:
           timeFilterOptions.map((opt) => DropdownMenuEntry(label: opt.label, value: opt)).toList(),
     );
