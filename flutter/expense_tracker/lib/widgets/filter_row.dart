@@ -107,7 +107,7 @@ class _FilterState extends State<FilterRow> {
                 : Align(
                     alignment: Alignment.centerRight,
                     child: Text(
-                      'Filters',
+                      'Filter by category',
                       style: Theme.of(context).textTheme.titleSmall,
                     ),
                   ),

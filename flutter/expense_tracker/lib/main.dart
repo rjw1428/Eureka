@@ -59,6 +59,13 @@ void main() {
             backgroundColor: darkColorScheme.primaryContainer,
           ),
         ),
+        textTheme: ThemeData.dark().textTheme.copyWith(
+              titleSmall: TextStyle(
+                fontSize: 10,
+                color: colorScheme.primaryContainer,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
       ),
       home: const HomeScreen(),
       themeMode: ThemeMode.dark,
