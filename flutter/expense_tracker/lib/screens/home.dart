@@ -167,6 +167,65 @@ class _HomeScreenState extends State<HomeScreen> {
       filters: _filterList,
     );
 
+    Widget categoryFilter = FilterRow(
+      options: _categoryOptions,
+      onFilter: _filterExpenses,
+      selectedFilters: _filterList,
+    );
+
+    Widget timeFilter = Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
+      child: TimeRow(onTimeSelect: _setTimeRange),
+    );
+
+    Widget columnOrientationLayout = Column(
+      children: [
+        timeFilter,
+        categoryFilter,
+        TotalRow(sum: totalExpenses),
+        SizedBox(
+          height: 200,
+          child: Chart(
+            expenses: _registeredExpenses,
+            selectedFilters: _filterList,
+          ),
+        ),
+        Expanded(child: listContent)
+      ],
+    );
+
+    Widget rowOrientationLayout = Row(
+      children: [
+        Expanded(
+          child: Column(
+            children: [
+              TotalRow(sum: totalExpenses),
+              Expanded(
+                child: Chart(
+                  expenses: _registeredExpenses,
+                  selectedFilters: _filterList,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: Column(
+            children: [
+              timeFilter,
+              categoryFilter,
+              Expanded(child: listContent),
+            ],
+          ),
+        )
+      ],
+    );
+    Widget body = LayoutBuilder(
+      builder: (ctx, constraints) {
+        return constraints.maxWidth < 600 ? columnOrientationLayout : rowOrientationLayout;
+      },
+    );
+
     return Scaffold(
       resizeToAvoidBottomInset: false,
       appBar: AppBar(
@@ -175,64 +234,7 @@ class _HomeScreenState extends State<HomeScreen> {
           AppBarActionMenu(),
         ],
       ),
-      body: LayoutBuilder(builder: (ctx, constraints) {
-        return constraints.maxWidth < 600
-            ? Column(
-                children: [
-                  FilterRow(
-                    options: _categoryOptions,
-                    onFilter: _filterExpenses,
-                    selectedFilters: _filterList,
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: TimeRow(onTimeSelect: _setTimeRange),
-                  ),
-                  TotalRow(sum: totalExpenses),
-                  SizedBox(
-                    height: 200,
-                    child: Chart(
-                      expenses: _registeredExpenses,
-                      selectedFilters: _filterList,
-                    ),
-                  ),
-                  Expanded(child: listContent)
-                ],
-              )
-            : Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      children: [
-                        TotalRow(sum: totalExpenses),
-                        Expanded(
-                          child: Chart(
-                            expenses: _registeredExpenses,
-                            selectedFilters: _filterList,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    child: Column(
-                      children: [
-                        FilterRow(
-                          options: _categoryOptions,
-                          onFilter: _filterExpenses,
-                          selectedFilters: _filterList,
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: TimeRow(onTimeSelect: _setTimeRange),
-                        ),
-                        Expanded(child: listContent)
-                      ],
-                    ),
-                  )
-                ],
-              );
-      }),
+      body: body,
       floatingActionButton: IconButton.filled(
         color: Theme.of(context).cardTheme.color,
         onPressed: _openAddExpenseOverlay,
