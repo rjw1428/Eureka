@@ -87,6 +87,10 @@ class _FilterState extends State<FilterRow> {
           TextButton(onPressed: controller.clearAll, child: const Text('Clear All')),
         ],
       ),
+      // Padding(
+      //   padding: const EdgeInsets.symmetric(vertical: 8),
+      //   child:
+      // ),
     );
   }
 }

@@ -4,6 +4,7 @@ import 'package:expense_tracker/services/categories.service.dart';
 import 'package:expense_tracker/services/expense.service.dart';
 import 'package:expense_tracker/widgets/app_bar_action_menu.dart';
 import 'package:expense_tracker/widgets/filter_row.dart';
+import 'package:expense_tracker/widgets/time_row.dart';
 import 'package:expense_tracker/widgets/total_row.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:expense_tracker/models/expense.dart';
@@ -21,8 +22,8 @@ class Expenses extends StatefulWidget {
 }
 
 class _ExpensesState extends State<Expenses> {
-  final List<Expense> _registeredExpenses = ExpenseService().getExpenses();
   final CategoryConfig categoryConfig = CategoriesService().getCategories();
+  List<Expense> _registeredExpenses = [];
   List<CategoryDataWithId> _categoryOptions = [];
   List<Category> _filterList = [];
 
@@ -109,21 +110,29 @@ class _ExpensesState extends State<Expenses> {
     setState(() => _filterList = selection);
   }
 
+  void _setTimeRange(DateTime date) {
+    setState(() {
+      _registeredExpenses = ExpenseService().getExpenses(date.year, date.month);
+      final Set<Category> distinctCategoryIds = Set.from(
+        _registeredExpenses.map((el) => el.category),
+      );
+      _categoryOptions = distinctCategoryIds.map((c) {
+        final config = categoryConfig[c]!;
+        return CategoryDataWithId(
+          budget: config.budget,
+          icon: config.icon,
+          label: config.label,
+          id: c,
+        );
+      }).toList();
+      _filterList = distinctCategoryIds.toList();
+    });
+  }
+
   @override
   initState() {
-    final Set<Category> distinctCategoryIds = Set.from(
-      _registeredExpenses.map((el) => el.category),
-    );
-    _categoryOptions = distinctCategoryIds.map((c) {
-      final config = categoryConfig[c]!;
-      return CategoryDataWithId(
-        budget: config.budget,
-        icon: config.icon,
-        label: config.label,
-        id: c,
-      );
-    }).toList();
-    _filterList = distinctCategoryIds.toList();
+    final now = DateTime.now();
+    _setTimeRange(now);
     super.initState();
   }
 
@@ -170,6 +179,10 @@ class _ExpensesState extends State<Expenses> {
                     onFilter: _filterExpenses,
                     selectedFilters: _filterList,
                   ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: TimeRow(onTimeSelect: _setTimeRange),
+                  ),
                   TotalRow(sum: totalExpenses),
                   SizedBox(
                     height: 200,
@@ -178,7 +191,6 @@ class _ExpensesState extends State<Expenses> {
                       selectedFilters: _filterList,
                     ),
                   ),
-                  const Text('Time Filter'),
                   Expanded(child: listContent)
                 ],
               )
@@ -205,7 +217,10 @@ class _ExpensesState extends State<Expenses> {
                           onFilter: _filterExpenses,
                           selectedFilters: _filterList,
                         ),
-                        const Text('Time Filter'),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8.0),
+                          child: TimeRow(onTimeSelect: _setTimeRange),
+                        ),
                         Expanded(child: listContent)
                       ],
                     ),

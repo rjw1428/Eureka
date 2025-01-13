@@ -31,3 +31,10 @@ const Map<Category, CategoryData> categories = {
     budget: 100.0,
   ),
 };
+
+class TimeFilterOption {
+  final DateTime id;
+  final String label;
+
+  const TimeFilterOption({required this.id, required this.label});
+}
