@@ -1,4 +1,3 @@
-import 'package:expense_tracker/constants/categories.dart';
 import 'package:expense_tracker/models/category.dart';
 import 'package:flutter/material.dart';
 import 'package:multi_dropdown/multi_dropdown.dart';
@@ -12,8 +11,8 @@ class FilterRow extends StatefulWidget {
   });
 
   final List<CategoryDataWithId> options;
-  final List<Category> selectedFilters;
-  final void Function(List<Category>) onFilter;
+  final List<String> selectedFilters;
+  final void Function(List<String>) onFilter;
 
   @override
   State<StatefulWidget> createState() {
@@ -26,7 +25,7 @@ class _FilterState extends State<FilterRow> {
 
   @override
   Widget build(BuildContext context) {
-    final controller = MultiSelectController<Category>();
+    final controller = MultiSelectController<String>();
     final defaultOptions = widget.options
         .map(
           (el) => DropdownItem(
@@ -38,7 +37,7 @@ class _FilterState extends State<FilterRow> {
         .toList();
     Widget filterWidget = Column(
       children: [
-        MultiDropdown<Category>(
+        MultiDropdown<String>(
           items: defaultOptions,
           controller: controller,
           enabled: true,

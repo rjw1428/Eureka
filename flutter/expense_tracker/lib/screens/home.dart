@@ -1,4 +1,3 @@
-import 'package:expense_tracker/constants/categories.dart';
 import 'package:expense_tracker/models/category.dart';
 import 'package:expense_tracker/models/expense.dart';
 import 'package:expense_tracker/services/categories.service.dart';
@@ -22,10 +21,10 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final CategoryConfig categoryConfig = CategoriesService().getCategories();
+  CategoryConfig categoryConfigs = [];
   List<Expense> _registeredExpenses = [];
   List<CategoryDataWithId> _categoryOptions = [];
-  List<Category> _filterList = [];
+  List<String> _filterList = [];
   DateTime _selectedDate = DateTime.now();
 
   void _openAddExpenseOverlay([Expense? expense]) {
@@ -111,19 +110,20 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _filterExpenses(List<Category> selection) {
+  void _filterExpenses(List<String> selection) {
     setState(() => _filterList = selection);
   }
 
   void _setTimeRange(DateTime date) {
+    categoryConfigs = CategoriesService().getCategories();
     setState(() {
       _selectedDate = date;
       _registeredExpenses = ExpenseService().getExpenses(date.year, date.month);
-      final Set<Category> distinctCategoryIds = Set.from(
+      final Set<String> distinctCategoryIds = Set.from(
         _registeredExpenses.map((el) => el.category),
       );
       _categoryOptions = distinctCategoryIds.map((c) {
-        final config = categoryConfig[c]!;
+        final config = categoryConfigs.firstWhere((con) => con.id == c);
         return CategoryDataWithId(
           budget: config.budget,
           icon: config.icon,
@@ -137,17 +137,19 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   initState() {
+    categoryConfigs = CategoriesService().getCategories();
     _setTimeRange(_selectedDate);
     super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
-    final Set<Category> distinctCategoryIds = Set.from(
+    categoryConfigs = CategoriesService().getCategories();
+    final Set<String> distinctCategoryIds = Set.from(
       _registeredExpenses.map((el) => el.category),
     );
     _categoryOptions = distinctCategoryIds.map((c) {
-      final config = categoryConfig[c]!;
+      final config = categoryConfigs.firstWhere((con) => con.id == c);
       return CategoryDataWithId(
         budget: config.budget,
         icon: config.icon,

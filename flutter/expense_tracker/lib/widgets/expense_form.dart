@@ -1,11 +1,8 @@
 import 'dart:io';
-import 'package:expense_tracker/constants/categories.dart';
 import 'package:expense_tracker/models/expense.dart';
 import 'package:expense_tracker/services/categories.service.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-
-final CategoryConfig categoryConfig = CategoriesService().getCategories();
 
 class ExpenseForm extends StatefulWidget {
   const ExpenseForm({
@@ -30,7 +27,7 @@ class _ExpenseFormState extends State<ExpenseForm> {
   String actionButtonLabel = 'Save';
   final _note = TextEditingController();
   final _amount = TextEditingController();
-  Category? _selectedCategory;
+  String? _selectedCategory;
   DateTime _selectedDate = DateTime.now();
 
   void _showDatePicker() async {
@@ -83,15 +80,9 @@ class _ExpenseFormState extends State<ExpenseForm> {
     }
 
     if (_selectedCategory == null) {
-      showDialog(
-        context: context,
-        builder: (ctx) {
-          return AlertDialog(
-            title: const Text('Invalid Category'),
-            content: const Text('Make sure to select a category'),
-            actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Okay'))],
-          );
-        },
+      _showDialog(
+        'Invalid Category',
+        'Make sure to select a category',
       );
       return;
     }
@@ -136,7 +127,9 @@ class _ExpenseFormState extends State<ExpenseForm> {
 
   @override
   Widget build(BuildContext context) {
+    final CategoryConfig categoryConfig = CategoriesService().getCategories();
     final keyboardSpace = MediaQuery.of(context).viewInsets.bottom;
+
     return SingleChildScrollView(
       child: Padding(
         padding: EdgeInsets.fromLTRB(16, 16, 16, keyboardSpace + 16),
@@ -152,10 +145,11 @@ class _ExpenseFormState extends State<ExpenseForm> {
                   hint: const Text('Category'),
                   isExpanded: true,
                   value: _selectedCategory,
-                  items: categoryConfig.entries
+                  items: categoryConfig
+                      .where((category) => !category.deleted || category.id == _selectedCategory)
                       .map((category) => DropdownMenuItem(
-                            value: category.key,
-                            child: Text(category.value.label),
+                            value: category.id,
+                            child: Text(category.label),
                           ))
                       .toList(),
                   onChanged: (value) => setState(() => _selectedCategory = value),

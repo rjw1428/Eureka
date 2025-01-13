@@ -1,4 +1,3 @@
-import 'package:expense_tracker/constants/categories.dart';
 import 'package:expense_tracker/services/categories.service.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
@@ -6,7 +5,6 @@ import 'package:intl/intl.dart';
 
 const uuid = Uuid();
 final dateFormatter = DateFormat.yMd();
-final CategoryConfig categories = CategoriesService().getCategories();
 
 class Expense {
   Expense({
@@ -17,7 +15,7 @@ class Expense {
   }) : id = uuid.v4();
 
   String id;
-  Category category;
+  String category;
   String? note;
   double amount;
   DateTime date;
@@ -27,11 +25,13 @@ class Expense {
   }
 
   IconData get icon {
-    return categories.containsKey(category) ? categories[category]!.icon : Icons.attach_money;
+    final CategoryConfig categories = CategoriesService().getCategories();
+    return categories.firstWhere((cat) => cat.id == category).icon;
   }
 
   String get title {
-    return '${categories[category]!.label}${note == null ? '' : ':'} ${note ?? ''}';
+    final CategoryConfig categories = CategoriesService().getCategories();
+    return '${categories.firstWhere((cat) => cat.id == category).label}${note == null ? '' : ':'} ${note ?? ''}';
   }
 
   updateId(String oldId) {
@@ -40,13 +40,17 @@ class Expense {
 }
 
 class ExpenseBucket {
-  const ExpenseBucket({required this.category, required this.expenses, required this.budgetLimit});
+  ExpenseBucket({
+    required this.category,
+    required this.expenses,
+    required this.budgetLimit,
+  });
 
-  ExpenseBucket.forCategory(List<Expense> allExpenses, this.category)
+  ExpenseBucket.forCategory(List<Expense> allExpenses, CategoryConfig categoryList, this.category)
       : expenses = allExpenses.where((expense) => expense.category == category).toList(),
-        budgetLimit = categories[category]!.budget;
+        budgetLimit = categoryList.firstWhere((cat) => cat.id == category).budget;
 
-  final Category category;
+  final String category;
   final List<Expense> expenses;
   final double budgetLimit;
 

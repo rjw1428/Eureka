@@ -1,4 +1,3 @@
-import 'package:expense_tracker/constants/categories.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:expense_tracker/models/expense.dart';
 import 'package:flutter/material.dart';
@@ -15,7 +14,7 @@ class ExpenseList extends StatelessWidget {
   final List<Expense> list;
   final void Function(Expense) onRemove;
   final void Function(Expense) onEdit;
-  final List<Category> filters;
+  final List<String> filters;
 
   @override
   Widget build(BuildContext context) {

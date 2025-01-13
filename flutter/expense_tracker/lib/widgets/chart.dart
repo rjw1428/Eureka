@@ -1,21 +1,19 @@
 import 'package:dotted_border/dotted_border.dart';
-import 'package:expense_tracker/constants/categories.dart';
 import 'package:expense_tracker/services/categories.service.dart';
 import 'package:flutter/material.dart';
 import 'package:expense_tracker/models/expense.dart';
-
-final CategoryConfig categoryConfig = CategoriesService().getCategories();
 
 class Chart extends StatelessWidget {
   const Chart({super.key, required this.expenses, required this.selectedFilters});
 
   final List<Expense> expenses;
-  final List<Category> selectedFilters;
+  final List<String> selectedFilters;
 
   List<ExpenseBucket> get buckets {
-    return categoryConfig.keys
-        .where((key) => selectedFilters.contains(key))
-        .map((key) => ExpenseBucket.forCategory(expenses, key))
+    final categories = CategoriesService().getCategories();
+    return categories
+        .where((config) => selectedFilters.contains(config.id))
+        .map((config) => ExpenseBucket.forCategory(expenses, categories, config.id))
         .toList();
   }
 
@@ -28,6 +26,7 @@ class Chart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final categoryConfig = CategoriesService().getCategories();
     final isDarkMode = MediaQuery.of(context).platformBrightness == Brightness.dark;
     final width = MediaQuery.of(context).size.width;
     return Container(
@@ -76,10 +75,15 @@ class Chart extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 4),
                       child: Column(
                         children: [
-                          Text(categoryConfig[bucket.category]!.label,
+                          Text(
+                              categoryConfig
+                                  .firstWhere((config) => config.id == bucket.category)
+                                  .label,
                               style: Theme.of(context).textTheme.labelSmall),
                           Icon(
-                            categoryConfig[bucket.category]!.icon,
+                            categoryConfig
+                                .firstWhere((config) => config.id == bucket.category)
+                                .icon,
                             color: isDarkMode
                                 ? Theme.of(context).colorScheme.secondary
                                 : Theme.of(context).colorScheme.primary.withOpacity(0.7),
