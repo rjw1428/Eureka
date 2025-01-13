@@ -37,11 +37,10 @@ class _TimeRowState extends State<TimeRow> {
       initialSelection: timeFilterOptions
           .firstWhere((opt) => opt.id.month == now.month && opt.id.year == now.year),
       controller: timeController,
-      requestFocusOnTap: true,
-      label: const Text('Month'),
+      requestFocusOnTap: false,
+      label: const Text('Select Month'),
       onSelected: (selectedDate) {
-        print(selectedDate!.id);
-        widget.onTimeSelect(selectedDate.id);
+        widget.onTimeSelect(selectedDate!.id);
       },
       dropdownMenuEntries:
           timeFilterOptions.map((opt) => DropdownMenuEntry(label: opt.label, value: opt)).toList(),

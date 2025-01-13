@@ -26,6 +26,7 @@ class _ExpensesState extends State<Expenses> {
   List<Expense> _registeredExpenses = [];
   List<CategoryDataWithId> _categoryOptions = [];
   List<Category> _filterList = [];
+  DateTime _selectedDate = DateTime.now();
 
   void _openAddExpenseOverlay([Expense? expense]) {
     showModalBottomSheet(
@@ -47,6 +48,8 @@ class _ExpensesState extends State<Expenses> {
         _filterList.add(expense.category);
       }
       _registeredExpenses.insert(index, expense);
+      ExpenseService().addExpense(expense, index);
+      _registeredExpenses = ExpenseService().getExpenses(_selectedDate.year, _selectedDate.month);
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -59,9 +62,9 @@ class _ExpensesState extends State<Expenses> {
 
   void _updateExpense(Expense expense) {
     final previousExpense = _registeredExpenses.firstWhere((e) => e.id == expense.id);
-    final index = _registeredExpenses.map((e) => e.id).toList().indexOf(expense.id);
     setState(() {
-      _registeredExpenses[index] = expense;
+      ExpenseService().updateExpense(expense);
+      _registeredExpenses = ExpenseService().getExpenses(_selectedDate.year, _selectedDate.month);
 
       final stillHasCategory = Set.from(_registeredExpenses.map((exp) => exp.category))
           .contains(previousExpense.category);
@@ -88,7 +91,8 @@ class _ExpensesState extends State<Expenses> {
 
     final index = _registeredExpenses.indexOf(expense);
     setState(() {
-      _registeredExpenses.remove(expense);
+      ExpenseService().remove(expense);
+      _registeredExpenses = ExpenseService().getExpenses(_selectedDate.year, _selectedDate.month);
       if (!Set.from(_registeredExpenses.map((exp) => exp.category)).contains(expense.category)) {
         _filterList.remove(expense.category);
       }
@@ -97,7 +101,7 @@ class _ExpensesState extends State<Expenses> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         duration: const Duration(seconds: 3),
-        content: Text('Expense for ${expense.title}  deleted!'),
+        content: Text('Expense for ${expense.title} deleted!'),
         action: SnackBarAction(
           label: 'Undo',
           onPressed: () => _addExpense(expense, index),
@@ -112,6 +116,7 @@ class _ExpensesState extends State<Expenses> {
 
   void _setTimeRange(DateTime date) {
     setState(() {
+      _selectedDate = date;
       _registeredExpenses = ExpenseService().getExpenses(date.year, date.month);
       final Set<Category> distinctCategoryIds = Set.from(
         _registeredExpenses.map((el) => el.category),
@@ -131,8 +136,7 @@ class _ExpensesState extends State<Expenses> {
 
   @override
   initState() {
-    final now = DateTime.now();
-    _setTimeRange(now);
+    _setTimeRange(_selectedDate);
     super.initState();
   }
 
@@ -180,7 +184,7 @@ class _ExpensesState extends State<Expenses> {
                     selectedFilters: _filterList,
                   ),
                   Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    padding: const EdgeInsets.all(8.0),
                     child: TimeRow(onTimeSelect: _setTimeRange),
                   ),
                   TotalRow(sum: totalExpenses),
@@ -218,7 +222,7 @@ class _ExpensesState extends State<Expenses> {
                           selectedFilters: _filterList,
                         ),
                         Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8.0),
+                          padding: const EdgeInsets.all(8.0),
                           child: TimeRow(onTimeSelect: _setTimeRange),
                         ),
                         Expanded(child: listContent)
