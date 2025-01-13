@@ -22,6 +22,8 @@ class FilterRow extends StatefulWidget {
 }
 
 class _FilterState extends State<FilterRow> {
+  bool _showFilter = false;
+
   @override
   Widget build(BuildContext context) {
     final controller = MultiSelectController<Category>();
@@ -34,60 +36,84 @@ class _FilterState extends State<FilterRow> {
           ),
         )
         .toList();
+    Widget filterWidget = Column(
+      children: [
+        MultiDropdown<Category>(
+          items: defaultOptions,
+          controller: controller,
+          enabled: true,
+          searchEnabled: false,
+          chipDecoration: ChipDecoration(
+            backgroundColor: Theme.of(context).cardTheme.color,
+            wrap: true,
+            runSpacing: 2,
+            spacing: 10,
+          ),
+          fieldDecoration: FieldDecoration(
+            hintText: 'Categories',
+            hintStyle: TextStyle(color: Theme.of(context).textTheme.labelMedium?.color),
+            prefixIcon: const Icon(Icons.filter_list_alt),
+            showClearIcon: false,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(4),
+              borderSide:
+                  BorderSide(color: Theme.of(context).buttonTheme.colorScheme!.secondaryContainer),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(4),
+              borderSide: const BorderSide(
+                color: Colors.black87,
+              ),
+            ),
+          ),
+          dropdownDecoration: DropdownDecoration(
+            borderRadius: BorderRadius.circular(4),
+            backgroundColor: Theme.of(context).cardTheme.color!,
+          ),
+          dropdownItemDecoration: DropdownItemDecoration(
+            selectedBackgroundColor: Theme.of(context).cardTheme.color,
+            selectedIcon:
+                Icon(Icons.check_box, color: Theme.of(context).appBarTheme.backgroundColor),
+            disabledIcon: Icon(Icons.lock, color: Colors.grey.shade300),
+          ),
+          onSelectionChange: (selection) {
+            widget.onFilter(selection);
+            controller.closeDropdown();
+          },
+        ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            TextButton(onPressed: controller.selectAll, child: const Text('SelectAll')),
+            TextButton(onPressed: controller.clearAll, child: const Text('Clear All')),
+          ],
+        )
+      ],
+    );
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8.0),
-      child: Column(
+      child: ExpansionPanelList(
+        elevation: 0,
+        expansionCallback: (int index, bool isExpanded) {
+          setState(() {
+            _showFilter = isExpanded;
+          });
+        },
         children: [
-          MultiDropdown<Category>(
-            items: defaultOptions,
-            controller: controller,
-            enabled: true,
-            searchEnabled: false,
-            chipDecoration: ChipDecoration(
-              backgroundColor: Theme.of(context).cardTheme.color,
-              wrap: true,
-              runSpacing: 2,
-              spacing: 10,
-            ),
-            fieldDecoration: FieldDecoration(
-              hintText: 'Categories',
-              hintStyle: const TextStyle(color: Colors.black87),
-              prefixIcon: const Icon(Icons.filter_list_alt),
-              showClearIcon: false,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(4),
-                borderSide: BorderSide(
-                    color: Theme.of(context).buttonTheme.colorScheme!.secondaryContainer),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(4),
-                borderSide: const BorderSide(
-                  color: Colors.black87,
-                ),
-              ),
-            ),
-            dropdownDecoration: DropdownDecoration(
-              borderRadius: BorderRadius.circular(4),
-              backgroundColor: Theme.of(context).cardTheme.color!,
-            ),
-            dropdownItemDecoration: DropdownItemDecoration(
-              selectedBackgroundColor: Theme.of(context).cardTheme.color,
-              selectedIcon:
-                  Icon(Icons.check_box, color: Theme.of(context).appBarTheme.backgroundColor),
-              disabledIcon: Icon(Icons.lock, color: Colors.grey.shade300),
-            ),
-            onSelectionChange: (selection) {
-              widget.onFilter(selection);
-              controller.closeDropdown();
-            },
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              TextButton(onPressed: controller.selectAll, child: const Text('SelectAll')),
-              TextButton(onPressed: controller.clearAll, child: const Text('Clear All')),
-            ],
+          ExpansionPanel(
+            headerBuilder: (ctx, isOpen) => isOpen
+                ? filterWidget
+                : Align(
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      'Filters',
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                  ),
+            body: const SizedBox(),
+            canTapOnHeader: false,
+            isExpanded: _showFilter,
           )
         ],
       ),
