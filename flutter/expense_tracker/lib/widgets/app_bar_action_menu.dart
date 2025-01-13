@@ -52,7 +52,7 @@ class AppBarActionMenu extends StatelessWidget {
           return;
         }
         if (value == "LOGOUT") {
-          print(value);
+          Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
           return;
         }
       },
@@ -61,7 +61,7 @@ class AppBarActionMenu extends StatelessWidget {
           value: "SETTINGS",
           child: Row(
             children: [
-              Icon(Icons.settings, color: Theme.of(context).appBarTheme.backgroundColor),
+              Icon(Icons.settings, color: Theme.of(context).textTheme.headlineLarge?.color),
               const Padding(padding: EdgeInsets.only(left: 8), child: Text('Settings'))
             ],
           ),
@@ -70,7 +70,7 @@ class AppBarActionMenu extends StatelessWidget {
           value: "HELP",
           child: Row(
             children: [
-              Icon(Icons.help, color: Theme.of(context).appBarTheme.backgroundColor),
+              Icon(Icons.help, color: Theme.of(context).textTheme.headlineLarge?.color),
               const Padding(padding: EdgeInsets.only(left: 8), child: Text('Help'))
             ],
           ),
@@ -79,7 +79,7 @@ class AppBarActionMenu extends StatelessWidget {
           value: "LOGOUT",
           child: Row(
             children: [
-              Icon(Icons.logout, color: Theme.of(context).appBarTheme.backgroundColor),
+              Icon(Icons.logout, color: Theme.of(context).textTheme.headlineLarge?.color),
               const Padding(padding: EdgeInsets.only(left: 8), child: Text('Log Out'))
             ],
           ),

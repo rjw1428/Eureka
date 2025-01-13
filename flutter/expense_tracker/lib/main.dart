@@ -1,4 +1,4 @@
-import 'package:expense_tracker/screens/home.dart';
+import 'package:expense_tracker/routing.dart';
 import 'package:flutter/material.dart';
 
 const seedColor = Color.fromARGB(255, 163, 3, 3);
@@ -67,7 +67,8 @@ void main() {
               ),
             ),
       ),
-      home: const HomeScreen(),
+      routes: appRoutes,
+      initialRoute: '/login',
       themeMode: ThemeMode.system,
     ),
   );

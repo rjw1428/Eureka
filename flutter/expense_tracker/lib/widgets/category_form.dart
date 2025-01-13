@@ -117,6 +117,7 @@ class _CategoryFormState extends State<CategoryForm> {
       actionButtonLabel = 'Update';
       _budget.text = widget.initialCategory!.budget.toString();
       _label.text = widget.initialCategory!.label;
+      _selectedIcon = widget.initialCategory!.icon;
     }
     super.initState();
   }
