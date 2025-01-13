@@ -45,6 +45,13 @@ class _ExpensesState extends State<Expenses> {
       }
       _registeredExpenses.insert(index, expense);
     });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        duration: Duration(seconds: 3),
+        content: Text('Expense added!'),
+      ),
+    );
   }
 
   void _updateExpense(Expense expense) {
@@ -64,6 +71,13 @@ class _ExpensesState extends State<Expenses> {
         _filterList.add(expense.category);
       }
     });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        duration: Duration(seconds: 3),
+        content: Text('Expense updated!'),
+      ),
+    );
   }
 
   void _removeExpense(Expense expense) {
