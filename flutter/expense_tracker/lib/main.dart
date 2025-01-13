@@ -1,6 +1,5 @@
-import 'package:expense_tracker/widgets/expenses.dart';
+import 'package:expense_tracker/screens/home.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 const seedColor = Color.fromARGB(255, 163, 3, 3);
 final colorScheme = ColorScheme.fromSeed(
@@ -61,7 +60,7 @@ void main() {
           ),
         ),
       ),
-      home: const Expenses(),
+      home: const HomeScreen(),
       themeMode: ThemeMode.dark,
     ),
   );
