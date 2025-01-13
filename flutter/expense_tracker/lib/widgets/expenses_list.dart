@@ -33,6 +33,7 @@ class ExpenseList extends StatelessWidget {
                       onEdit: onEdit,
                     )
                   : GestureDetector(
+                      key: ValueKey(list[i].id),
                       onLongPress: () => onEdit(filteredList[i]),
                       child: ExpenseItem(
                         expense: filteredList[i],

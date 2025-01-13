@@ -68,7 +68,7 @@ void main() {
             ),
       ),
       home: const HomeScreen(),
-      themeMode: ThemeMode.dark,
+      themeMode: ThemeMode.system,
     ),
   );
 }

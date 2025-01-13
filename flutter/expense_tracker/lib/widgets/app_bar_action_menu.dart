@@ -1,3 +1,5 @@
+import 'package:expense_tracker/constants/help_text.dart';
+import 'package:expense_tracker/screens/settings.dart';
 import 'package:flutter/material.dart';
 
 class AppBarActionMenu extends StatelessWidget {
@@ -10,11 +12,43 @@ class AppBarActionMenu extends StatelessWidget {
       position: PopupMenuPosition.under,
       onSelected: (value) {
         if (value == "SETTINGS") {
-          print(value);
+          Navigator.push(context, MaterialPageRoute(builder: (ctx) => const SettingsScreen()));
           return;
         }
         if (value == "HELP") {
-          print(value);
+          showDialog<String>(
+            context: context,
+            builder: (BuildContext context) => Dialog(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Center(
+                        child: Text('About Expense Tracker',
+                            style: Theme.of(context).textTheme.headlineMedium)),
+                    const SizedBox(height: 15),
+                    ...helpText.expand((section) {
+                      return [
+                        Text(section.title, style: Theme.of(context).textTheme.titleMedium),
+                        Text(section.info, style: Theme.of(context).textTheme.bodySmall),
+                        const SizedBox(height: 15),
+                      ];
+                    }),
+                    Center(
+                      child: TextButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                        },
+                        child: const Text('Close'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
           return;
         }
         if (value == "LOGOUT") {
