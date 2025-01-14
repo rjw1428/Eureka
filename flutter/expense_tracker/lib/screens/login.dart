@@ -1,4 +1,5 @@
 import 'package:expense_tracker/services/auth.service.dart';
+import 'package:expense_tracker/widgets/show_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -12,13 +13,16 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   bool _showLoginForm = false;
+  bool _showCreateAccountForm = false;
   final _emailControl = TextEditingController();
   final _passwordControl = TextEditingController();
+  final _confirmPasswordControl = TextEditingController();
 
   @override
   void dispose() {
     _emailControl.dispose();
     _passwordControl.dispose();
+    _confirmPasswordControl.dispose();
     super.dispose();
   }
 
@@ -114,9 +118,67 @@ class _LoginScreenState extends State<LoginScreen> {
               padding: EdgeInsets.only(top: 8.0),
               child: Text('or'),
             ),
+            if (_showCreateAccountForm)
+              SizedBox(
+                width: 200,
+                child: Column(
+                  children: [
+                    TextField(
+                      controller: _emailControl,
+                      decoration: const InputDecoration(
+                        label: Text('Email'),
+                      ),
+                    ),
+                    TextField(
+                      controller: _passwordControl,
+                      obscureText: true,
+                      enableSuggestions: false,
+                      autocorrect: false,
+                      decoration: const InputDecoration(
+                        label: Text('Password'),
+                      ),
+                    ),
+                    TextField(
+                      controller: _confirmPasswordControl,
+                      obscureText: true,
+                      enableSuggestions: false,
+                      autocorrect: false,
+                      decoration: const InputDecoration(
+                        label: Text('Re-enter Password'),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                ),
+              ),
             TextButton(
-              onPressed: () => {},
-              child: const Text("Click here to create an account"),
+              onPressed: () {
+                if (!_showCreateAccountForm) {
+                  setState(() => _showCreateAccountForm = true);
+                } else {
+                  if (_passwordControl.text.length < 6) {
+                    showDialogNotification(
+                      'Password too short',
+                      'Password must be 6 characters or greater. Try again.',
+                      context,
+                    );
+                    return;
+                  }
+
+                  if (_passwordControl.text != _confirmPasswordControl.text) {
+                    showDialogNotification(
+                      'Invalid Password',
+                      'Confirmation password did not match. Try again.',
+                      context,
+                    );
+                    return;
+                  }
+
+                  AuthService().createUser(_emailControl.text.trim(), _passwordControl.text);
+                }
+              },
+              child: Text(
+                  _showCreateAccountForm ? "Create Account" : "Click here to create an account"),
             ),
           ],
         ),

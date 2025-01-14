@@ -1,7 +1,6 @@
-import 'dart:io';
 import 'package:expense_tracker/models/expense.dart';
 import 'package:expense_tracker/services/categories.service.dart';
-import 'package:flutter/cupertino.dart';
+import 'package:expense_tracker/widgets/show_dialog.dart';
 import 'package:flutter/material.dart';
 
 class ExpenseForm extends StatefulWidget {
@@ -37,53 +36,18 @@ class _ExpenseFormState extends State<ExpenseForm> {
     setState(() => _selectedDate = date ?? _selectedDate);
   }
 
-  void _showDialog(String title, String content) {
-    bool isIos = false;
-    try {
-      isIos = Platform.isIOS;
-    } catch (e) {
-      isIos = false;
-    }
-
-    if (isIos) {
-      showCupertinoDialog(
-          context: context,
-          builder: (ctx) => CupertinoAlertDialog(
-                title: Text(title),
-                content: Text(content),
-                actions: [
-                  TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Okay'))
-                ],
-              ));
-    } else {
-      showDialog(
-          context: context,
-          builder: (ctx) => AlertDialog(
-                title: Text(title),
-                content: Text(content),
-                actions: [
-                  TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Okay'))
-                ],
-              ));
-    }
-  }
-
   void _submit() {
     final enteredAmount = double.tryParse(_amount.text);
     if (enteredAmount == null || enteredAmount == 0) {
-      _showDialog(
+      showDialogNotification(
           'Invalid Amount',
-          enteredAmount == 0
-              ? 'Make sure the amount is not 0'
-              : 'Make sure the amount is a number');
+          enteredAmount == 0 ? 'Make sure the amount is not 0' : 'Make sure the amount is a number',
+          context);
       return;
     }
 
     if (_selectedCategory == null) {
-      _showDialog(
-        'Invalid Category',
-        'Make sure to select a category',
-      );
+      showDialogNotification('Invalid Category', 'Make sure to select a category', context);
       return;
     }
 
