@@ -1,5 +1,6 @@
 import 'package:expense_tracker/constants/help_text.dart';
 import 'package:expense_tracker/screens/settings.dart';
+import 'package:expense_tracker/services/auth.service.dart';
 import 'package:flutter/material.dart';
 
 class AppBarActionMenu extends StatelessWidget {
@@ -52,7 +53,7 @@ class AppBarActionMenu extends StatelessWidget {
           return;
         }
         if (value == "LOGOUT") {
-          Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+          AuthService().logOut();
           return;
         }
       },

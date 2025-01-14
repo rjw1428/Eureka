@@ -32,6 +32,13 @@ final Map<String, CategoryData> defaultCategories = {
 };
 
 class CategoriesService {
+  CategoriesService._internal();
+
+  static final CategoriesService _instance = CategoriesService._internal();
+  factory CategoriesService() {
+    return _instance;
+  }
+
   List<CategoryDataWithId> getCategories({withDeleted = true}) {
     return defaultCategories.entries
         .where((el) => withDeleted ? true : !el.value.deleted)

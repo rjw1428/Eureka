@@ -49,6 +49,13 @@ final defaultData = [
 ];
 
 class ExpenseService {
+  ExpenseService._internal();
+
+  static final ExpenseService _instance = ExpenseService._internal();
+  factory ExpenseService() {
+    return _instance;
+  }
+
   List<Expense> getExpenses(int year, int month) {
     return defaultData
         .where((expense) => expense.date.year == year && expense.date.month == month)

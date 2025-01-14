@@ -62,7 +62,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Settings Page',
+                'Settings',
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               IconButton(

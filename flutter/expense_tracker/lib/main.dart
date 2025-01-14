@@ -1,5 +1,8 @@
 import 'package:expense_tracker/routing.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:expense_tracker/firebase_options.dart';
+import 'package:firebase_core/firebase_core.dart';
 
 const seedColor = Color.fromARGB(255, 163, 3, 3);
 final colorScheme = ColorScheme.fromSeed(
@@ -10,11 +13,16 @@ final darkColorScheme = ColorScheme.fromSeed(
   seedColor: seedColor,
   brightness: Brightness.dark,
 );
-void main() {
+void main() async {
   // WidgetsFlutterBinding.ensureInitialized();
   // SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]).then((fn) {
   //   // Run App Function
   // });
+  await dotenv.load(fileName: ".env");
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
   runApp(
     MaterialApp(
       debugShowCheckedModeBanner: false,
@@ -68,7 +76,7 @@ void main() {
             ),
       ),
       routes: appRoutes,
-      initialRoute: '/login',
+      initialRoute: '/',
       themeMode: ThemeMode.system,
     ),
   );

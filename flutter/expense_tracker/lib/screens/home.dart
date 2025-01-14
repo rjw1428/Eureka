@@ -1,5 +1,7 @@
 import 'package:expense_tracker/models/category.dart';
 import 'package:expense_tracker/models/expense.dart';
+import 'package:expense_tracker/screens/login.dart';
+import 'package:expense_tracker/services/auth.service.dart';
 import 'package:expense_tracker/services/categories.service.dart';
 import 'package:expense_tracker/services/expense.service.dart';
 import 'package:expense_tracker/widgets/app_bar_action_menu.dart';
@@ -11,16 +13,40 @@ import 'package:expense_tracker/widgets/time_row.dart';
 import 'package:expense_tracker/widgets/total_row.dart';
 import 'package:flutter/material.dart';
 
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   @override
-  State<StatefulWidget> createState() {
-    return _HomeScreenState();
+  Widget build(BuildContext context) {
+    return StreamBuilder(
+      stream: AuthService().userStream,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Text('PENDING');
+        } else if (snapshot.hasError) {
+          return const Center(child: Text('ERROR'));
+        } else if (snapshot.hasData) {
+          return TransactionScreen(userId: snapshot.data!.uid);
+        } else {
+          return const LoginScreen();
+        }
+      },
+    );
   }
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class TransactionScreen extends StatefulWidget {
+  const TransactionScreen({super.key, required this.userId});
+
+  final String userId;
+
+  @override
+  State<StatefulWidget> createState() {
+    return _TransactionScreenState();
+  }
+}
+
+class _TransactionScreenState extends State<TransactionScreen> {
   CategoryConfig categoryConfigs = [];
   List<Expense> _registeredExpenses = [];
   List<CategoryDataWithId> _categoryOptions = [];
@@ -144,6 +170,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    print('UserId: ${widget.userId}');
     categoryConfigs = CategoriesService().getCategories();
     final Set<String> distinctCategoryIds = Set.from(
       _registeredExpenses.map((el) => el.category),
