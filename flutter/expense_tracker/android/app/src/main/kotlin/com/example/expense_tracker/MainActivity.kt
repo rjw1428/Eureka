@@ -1,4 +1,4 @@
-package com.example.expense_tracker
+package com.rwss.expense_tracker
 
 import io.flutter.embedding.android.FlutterActivity
 
