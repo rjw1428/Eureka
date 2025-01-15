@@ -1,24 +1,29 @@
 import 'package:expense_tracker/services/categories.service.dart';
 import 'package:flutter/material.dart';
-import 'package:uuid/uuid.dart';
 import 'package:intl/intl.dart';
+import 'package:json_annotation/json_annotation.dart';
+part 'expense.g.dart';
 
-const uuid = Uuid();
 final dateFormatter = DateFormat.yMd();
 
+@JsonSerializable()
 class Expense {
   Expense({
     required this.amount,
     required this.date,
     required this.category,
     this.note,
-  }) : id = uuid.v4();
+    this.id,
+  });
 
-  String id;
   String category;
+  String? id;
   String? note;
   double amount;
   DateTime date;
+
+  factory Expense.fromJson(Map<String, dynamic> json) => _$ExpenseFromJson(json);
+  Map<String, dynamic> toJson() => _$ExpenseToJson(this);
 
   String get formattedDate {
     return dateFormatter.format(date);

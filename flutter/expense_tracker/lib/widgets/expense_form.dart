@@ -59,7 +59,7 @@ class _ExpenseFormState extends State<ExpenseForm> {
     );
 
     if (widget.initialExpense != null) {
-      newExpense.updateId(widget.initialExpense!.id);
+      newExpense.updateId(widget.initialExpense!.id!);
       widget.onSubmit(newExpense);
     } else {
       widget.onSubmit(newExpense);

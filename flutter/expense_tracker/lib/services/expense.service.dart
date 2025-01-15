@@ -1,4 +1,6 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:expense_tracker/models/expense.dart';
+import 'package:intl/intl.dart';
 
 final defaultData = [
   Expense(
@@ -48,12 +50,28 @@ final defaultData = [
   ),
 ];
 
+final formatter = DateFormat('MMM');
+
 class ExpenseService {
   ExpenseService._internal();
 
+  final _db = FirebaseFirestore.instance;
   static final ExpenseService _instance = ExpenseService._internal();
   factory ExpenseService() {
     return _instance;
+  }
+
+  CollectionReference<Map<String, dynamic>> expenseCollection(String month) {
+    // AuthService().user?.uid
+    // TODO: Get the ledger ID here
+    // TODO: Validate using security rule
+    const ledgerId = '41Rfjjro4zy9Xr3gs557';
+    return _db.collection('ledger').doc(ledgerId).collection(month);
+  }
+
+  Stream<List<Expense>> getExpenseStream(String userId, String month) {
+    return expenseCollection(month).snapshots().map((snapshot) =>
+        snapshot.docs.map((doc) => Expense.fromJson({...doc.data(), "id": doc.id})).toList());
   }
 
   List<Expense> getExpenses(int year, int month) {
@@ -67,11 +85,16 @@ class ExpenseService {
     defaultData[index] = expense;
   }
 
-  void remove(Expense expense) {
-    defaultData.remove(expense);
+  Future<void> remove(Expense expense) {
+    // defaultData.remove(expense);
+    final month = "${expense.date.year}_${formatter.format(expense.date).toUpperCase()}";
+    return expenseCollection(month).doc(expense.id!).delete();
   }
 
-  void addExpense(Expense expense, [index = 0]) {
-    defaultData.insert(index, expense);
+  Future<void> addExpense(Expense expense, [index = 0]) {
+    // defaultData.insert(index, expense);
+    // TODO: Add without id value
+    final month = "${expense.date.year}_${formatter.format(expense.date).toUpperCase()}";
+    return expenseCollection(month).add(expense.toJson());
   }
 }
