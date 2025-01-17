@@ -12,6 +12,7 @@ import 'package:expense_tracker/widgets/filter_row.dart';
 import 'package:expense_tracker/widgets/time_row.dart';
 import 'package:expense_tracker/widgets/total_row.dart';
 import 'package:flutter/material.dart';
+import 'package:rxdart/rxdart.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -47,13 +48,13 @@ class TransactionScreen extends StatefulWidget {
 }
 
 class _TransactionScreenState extends State<TransactionScreen> {
-  CategoryConfig categoryConfigs = [];
-  List<Expense> _registeredExpenses = [];
-  List<CategoryDataWithId> _categoryOptions = [];
+  List<ExpenseWithCategoryData> _registeredExpenses = [];
+  List<CategoryDataWithId> _categoryConfigs = []; // All configs
+  List<CategoryDataWithId> _categoryOptions = []; // filtered list of configs by what's being using
   List<String> _filterList = [];
   DateTime _selectedDate = DateTime.now();
 
-  void _openAddExpenseOverlay([Expense? expense]) {
+  void _openAddExpenseOverlay([ExpenseWithCategoryData? expense]) {
     showModalBottomSheet(
       useSafeArea: true,
       isScrollControlled: true,
@@ -114,7 +115,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
     );
   }
 
-  void _removeExpense(Expense expense) {
+  void _removeExpense(ExpenseWithCategoryData expense) async {
     ScaffoldMessenger.of(context).clearSnackBars();
 
     final index = _registeredExpenses.indexOf(expense);
@@ -126,16 +127,19 @@ class _TransactionScreenState extends State<TransactionScreen> {
       // }
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        duration: const Duration(seconds: 3),
-        content: Text('Expense for ${expense.title} deleted!'),
-        action: SnackBarAction(
-          label: 'Undo',
-          onPressed: () => _addExpense(expense, index),
+    final title = expense.title;
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          duration: const Duration(seconds: 3),
+          content: Text('Expense for $title deleted!'),
+          action: SnackBarAction(
+            label: 'Undo',
+            onPressed: () => _addExpense(expense, index),
+          ),
         ),
-      ),
-    );
+      );
+    }
   }
 
   void _filterExpenses(List<String> selection) {
@@ -149,6 +153,11 @@ class _TransactionScreenState extends State<TransactionScreen> {
   }
 
   @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: false,
@@ -158,8 +167,14 @@ class _TransactionScreenState extends State<TransactionScreen> {
           AppBarActionMenu(),
         ],
       ),
-      body: StreamBuilder<List<Expense>>(
-        stream: ExpenseService().getExpenseStream(_selectedDate),
+      body: StreamBuilder<Map<String, List<dynamic>>>(
+        stream: CombineLatestStream.combine2(
+          ExpenseService().getExpenseStream(_selectedDate),
+          CategoriesService().getCategoriesStream(),
+          (expenses, categories) {
+            return Map.from({'expenses': expenses, 'categories': categories});
+          },
+        ),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
             return Text(snapshot.error.toString());
@@ -167,32 +182,32 @@ class _TransactionScreenState extends State<TransactionScreen> {
           if (!snapshot.hasData) {
             return const Text('Loading...');
           }
-          print('UserId: ${widget.userId} - ${snapshot.data!.length}');
 
-          categoryConfigs = CategoriesService().getCategories();
+          _categoryConfigs = snapshot.data!['categories']!.map((el) {
+            return el as CategoryDataWithId;
+          }).toList();
 
-          _registeredExpenses = snapshot.data ?? [];
+          _registeredExpenses = snapshot.data!['expenses']!.map((exp) {
+            final e = exp as Expense;
+            final CategoryDataWithId category = _categoryConfigs.firstWhere((cat) {
+              return cat.id == e.categoryId;
+            });
+            return ExpenseWithCategoryData.fromJson({...e.toJson(), 'category': category.toJson()});
+          }).toList();
 
           final Set<String> distinctCategoryIds = Set.from(
-            _registeredExpenses.map((el) => el.category),
+            _registeredExpenses.map((el) => el.categoryId),
           );
-          _categoryOptions = distinctCategoryIds.map((c) {
-            final config = categoryConfigs.firstWhere((con) => con.id == c);
-            return CategoryDataWithId(
-              budget: config.budget,
-              icon: config.icon,
-              label: config.label,
-              id: c,
-            );
-          }).toList();
+
+          _categoryOptions =
+              _categoryConfigs.where((config) => distinctCategoryIds.contains(config.id)).toList();
           _filterList = distinctCategoryIds.toList();
 
           final double totalExpenses = _registeredExpenses
-              .where((expense) => _filterList.contains(expense.category))
+              .where((expense) => _filterList.contains(expense.categoryId))
               .fold(0, (sum, exp) => exp.amount + sum);
-          print('TOTAL: $totalExpenses');
 
-          Widget listContent(List<Expense> expenses) {
+          Widget listContent(List<ExpenseWithCategoryData> expenses) {
             return ExpenseList(
               list: expenses,
               onRemove: _removeExpense,
@@ -212,7 +227,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
             child: TimeRow(onTimeSelect: _setTimeRange),
           );
 
-          Widget columnOrientationLayout(List<Expense> expenses) {
+          Widget columnOrientationLayout(List<ExpenseWithCategoryData> expenses) {
             return Column(
               children: [
                 timeFilter,
@@ -223,6 +238,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
                   child: Chart(
                     expenses: expenses,
                     selectedFilters: _filterList,
+                    budgetConfigs: _categoryConfigs,
                   ),
                 ),
                 Expanded(child: listContent(expenses))
@@ -230,7 +246,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
             );
           }
 
-          Widget rowOrientationLayout(List<Expense> expenses) {
+          Widget rowOrientationLayout(List<ExpenseWithCategoryData> expenses) {
             return Row(
               children: [
                 Expanded(
@@ -241,6 +257,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
                         child: Chart(
                           expenses: expenses,
                           selectedFilters: _filterList,
+                          budgetConfigs: _categoryConfigs,
                         ),
                       ),
                     ],
@@ -262,8 +279,8 @@ class _TransactionScreenState extends State<TransactionScreen> {
           return LayoutBuilder(
             builder: (ctx, constraints) {
               return constraints.maxWidth < 600
-                  ? columnOrientationLayout(snapshot.data ?? [])
-                  : rowOrientationLayout(snapshot.data ?? []);
+                  ? columnOrientationLayout(_registeredExpenses)
+                  : rowOrientationLayout(_registeredExpenses);
             },
           );
         },

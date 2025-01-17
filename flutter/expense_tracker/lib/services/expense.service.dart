@@ -24,14 +24,18 @@ class ExpenseService {
   Stream<List<Expense>> getExpenseStream(DateTime date) {
     final ledgerId$ = AuthService().getCurrentUserLedgerId();
     final month = formatMonth(date);
+
     return ledgerId$
-        .switchMap(
-            (ledgerId) => _db.collection('ledger').doc(ledgerId).collection(month).snapshots())
-        .map((snapshot) {
-      return snapshot.docs.map((doc) {
-        return Expense.fromJson({...doc.data(), "id": doc.id});
-      }).toList();
-    });
+        .switchMap((ledgerId) => _db
+            .collection('ledger')
+            .doc(ledgerId)
+            .collection(month)
+            .orderBy('date', descending: true)
+            .snapshots())
+        .map((snapshot) => snapshot.docs.map((doc) {
+              return Expense.fromJson({...doc.data(), "id": doc.id});
+            }).toList())
+        .shareReplay(maxSize: 1);
   }
 
   Future<void> updateExpense(Expense expense, Expense previousExpense) async {

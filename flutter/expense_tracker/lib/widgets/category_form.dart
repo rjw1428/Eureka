@@ -1,11 +1,8 @@
 import 'dart:io';
 import 'package:expense_tracker/constants/icons.dart';
 import 'package:expense_tracker/models/category.dart';
-import 'package:expense_tracker/services/categories.service.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-
-final CategoryConfig categoryConfig = CategoriesService().getCategories();
 
 class CategoryForm extends StatefulWidget {
   const CategoryForm({
@@ -28,7 +25,7 @@ class CategoryForm extends StatefulWidget {
 class _CategoryFormState extends State<CategoryForm> {
   String formTitle = 'Add Category';
   String actionButtonLabel = 'Save';
-  IconData _selectedIcon = categoryIcons[0];
+  String _selectedIcon = 'access_time_outlined';
   final _label = TextEditingController();
   final _budget = TextEditingController();
 
@@ -140,18 +137,18 @@ class _CategoryFormState extends State<CategoryForm> {
                 children: [
                   Padding(
                     padding: const EdgeInsets.only(right: 8.0, top: 16),
-                    child: DropdownButton<IconData>(
+                    child: DropdownButton<String>(
                       onChanged: (el) {
                         setState(() {
                           _selectedIcon = el!;
                         });
                       },
                       value: _selectedIcon,
-                      items: categoryIcons
+                      items: categoryIcons.entries
                           .map(
-                            (el) => DropdownMenuItem<IconData>(
-                              value: el,
-                              child: Icon(el),
+                            (el) => DropdownMenuItem<String>(
+                              value: el.key,
+                              child: Icon(el.value),
                             ),
                           )
                           .toList(),

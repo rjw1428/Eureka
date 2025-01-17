@@ -11,15 +11,15 @@ class ExpenseList extends StatelessWidget {
     required this.filters,
   });
 
-  final List<Expense> list;
-  final void Function(Expense) onRemove;
-  final void Function(Expense) onEdit;
+  final List<ExpenseWithCategoryData> list;
+  final void Function(ExpenseWithCategoryData) onRemove;
+  final void Function(ExpenseWithCategoryData) onEdit;
   final List<String> filters;
 
   @override
   Widget build(BuildContext context) {
-    final List<Expense> filteredList =
-        list.where((expense) => filters.contains(expense.category)).toList();
+    final List<ExpenseWithCategoryData> filteredList =
+        list.where((expense) => filters.contains(expense.category.id)).toList();
 
     return filteredList.isEmpty
         ? const Center(child: Text('No expenses found 💩'))
@@ -56,8 +56,8 @@ class ExpenseItem extends StatelessWidget {
     required this.onEdit,
   });
 
-  final Expense expense;
-  final void Function(Expense) onEdit;
+  final ExpenseWithCategoryData expense;
+  final void Function(ExpenseWithCategoryData) onEdit;
 
   @override
   Widget build(BuildContext context) {

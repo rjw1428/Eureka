@@ -1,34 +1,40 @@
 import 'package:dotted_border/dotted_border.dart';
-import 'package:expense_tracker/services/categories.service.dart';
+import 'package:expense_tracker/models/category.dart';
 import 'package:flutter/material.dart';
 import 'package:expense_tracker/models/expense.dart';
 
 class Chart extends StatelessWidget {
-  const Chart({super.key, required this.expenses, required this.selectedFilters});
+  const Chart({
+    super.key,
+    required this.expenses,
+    required this.selectedFilters,
+    required this.budgetConfigs,
+  });
 
   final List<Expense> expenses;
   final List<String> selectedFilters;
+  final List<CategoryDataWithId> budgetConfigs;
 
-  List<ExpenseBucket> get buckets {
-    final categories = CategoriesService().getCategories();
-    return categories
+  List<ExpenseBucket> getBuckets(List<CategoryDataWithId> data) {
+    return data
         .where((config) => selectedFilters.contains(config.id))
-        .map((config) => ExpenseBucket.forCategory(expenses, categories, config.id))
+        .map((config) => ExpenseBucket.forCategory(expenses, data, config.id))
         .toList();
   }
 
-  double get maxTotalExpense {
+  double getMaxTotalExpense(List<ExpenseBucket> buckets) {
     return buckets.fold(
-      0,
-      (total, bucket) => bucket.totalExpenses > total ? bucket.totalExpenses : total,
-    );
+        0, (total, bucket) => bucket.totalExpenses > total ? bucket.totalExpenses : total);
   }
 
   @override
   Widget build(BuildContext context) {
-    final categoryConfig = CategoriesService().getCategories();
     final isDarkMode = MediaQuery.of(context).platformBrightness == Brightness.dark;
     final width = MediaQuery.of(context).size.width;
+
+    final buckets = getBuckets(budgetConfigs);
+    final maxTotalExpense = getMaxTotalExpense(buckets);
+
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 8, vertical: width < 600 ? 16 : 0),
       padding: const EdgeInsets.symmetric(
@@ -76,14 +82,14 @@ class Chart extends StatelessWidget {
                       child: Column(
                         children: [
                           Text(
-                              categoryConfig
+                              budgetConfigs
                                   .firstWhere((config) => config.id == bucket.category)
                                   .label,
                               style: Theme.of(context).textTheme.labelSmall),
                           Icon(
-                            categoryConfig
+                            budgetConfigs
                                 .firstWhere((config) => config.id == bucket.category)
-                                .icon,
+                                .iconData,
                             color: isDarkMode
                                 ? Theme.of(context).colorScheme.secondary
                                 : Theme.of(context).colorScheme.primary.withOpacity(0.7),

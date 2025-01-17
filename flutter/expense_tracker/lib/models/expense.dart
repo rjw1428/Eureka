@@ -1,4 +1,5 @@
-import 'package:expense_tracker/services/categories.service.dart';
+import 'package:expense_tracker/constants/icons.dart';
+import 'package:expense_tracker/models/category.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:json_annotation/json_annotation.dart';
@@ -11,12 +12,12 @@ class Expense {
   Expense({
     required this.amount,
     required this.date,
-    required this.category,
+    required this.categoryId,
     this.note,
     this.id,
   });
 
-  String category;
+  String categoryId;
   String? id;
   String? note;
   double amount;
@@ -29,18 +30,32 @@ class Expense {
     return dateFormatter.format(date);
   }
 
-  IconData get icon {
-    final CategoryConfig categories = CategoriesService().getCategories();
-    return categories.firstWhere((cat) => cat.id == category).icon;
-  }
-
-  String get title {
-    final CategoryConfig categories = CategoriesService().getCategories();
-    return '${categories.firstWhere((cat) => cat.id == category).label}${note == null ? '' : ':'} ${note ?? ''}';
-  }
-
   updateId(String oldId) {
     id = oldId;
+  }
+}
+
+@JsonSerializable()
+class ExpenseWithCategoryData extends Expense {
+  CategoryDataWithId category;
+
+  ExpenseWithCategoryData({
+    required super.amount,
+    required super.date,
+    required super.categoryId,
+    required this.category,
+  });
+
+  factory ExpenseWithCategoryData.fromJson(Map<String, dynamic> json) =>
+      _$ExpenseWithCategoryDataFromJson(json);
+  Map<String, dynamic> toJson() => _$ExpenseWithCategoryDataToJson(this);
+
+  String get title {
+    return '${category.label}${note == null ? '' : ':'} ${note ?? ''}';
+  }
+
+  IconData get icon {
+    return categoryIcons[category.icon]!;
   }
 }
 
@@ -51,8 +66,11 @@ class ExpenseBucket {
     required this.budgetLimit,
   });
 
-  ExpenseBucket.forCategory(List<Expense> allExpenses, CategoryConfig categoryList, this.category)
-      : expenses = allExpenses.where((expense) => expense.category == category).toList(),
+  ExpenseBucket.forCategory(
+    List<Expense> allExpenses,
+    List<CategoryDataWithId> categoryList,
+    this.category,
+  )   : expenses = allExpenses.where((expense) => expense.categoryId == category).toList(),
         budgetLimit = categoryList.firstWhere((cat) => cat.id == category).budget;
 
   final String category;

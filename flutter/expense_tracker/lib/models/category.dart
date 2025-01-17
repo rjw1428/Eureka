@@ -1,8 +1,12 @@
+import 'package:expense_tracker/constants/icons.dart';
 import 'package:flutter/material.dart';
+import 'package:json_annotation/json_annotation.dart';
+part 'category.g.dart';
 
+@JsonSerializable()
 class CategoryData {
   final String label;
-  final IconData icon;
+  final String icon;
   final double budget;
 
   CategoryData({
@@ -13,8 +17,11 @@ class CategoryData {
   });
 
   bool deleted;
+
+  Map<String, dynamic> toJson() => _$CategoryDataToJson(this);
 }
 
+@JsonSerializable()
 class CategoryDataWithId extends CategoryData {
   CategoryDataWithId({
     required super.label,
@@ -25,6 +32,16 @@ class CategoryDataWithId extends CategoryData {
   });
 
   String id;
+
+  factory CategoryDataWithId.fromJson(Map<String, dynamic> json) =>
+      _$CategoryDataWithIdFromJson(json);
+
+  @override
+  Map<String, dynamic> toJson() => _$CategoryDataWithIdToJson(this);
+
+  IconData get iconData {
+    return categoryIcons[icon] ?? Icons.abc;
+  }
 
   updateId(String oldId) {
     id = oldId;
