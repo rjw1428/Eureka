@@ -89,7 +89,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 icon: const Icon(Icons.playlist_add),
               ),
             ),
-          )
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Link your spending',
+            style: Theme.of(context).textTheme.titleMedium,
+            textAlign: TextAlign.start,
+          ),
+          Text(
+            'Send a request to another user. When they accept, all transactions will appear on each others accounts.',
+            style: Theme.of(context).textTheme.bodyMedium,
+            textAlign: TextAlign.start,
+          ),
         ],
       ),
     );

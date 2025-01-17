@@ -68,41 +68,43 @@ class _TransactionScreenState extends State<TransactionScreen> {
     );
   }
 
-  void _addExpense(Expense expense, [int index = 0]) {
-    setState(() {
-      if (!_filterList.contains(expense.category)) {
-        _filterList.add(expense.category);
-      }
-      _registeredExpenses.insert(index, expense);
-      ExpenseService().addExpense(expense, index);
-      _registeredExpenses = ExpenseService().getExpenses(_selectedDate.year, _selectedDate.month);
-    });
+  void _addExpense(Expense expense, [int index = 0]) async {
+    // setState(() {
+    //   if (!_filterList.contains(expense.category)) {
+    //     _filterList.add(expense.category);
+    //   }
+    //   _registeredExpenses.insert(index, expense);
+    //   ExpenseService().addExpense(expense, index);
+    // });
+
+    final resp = await ExpenseService().addExpense(expense, index);
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        duration: Duration(seconds: 3),
-        content: Text('Expense added!'),
+      SnackBar(
+        duration: const Duration(seconds: 3),
+        content: Text(resp == null ? 'An error occurred while adding expense' : 'Expense added!'),
       ),
     );
   }
 
   void _updateExpense(Expense expense) {
     final previousExpense = _registeredExpenses.firstWhere((e) => e.id == expense.id);
-    setState(() {
-      ExpenseService().updateExpense(expense);
-      _registeredExpenses = ExpenseService().getExpenses(_selectedDate.year, _selectedDate.month);
+    // setState(() {
+    //   ExpenseService().updateExpense(expense);
 
-      final stillHasCategory = Set.from(_registeredExpenses.map((exp) => exp.category))
-          .contains(previousExpense.category);
+    //   final stillHasCategory = Set.from(_registeredExpenses.map((exp) => exp.category))
+    //       .contains(previousExpense.category);
 
-      if (!stillHasCategory) {
-        _filterList.remove(previousExpense.category);
-      }
+    //   if (!stillHasCategory) {
+    //     _filterList.remove(previousExpense.category);
+    //   }
 
-      if (!_filterList.contains(expense.category)) {
-        _filterList.add(expense.category);
-      }
-    });
+    //   if (!_filterList.contains(expense.category)) {
+    //     _filterList.add(expense.category);
+    //   }
+    // });
+
+    ExpenseService().updateExpense(expense, previousExpense);
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -116,12 +118,12 @@ class _TransactionScreenState extends State<TransactionScreen> {
     ScaffoldMessenger.of(context).clearSnackBars();
 
     final index = _registeredExpenses.indexOf(expense);
+    ExpenseService().remove(expense);
+
     setState(() {
-      ExpenseService().remove(expense);
-      _registeredExpenses = ExpenseService().getExpenses(_selectedDate.year, _selectedDate.month);
-      if (!Set.from(_registeredExpenses.map((exp) => exp.category)).contains(expense.category)) {
-        _filterList.remove(expense.category);
-      }
+      // if (!Set.from(_registeredExpenses.map((exp) => exp.category)).contains(expense.category)) {
+      //   _filterList.remove(expense.category);
+      // }
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -141,120 +143,13 @@ class _TransactionScreenState extends State<TransactionScreen> {
   }
 
   void _setTimeRange(DateTime date) {
-    categoryConfigs = CategoriesService().getCategories();
     setState(() {
       _selectedDate = date;
-      _registeredExpenses = ExpenseService().getExpenses(date.year, date.month);
-      final Set<String> distinctCategoryIds = Set.from(
-        _registeredExpenses.map((el) => el.category),
-      );
-      _categoryOptions = distinctCategoryIds.map((c) {
-        final config = categoryConfigs.firstWhere((con) => con.id == c);
-        return CategoryDataWithId(
-          budget: config.budget,
-          icon: config.icon,
-          label: config.label,
-          id: c,
-        );
-      }).toList();
-      _filterList = distinctCategoryIds.toList();
     });
   }
 
   @override
-  initState() {
-    categoryConfigs = CategoriesService().getCategories();
-    _setTimeRange(_selectedDate);
-    super.initState();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    print('UserId: ${widget.userId}');
-    categoryConfigs = CategoriesService().getCategories();
-    final Set<String> distinctCategoryIds = Set.from(
-      _registeredExpenses.map((el) => el.category),
-    );
-    _categoryOptions = distinctCategoryIds.map((c) {
-      final config = categoryConfigs.firstWhere((con) => con.id == c);
-      return CategoryDataWithId(
-        budget: config.budget,
-        icon: config.icon,
-        label: config.label,
-        id: c,
-      );
-    }).toList();
-
-    final double totalExpenses = _registeredExpenses
-        .where((expense) => _filterList.contains(expense.category))
-        .fold(0, (sum, exp) => exp.amount + sum);
-
-    Widget listContent = ExpenseList(
-      list: _registeredExpenses,
-      onRemove: _removeExpense,
-      onEdit: _openAddExpenseOverlay,
-      filters: _filterList,
-    );
-
-    Widget categoryFilter = FilterRow(
-      options: _categoryOptions,
-      onFilter: _filterExpenses,
-      selectedFilters: _filterList,
-    );
-
-    Widget timeFilter = Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
-      child: TimeRow(onTimeSelect: _setTimeRange),
-    );
-
-    Widget columnOrientationLayout = Column(
-      children: [
-        timeFilter,
-        categoryFilter,
-        TotalRow(sum: totalExpenses),
-        SizedBox(
-          height: 200,
-          child: Chart(
-            expenses: _registeredExpenses,
-            selectedFilters: _filterList,
-          ),
-        ),
-        Expanded(child: listContent)
-      ],
-    );
-
-    Widget rowOrientationLayout = Row(
-      children: [
-        Expanded(
-          child: Column(
-            children: [
-              TotalRow(sum: totalExpenses),
-              Expanded(
-                child: Chart(
-                  expenses: _registeredExpenses,
-                  selectedFilters: _filterList,
-                ),
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: Column(
-            children: [
-              timeFilter,
-              categoryFilter,
-              Expanded(child: listContent),
-            ],
-          ),
-        )
-      ],
-    );
-    Widget body = LayoutBuilder(
-      builder: (ctx, constraints) {
-        return constraints.maxWidth < 600 ? columnOrientationLayout : rowOrientationLayout;
-      },
-    );
-
     return Scaffold(
       resizeToAvoidBottomInset: false,
       appBar: AppBar(
@@ -263,7 +158,116 @@ class _TransactionScreenState extends State<TransactionScreen> {
           AppBarActionMenu(),
         ],
       ),
-      body: body,
+      body: StreamBuilder<List<Expense>>(
+        stream: ExpenseService().getExpenseStream(_selectedDate),
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Text(snapshot.error.toString());
+          }
+          if (!snapshot.hasData) {
+            return const Text('Loading...');
+          }
+          print('UserId: ${widget.userId} - ${snapshot.data!.length}');
+
+          categoryConfigs = CategoriesService().getCategories();
+
+          _registeredExpenses = snapshot.data ?? [];
+
+          final Set<String> distinctCategoryIds = Set.from(
+            _registeredExpenses.map((el) => el.category),
+          );
+          _categoryOptions = distinctCategoryIds.map((c) {
+            final config = categoryConfigs.firstWhere((con) => con.id == c);
+            return CategoryDataWithId(
+              budget: config.budget,
+              icon: config.icon,
+              label: config.label,
+              id: c,
+            );
+          }).toList();
+          _filterList = distinctCategoryIds.toList();
+
+          final double totalExpenses = _registeredExpenses
+              .where((expense) => _filterList.contains(expense.category))
+              .fold(0, (sum, exp) => exp.amount + sum);
+          print('TOTAL: $totalExpenses');
+
+          Widget listContent(List<Expense> expenses) {
+            return ExpenseList(
+              list: expenses,
+              onRemove: _removeExpense,
+              onEdit: _openAddExpenseOverlay,
+              filters: _filterList,
+            );
+          }
+
+          Widget categoryFilter = FilterRow(
+            options: _categoryOptions,
+            onFilter: _filterExpenses,
+            selectedFilters: _filterList,
+          );
+
+          Widget timeFilter = Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
+            child: TimeRow(onTimeSelect: _setTimeRange),
+          );
+
+          Widget columnOrientationLayout(List<Expense> expenses) {
+            return Column(
+              children: [
+                timeFilter,
+                categoryFilter,
+                TotalRow(sum: totalExpenses),
+                SizedBox(
+                  height: 200,
+                  child: Chart(
+                    expenses: expenses,
+                    selectedFilters: _filterList,
+                  ),
+                ),
+                Expanded(child: listContent(expenses))
+              ],
+            );
+          }
+
+          Widget rowOrientationLayout(List<Expense> expenses) {
+            return Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    children: [
+                      TotalRow(sum: totalExpenses),
+                      Expanded(
+                        child: Chart(
+                          expenses: expenses,
+                          selectedFilters: _filterList,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: Column(
+                    children: [
+                      timeFilter,
+                      categoryFilter,
+                      Expanded(child: listContent(expenses)),
+                    ],
+                  ),
+                )
+              ],
+            );
+          }
+
+          return LayoutBuilder(
+            builder: (ctx, constraints) {
+              return constraints.maxWidth < 600
+                  ? columnOrientationLayout(snapshot.data ?? [])
+                  : rowOrientationLayout(snapshot.data ?? []);
+            },
+          );
+        },
+      ),
       floatingActionButton: IconButton.filled(
         color: Theme.of(context).cardTheme.color,
         onPressed: _openAddExpenseOverlay,

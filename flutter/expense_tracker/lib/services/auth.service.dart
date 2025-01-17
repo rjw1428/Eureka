@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -13,9 +14,22 @@ class AuthService {
   factory AuthService() {
     return _instance;
   }
-
+  final _db = FirebaseFirestore.instance;
   final userStream = FirebaseAuth.instance.authStateChanges().shareReplay(maxSize: 1);
   User? user = FirebaseAuth.instance.currentUser;
+
+  Stream<String?> getCurrentUserLedgerId() {
+    if (user == null) return const Stream.empty();
+    return _getUserLedgerId(user!.uid);
+  }
+
+  Stream<String> _getUserLedgerId(String uid) {
+    return _db
+        .collection('expenseUsers')
+        .doc(uid)
+        .snapshots()
+        .map((doc) => doc.get('ledgerId') as String);
+  }
 
   Future<void> createUser(String email, String password) async {
     try {
@@ -54,18 +68,6 @@ class AuthService {
     } on FirebaseAuthException catch (e) {
       print('googleLogin exception: $e');
     }
-    // if (bool.parse(dotenv.env['DEV_MODE'] ?? 'true')) {
-    //   try {
-    //     final googleProvider = GoogleAuthProvider();
-    //     googleProvider.addScope('https://www.googleapis.com/auth/contacts.readonly');
-    //     await FirebaseAuth.instance.signInWithPopup(googleProvider);
-    //     user = FirebaseAuth.instance.currentUser;
-    //   } on FirebaseAuthException catch (e) {
-    //     print('googleLogin exception: $e');
-    //   }
-    // } else {
-
-    // }
   }
 
   Future<void> appleLogin() async {

@@ -1,54 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:expense_tracker/models/expense.dart';
+import 'package:expense_tracker/services/auth.service.dart';
 import 'package:intl/intl.dart';
-
-final defaultData = [
-  Expense(
-    note: 'Grocery Shopping',
-    amount: 30.82,
-    date: DateTime.now(),
-    category: 'SHOPPING',
-  ),
-  Expense(
-    note: 'Truck',
-    amount: 89.12,
-    date: DateTime.now().add(const Duration(hours: -1)),
-    category: 'GAS',
-  ),
-  Expense(
-    amount: 45.00,
-    date: DateTime.now().add(const Duration(hours: -2)),
-    category: 'HOME_RENO',
-  ),
-  Expense(
-    amount: 10.88,
-    date: DateTime.now().add(const Duration(days: -2)),
-    category: 'GAS',
-    note: 'Here is one with a very long title just to see how it renders',
-  ),
-  Expense(
-      amount: 112.00,
-      date: DateTime(2024, 12, 12),
-      category: 'EATING_OUT',
-      note: 'December Dinner'),
-  Expense(
-    amount: 45.00,
-    date: DateTime(2024, 12, 10),
-    category: 'GAS',
-    note: 'December Gas',
-  ),
-  Expense(
-      amount: 111.00,
-      date: DateTime(2024, 11, 29),
-      category: 'EATING_OUT',
-      note: 'November Dinner'),
-  Expense(
-    amount: 45.00,
-    date: DateTime(2024, 11, 29),
-    category: 'GAS',
-    note: 'November Gas',
-  ),
-];
+import 'package:rxdart/rxdart.dart';
 
 final formatter = DateFormat('MMM');
 
@@ -61,40 +15,53 @@ class ExpenseService {
     return _instance;
   }
 
-  CollectionReference<Map<String, dynamic>> expenseCollection(String month) {
-    // AuthService().user?.uid
-    // TODO: Get the ledger ID here
-    // TODO: Validate using security rule
-    const ledgerId = '41Rfjjro4zy9Xr3gs557';
+  Future<CollectionReference<Map<String, dynamic>>> expenseCollection(DateTime date) async {
+    final ledgerId = await AuthService().getCurrentUserLedgerId().first;
+    final month = formatMonth(date);
     return _db.collection('ledger').doc(ledgerId).collection(month);
   }
 
-  Stream<List<Expense>> getExpenseStream(String userId, String month) {
-    return expenseCollection(month).snapshots().map((snapshot) =>
-        snapshot.docs.map((doc) => Expense.fromJson({...doc.data(), "id": doc.id})).toList());
+  Stream<List<Expense>> getExpenseStream(DateTime date) {
+    final ledgerId$ = AuthService().getCurrentUserLedgerId();
+    final month = formatMonth(date);
+    return ledgerId$
+        .switchMap(
+            (ledgerId) => _db.collection('ledger').doc(ledgerId).collection(month).snapshots())
+        .map((snapshot) {
+      return snapshot.docs.map((doc) {
+        return Expense.fromJson({...doc.data(), "id": doc.id});
+      }).toList();
+    });
   }
 
-  List<Expense> getExpenses(int year, int month) {
-    return defaultData
-        .where((expense) => expense.date.year == year && expense.date.month == month)
-        .toList();
+  Future<void> updateExpense(Expense expense, Expense previousExpense) async {
+    if (expense.date.month == previousExpense.date.month &&
+        expense.date.year == previousExpense.date.year) {
+      final collectionRef = await expenseCollection(previousExpense.date);
+      return collectionRef.doc(previousExpense.id).set(expense.toJson());
+    }
+    await remove(previousExpense);
+    await addExpense(expense);
+    return;
   }
 
-  void updateExpense(Expense expense) {
-    final index = defaultData.map((e) => e.id).toList().indexOf(expense.id);
-    defaultData[index] = expense;
+  Future<void> remove(Expense expense) async {
+    final collectionRef = await expenseCollection(expense.date);
+    return collectionRef.doc(expense.id!).delete();
   }
 
-  Future<void> remove(Expense expense) {
-    // defaultData.remove(expense);
-    final month = "${expense.date.year}_${formatter.format(expense.date).toUpperCase()}";
-    return expenseCollection(month).doc(expense.id!).delete();
+  Future<DocumentReference<Map<String, dynamic>>?> addExpense(Expense expense, [index = 0]) async {
+    try {
+      final collectionRef = await expenseCollection(expense.date);
+      var newExpenseData = expense.toJson();
+      newExpenseData.remove('id');
+      return collectionRef.add(newExpenseData);
+    } catch (e) {
+      return null;
+    }
   }
 
-  Future<void> addExpense(Expense expense, [index = 0]) {
-    // defaultData.insert(index, expense);
-    // TODO: Add without id value
-    final month = "${expense.date.year}_${formatter.format(expense.date).toUpperCase()}";
-    return expenseCollection(month).add(expense.toJson());
+  String formatMonth(DateTime date) {
+    return "${date.year}_${formatter.format(date).toUpperCase()}";
   }
 }
