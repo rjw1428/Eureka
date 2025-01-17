@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:expense_tracker/models/category.dart';
 import 'package:expense_tracker/models/expense.dart';
 import 'package:expense_tracker/screens/login.dart';
@@ -48,10 +50,12 @@ class TransactionScreen extends StatefulWidget {
 }
 
 class _TransactionScreenState extends State<TransactionScreen> {
-  List<ExpenseWithCategoryData> _registeredExpenses = [];
+  List<ExpenseWithCategoryData> _expenses = [];
   List<CategoryDataWithId> _categoryConfigs = []; // All configs
   List<CategoryDataWithId> _categoryOptions = []; // filtered list of configs by what's being using
-  List<String> _filterList = [];
+  List<String> _filterList = []; // All available category ids for given expense list
+  final _selectedFilters =
+      StreamController<List<String>?>.broadcast(); // Only selected category ids
   DateTime _selectedDate = DateTime.now();
 
   void _openAddExpenseOverlay([ExpenseWithCategoryData? expense]) {
@@ -70,40 +74,19 @@ class _TransactionScreenState extends State<TransactionScreen> {
   }
 
   void _addExpense(Expense expense, [int index = 0]) async {
-    // setState(() {
-    //   if (!_filterList.contains(expense.category)) {
-    //     _filterList.add(expense.category);
-    //   }
-    //   _registeredExpenses.insert(index, expense);
-    //   ExpenseService().addExpense(expense, index);
-    // });
-
     final resp = await ExpenseService().addExpense(expense, index);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        duration: const Duration(seconds: 3),
-        content: Text(resp == null ? 'An error occurred while adding expense' : 'Expense added!'),
-      ),
-    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          duration: const Duration(seconds: 3),
+          content: Text(resp == null ? 'An error occurred while adding expense' : 'Expense added!'),
+        ),
+      );
+    }
   }
 
   void _updateExpense(Expense expense) {
-    final previousExpense = _registeredExpenses.firstWhere((e) => e.id == expense.id);
-    // setState(() {
-    //   ExpenseService().updateExpense(expense);
-
-    //   final stillHasCategory = Set.from(_registeredExpenses.map((exp) => exp.category))
-    //       .contains(previousExpense.category);
-
-    //   if (!stillHasCategory) {
-    //     _filterList.remove(previousExpense.category);
-    //   }
-
-    //   if (!_filterList.contains(expense.category)) {
-    //     _filterList.add(expense.category);
-    //   }
-    // });
+    final previousExpense = _expenses.firstWhere((e) => e.id == expense.id);
 
     ExpenseService().updateExpense(expense, previousExpense);
 
@@ -118,14 +101,8 @@ class _TransactionScreenState extends State<TransactionScreen> {
   void _removeExpense(ExpenseWithCategoryData expense) async {
     ScaffoldMessenger.of(context).clearSnackBars();
 
-    final index = _registeredExpenses.indexOf(expense);
+    final index = _expenses.indexOf(expense);
     ExpenseService().remove(expense);
-
-    setState(() {
-      // if (!Set.from(_registeredExpenses.map((exp) => exp.category)).contains(expense.category)) {
-      //   _filterList.remove(expense.category);
-      // }
-    });
 
     final title = expense.title;
     if (mounted) {
@@ -143,18 +120,11 @@ class _TransactionScreenState extends State<TransactionScreen> {
   }
 
   void _filterExpenses(List<String> selection) {
-    setState(() => _filterList = selection);
+    _selectedFilters.sink.add(selection);
   }
 
   void _setTimeRange(DateTime date) {
-    setState(() {
-      _selectedDate = date;
-    });
-  }
-
-  @override
-  void initState() {
-    super.initState();
+    setState(() => _selectedDate = date);
   }
 
   @override
@@ -168,11 +138,19 @@ class _TransactionScreenState extends State<TransactionScreen> {
         ],
       ),
       body: StreamBuilder<Map<String, List<dynamic>>>(
-        stream: CombineLatestStream.combine2(
+        stream: CombineLatestStream.combine3(
           ExpenseService().getExpenseStream(_selectedDate),
           CategoriesService().getCategoriesStream(),
-          (expenses, categories) {
-            return Map.from({'expenses': expenses, 'categories': categories});
+          _selectedFilters.stream.startWith(null),
+          (expenses, categories, selection) {
+            final List distinctCategoryIds = Set.from(
+              expenses.map((el) => el.categoryId),
+            ).toList();
+            return Map.from({
+              'expenses': expenses,
+              'categories': categories,
+              'selection': selection ?? distinctCategoryIds,
+            });
           },
         ),
         builder: (context, snapshot) {
@@ -187,7 +165,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
             return el as CategoryDataWithId;
           }).toList();
 
-          _registeredExpenses = snapshot.data!['expenses']!.map((exp) {
+          _expenses = snapshot.data!['expenses']!.map((exp) {
             final e = exp as Expense;
             final CategoryDataWithId category = _categoryConfigs.firstWhere((cat) {
               return cat.id == e.categoryId;
@@ -196,14 +174,19 @@ class _TransactionScreenState extends State<TransactionScreen> {
           }).toList();
 
           final Set<String> distinctCategoryIds = Set.from(
-            _registeredExpenses.map((el) => el.categoryId),
+            _expenses.map((el) => el.categoryId),
           );
 
           _categoryOptions =
               _categoryConfigs.where((config) => distinctCategoryIds.contains(config.id)).toList();
-          _filterList = distinctCategoryIds.toList();
 
-          final double totalExpenses = _registeredExpenses
+          final selectedIds = snapshot.data!['selection'];
+
+          _filterList = selectedIds == null
+              ? distinctCategoryIds.toList()
+              : distinctCategoryIds.toList().where((id) => selectedIds.contains(id)).toList();
+
+          final double totalExpenses = _expenses
               .where((expense) => _filterList.contains(expense.categoryId))
               .fold(0, (sum, exp) => exp.amount + sum);
 
@@ -279,8 +262,8 @@ class _TransactionScreenState extends State<TransactionScreen> {
           return LayoutBuilder(
             builder: (ctx, constraints) {
               return constraints.maxWidth < 600
-                  ? columnOrientationLayout(_registeredExpenses)
-                  : rowOrientationLayout(_registeredExpenses);
+                  ? columnOrientationLayout(_expenses)
+                  : rowOrientationLayout(_expenses);
             },
           );
         },
