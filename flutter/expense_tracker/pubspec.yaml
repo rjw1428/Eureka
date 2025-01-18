@@ -26,6 +26,9 @@ dependencies:
   google_sign_in: ^6.2.1
   sign_in_with_apple: ^6.1.0
   json_annotation: ^4.9.0
+  shared_preferences: ^2.3.5
+  flutter_colorpicker: ^1.1.0
+  cloud_functions: ^4.7.6
   
 
 dev_dependencies:

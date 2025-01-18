@@ -22,14 +22,19 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder(
-      stream: AuthService().userStream,
+      // stream: AuthService().userStream,
+      stream: AuthService().getAccount(),
       builder: (context, snapshot) {
+        print("---STREAM---");
+        print(snapshot.data);
+        print(snapshot.hasData);
+        print(snapshot.error);
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Text('PENDING');
         } else if (snapshot.hasError) {
           return const Center(child: Text('ERROR'));
         } else if (snapshot.hasData) {
-          return TransactionScreen(userId: snapshot.data!.uid);
+          return TransactionScreen(userId: snapshot.data!);
         } else {
           return const LoginScreen();
         }

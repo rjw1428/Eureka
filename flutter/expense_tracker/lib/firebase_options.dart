@@ -45,41 +45,46 @@ class DefaultFirebaseOptions {
     messagingSenderId: '1070956843093',
     projectId: 'taskr-1428',
     authDomain: 'taskr-1428.firebaseapp.com',
-    storageBucket: 'taskr-1428.appspot.com',
+    storageBucket: 'taskr-1428.firebasestorage.app',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyAp3fTO2bR6qpwAKXG6itbssRhWzT7x7l8',
-    appId: '1:1070956843093:android:8be9d4f73f5570296604dc',
+    appId: '1:1070956843093:android:9e1d88b3b5b954ab6604dc',
     messagingSenderId: '1070956843093',
     projectId: 'taskr-1428',
-    storageBucket: 'taskr-1428.appspot.com',
+    storageBucket: 'taskr-1428.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyCXA79gRO_PXwxKS913S10f66AWjUYCaH0',
-    appId: '1:1070956843093:ios:0e47d33d6dd0323c6604dc',
+    appId: '1:1070956843093:ios:942bb81f789cd2096604dc',
     messagingSenderId: '1070956843093',
     projectId: 'taskr-1428',
-    storageBucket: 'taskr-1428.appspot.com',
-    iosBundleId: 'com.rwss.taskr',
+    storageBucket: 'taskr-1428.firebasestorage.app',
+    androidClientId: '1070956843093-qsijqjlqefr72ed5s09f8tjfp884m692.apps.googleusercontent.com',
+    iosClientId: '1070956843093-24sai4jufmb0tg875l8mf74f5vhh9iu7.apps.googleusercontent.com',
+    iosBundleId: 'com.example.expenseTracker',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
     apiKey: 'AIzaSyCXA79gRO_PXwxKS913S10f66AWjUYCaH0',
-    appId: '1:1070956843093:ios:0e47d33d6dd0323c6604dc',
+    appId: '1:1070956843093:ios:942bb81f789cd2096604dc',
     messagingSenderId: '1070956843093',
     projectId: 'taskr-1428',
-    storageBucket: 'taskr-1428.appspot.com',
-    iosBundleId: 'com.rwss.taskr',
+    storageBucket: 'taskr-1428.firebasestorage.app',
+    androidClientId: '1070956843093-qsijqjlqefr72ed5s09f8tjfp884m692.apps.googleusercontent.com',
+    iosClientId: '1070956843093-24sai4jufmb0tg875l8mf74f5vhh9iu7.apps.googleusercontent.com',
+    iosBundleId: 'com.example.expenseTracker',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyCdPnIFovrJzzGK0yHLdGs9UKA3CkmwoR8',
-    appId: '1:1070956843093:web:60c8fdeed0c21f366604dc',
+    apiKey: 'AIzaSyDdYYnz3jV4UF9OOo3Bj_uYkD03W6vIkdw',
+    appId: '1:1070956843093:web:d9a0b18158d15cae6604dc',
     messagingSenderId: '1070956843093',
     projectId: 'taskr-1428',
     authDomain: 'taskr-1428.firebaseapp.com',
-    storageBucket: 'taskr-1428.appspot.com',
+    storageBucket: 'taskr-1428.firebasestorage.app',
   );
+
 }

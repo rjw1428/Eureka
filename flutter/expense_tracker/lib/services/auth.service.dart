@@ -1,4 +1,7 @@
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
+import 'package:expense_tracker/models/response.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -7,6 +10,7 @@ import 'package:rxdart/rxdart.dart';
 
 // ignore: non_constant_identifier_names
 final WEB_CLIENT_ID = dotenv.env['WEB_CLIENT_ID'];
+FirebaseFunctions functions = FirebaseFunctions.instance;
 
 class AuthService {
   AuthService._internal();
@@ -31,13 +35,15 @@ class AuthService {
         .map((doc) => doc.get('ledgerId') as String);
   }
 
-  Future<void> createUser(String email, String password) async {
+  Future<bool> createUser(String email, String password) async {
     try {
       await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
       user = await userStream.first;
+
+      return await initializeAccount(email, user!.uid);
     } on FirebaseAuthException catch (e) {
       if (e.code == 'weak-password') {
         print('The password provided is too weak.');
@@ -47,6 +53,7 @@ class AuthService {
     } catch (e) {
       print(e);
     }
+    return false;
   }
 
   Future<void> googleLogin() async {
@@ -70,31 +77,67 @@ class AuthService {
     }
   }
 
-  Future<void> appleLogin() async {
+  // Future<void> appleLogin() async {
+  //   try {
+  //     final appleProvider = AppleAuthProvider();
+  //     if (kIsWeb) {
+  //       await FirebaseAuth.instance.signInWithPopup(appleProvider);
+  //     } else {
+  //       await FirebaseAuth.instance.signInWithProvider(appleProvider);
+  //     }
+  //   } catch (e) {
+  //     print('Apple Login Error');
+  //   }
+  // }
+
+  Future<Response> emailLogin(String email, String password) async {
     try {
-      final appleProvider = AppleAuthProvider();
-      if (kIsWeb) {
-        await FirebaseAuth.instance.signInWithPopup(appleProvider);
-      } else {
-        await FirebaseAuth.instance.signInWithProvider(appleProvider);
-      }
+      await FirebaseAuth.instance.signInWithEmailAndPassword(email: email, password: password);
+      user = FirebaseAuth.instance.currentUser;
+      return const Response(success: true);
+    } on FirebaseAuthException catch (e) {
+      print('Login error: ${e.code}: ${e.message}');
+      return const Response(
+        success: false,
+        message: 'Incorrect username or password.',
+      );
     } catch (e) {
-      print('Apple Login Error');
+      return const Response(
+        success: false,
+        message: 'Unknown error occurred, please try again.',
+      );
     }
   }
 
-  Future<void> emailLogin(String email, String password) async {
+  Future<bool> initializeAccount(String email, String userId) async {
+    Completer<bool> completer = Completer();
     try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(email: email, password: password);
-      // user = await userStream.first;
-      user = FirebaseAuth.instance.currentUser;
-    } on FirebaseAuthException catch (e) {
-      if (e.code == 'user-not-found') {
-        print('No user found for that email.');
-      } else if (e.code == 'wrong-password') {
-        print('Wrong password provided for that user.');
-      }
+      final resp = await functions.httpsCallable("initializeExpenseTrackerAccount").call({
+        'userId': userId,
+        'email': email,
+      });
+      print(resp.data);
+    } catch (e) {
+      print(e);
+      completer.complete(false);
     }
+    return completer.future;
+  }
+
+  Stream getAccount() {
+    return userStream.switchMap((user) {
+      if (user == null) {
+        return const Stream.empty().startWith(null);
+      }
+      print("LOGGED IN AS: ${user.uid}");
+      return _db
+          .collection('expenseUsers')
+          .doc(user!.uid)
+          .snapshots()
+          .map((event) => event.data())
+          .where((data) => data != null)
+          .map((d) => user!.uid);
+    });
   }
 
   Future<void> logOut() async {

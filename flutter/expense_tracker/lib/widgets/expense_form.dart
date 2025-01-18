@@ -41,13 +41,19 @@ class _ExpenseFormState extends State<ExpenseForm> {
     if (enteredAmount == null || enteredAmount == 0) {
       showDialogNotification(
           'Invalid Amount',
-          enteredAmount == 0 ? 'Make sure the amount is not 0' : 'Make sure the amount is a number',
+          Text(enteredAmount == 0
+              ? 'Make sure the amount is not 0'
+              : 'Make sure the amount is a number'),
           context);
       return;
     }
 
     if (_selectedCategory == null) {
-      showDialogNotification('Invalid Category', 'Make sure to select a category', context);
+      showDialogNotification(
+        'Invalid Category',
+        const Text('Make sure to select a category'),
+        context,
+      );
       return;
     }
 

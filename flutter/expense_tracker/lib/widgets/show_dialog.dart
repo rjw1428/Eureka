@@ -3,7 +3,16 @@ import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
-void showDialogNotification(String title, String content, BuildContext context) {
+void showDialogNotification(
+  String title,
+  Widget content,
+  BuildContext context, [
+  Widget? callback,
+]) {
+  if (context.findRenderObject() == null) {
+    return;
+  }
+
   bool isIos = false;
   try {
     isIos = Platform.isIOS;
@@ -13,19 +22,31 @@ void showDialogNotification(String title, String content, BuildContext context) 
 
   if (isIos) {
     showCupertinoDialog(
-        context: context,
-        builder: (ctx) => CupertinoAlertDialog(
-              title: Text(title),
-              content: Text(content),
-              actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Okay'))],
-            ));
+      context: context,
+      builder: (ctx) => CupertinoAlertDialog(
+        title: Text(title),
+        content: content,
+        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Okay'))],
+      ),
+    );
   } else {
     showDialog(
-        context: context,
-        builder: (ctx) => AlertDialog(
-              title: Text(title),
-              content: Text(content),
-              actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Okay'))],
-            ));
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [content],
+          ),
+        ),
+        actions: callback == null
+            ? [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Okay'))]
+            : [
+                callback,
+                TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel'))
+              ],
+      ),
+    );
   }
 }

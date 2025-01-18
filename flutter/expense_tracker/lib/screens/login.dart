@@ -63,17 +63,17 @@ class _LoginScreenState extends State<LoginScreen> {
               onPressed: () async => await AuthService().googleLogin(),
               label: const Text("Login with Google", textAlign: TextAlign.center),
             ),
+            // const SizedBox(height: 16),
+            // ElevatedButton.icon(
+            //   icon: const Icon(
+            //     FontAwesomeIcons.apple,
+            //     size: 20,
+            //   ),
+            //   onPressed: () async => await AuthService().appleLogin(),
+            //   label: const Text("Login with Apple", textAlign: TextAlign.center),
+            // ),
             const SizedBox(height: 16),
-            ElevatedButton.icon(
-              icon: const Icon(
-                FontAwesomeIcons.apple,
-                size: 20,
-              ),
-              onPressed: () async => await AuthService().appleLogin(),
-              label: const Text("Login with Apple", textAlign: TextAlign.center),
-            ),
-            const SizedBox(height: 16),
-            if (_showLoginForm)
+            if (_showLoginForm && !_showCreateAccountForm)
               SizedBox(
                 width: 200,
                 child: Column(
@@ -102,11 +102,43 @@ class _LoginScreenState extends State<LoginScreen> {
                 FontAwesomeIcons.envelope,
                 size: 20,
               ),
-              onPressed: () {
+              onPressed: () async {
                 if (!_showLoginForm) {
-                  setState(() => _showLoginForm = true);
+                  setState(() {
+                    _showLoginForm = true;
+                    _showCreateAccountForm = false;
+                  });
                 } else {
-                  AuthService().emailLogin(_emailControl.text.trim(), _passwordControl.text);
+                  if (_emailControl.text.isEmpty) {
+                    showDialogNotification(
+                      'Email missing',
+                      const Text('Enter your email address and try again.'),
+                      context,
+                    );
+                    return;
+                  }
+
+                  if (_passwordControl.text.isEmpty) {
+                    showDialogNotification(
+                      'Password missing',
+                      const Text('Enter your password and try again.'),
+                      context,
+                    );
+                    return;
+                  }
+
+                  final response = await AuthService().emailLogin(
+                    _emailControl.text.trim(),
+                    _passwordControl.text,
+                  );
+
+                  if (!response.success) {
+                    showDialogNotification(
+                      'Login Unsuccessful',
+                      Text(response.message!),
+                      context,
+                    );
+                  }
                 }
               },
               label: Text(
@@ -118,7 +150,7 @@ class _LoginScreenState extends State<LoginScreen> {
               padding: EdgeInsets.only(top: 8.0),
               child: Text('or'),
             ),
-            if (_showCreateAccountForm)
+            if (_showCreateAccountForm && !_showLoginForm)
               SizedBox(
                 width: 200,
                 child: Column(
@@ -152,14 +184,17 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
             TextButton(
-              onPressed: () {
+              onPressed: () async {
                 if (!_showCreateAccountForm) {
-                  setState(() => _showCreateAccountForm = true);
+                  setState(() {
+                    _showCreateAccountForm = true;
+                    _showLoginForm = false;
+                  });
                 } else {
                   if (_passwordControl.text.length < 6) {
                     showDialogNotification(
                       'Password too short',
-                      'Password must be 6 characters or greater. Try again.',
+                      const Text('Password must be 6 characters or greater. Try again.'),
                       context,
                     );
                     return;
@@ -168,13 +203,23 @@ class _LoginScreenState extends State<LoginScreen> {
                   if (_passwordControl.text != _confirmPasswordControl.text) {
                     showDialogNotification(
                       'Invalid Password',
-                      'Confirmation password did not match. Try again.',
+                      const Text('Confirmation password did not match. Try again.'),
                       context,
                     );
                     return;
                   }
 
-                  AuthService().createUser(_emailControl.text.trim(), _passwordControl.text);
+                  final success = await AuthService()
+                      .createUser(_emailControl.text.trim(), _passwordControl.text);
+                  if (!success) {
+                    showDialogNotification(
+                      'An Error Occurred',
+                      const Text(
+                          'Something went wrong, unable to create an account, please try again.'),
+                      context,
+                    );
+                    return;
+                  }
                 }
               },
               child: Text(

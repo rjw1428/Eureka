@@ -3,21 +3,30 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:expense_tracker/firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-const seedColor = Color.fromARGB(255, 163, 3, 3);
-final colorScheme = ColorScheme.fromSeed(
-  seedColor: seedColor,
-);
-
-final darkColorScheme = ColorScheme.fromSeed(
-  seedColor: seedColor,
-  brightness: Brightness.dark,
-);
 void main() async {
-  // WidgetsFlutterBinding.ensureInitialized();
+  WidgetsFlutterBinding.ensureInitialized();
   // SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]).then((fn) {
   //   // Run App Function
   // });
+  SharedPreferences preferences = await SharedPreferences.getInstance();
+  String themeColor = preferences.getString('theme_color') ?? "255,163,3,3";
+  final List<int> seedColorParts = themeColor.split(',').map((e) => int.parse(e)).toList();
+  final seedColor = Color.fromARGB(
+    seedColorParts[0],
+    seedColorParts[1],
+    seedColorParts[2],
+    seedColorParts[3],
+  );
+  final colorScheme = ColorScheme.fromSeed(
+    seedColor: seedColor,
+  );
+
+  final darkColorScheme = ColorScheme.fromSeed(
+    seedColor: seedColor,
+    brightness: Brightness.dark,
+  );
   await dotenv.load(fileName: ".env");
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
