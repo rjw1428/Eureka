@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:expense_tracker/models/expense_user.dart';
 import 'package:expense_tracker/models/response.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
@@ -27,7 +28,7 @@ class AuthService {
     return _getUserLedgerId(user!.uid);
   }
 
-  Stream getAccount() {
+  Stream getAccountOrNull() {
     return userStream.switchMap((user) {
       if (user == null) {
         return const Stream.empty().startWith(null);
@@ -39,8 +40,18 @@ class AuthService {
           .snapshots()
           .map((event) => event.data())
           .where((data) => data != null)
-          .map((d) => user.uid);
+          .map((d) => ExpenseUser.fromJson({'id': user.uid, ...d!}));
     });
+  }
+
+  Stream<ExpenseUser> getAccount() {
+    return _db
+        .collection('expenseUsers')
+        .doc(user!.uid)
+        .snapshots()
+        .map((event) => event.data())
+        .where((data) => data != null)
+        .map((d) => ExpenseUser.fromJson({'id': user!.uid, ...d!}));
   }
 
   Stream<String> _getUserLedgerId(String uid) {

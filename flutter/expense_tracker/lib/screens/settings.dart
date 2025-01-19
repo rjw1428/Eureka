@@ -1,4 +1,5 @@
 import 'package:expense_tracker/models/category.dart';
+import 'package:expense_tracker/models/expense_user.dart';
 import 'package:expense_tracker/models/pending_request.dart';
 import 'package:expense_tracker/services/account_link.service.dart';
 import 'package:expense_tracker/services/auth.service.dart';
@@ -8,7 +9,6 @@ import 'package:expense_tracker/widgets/show_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:rxdart/rxdart.dart';
-import 'package:rxdart/streams.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -81,13 +81,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     final keyboardSpace = MediaQuery.of(context).viewInsets.bottom;
 
-    return StreamBuilder<Map<String, List<dynamic>>>(
-        stream: AuthService().getCurrentUserLedgerId().switchMap(
-              (ledgerId) => CombineLatestStream.combine2(
-                CategoriesService().getCategoriesStream(ledgerId!, withDeleted: false),
-                AccountLinkService().pendingLinkRequestList(AuthService().user!.uid),
-                (categoryList, pendingRequestList) =>
-                    {'categoryList': categoryList, 'pendingRequestList': pendingRequestList},
+    return StreamBuilder(
+        stream: AuthService().getAccount().switchMap(
+              (account) => CombineLatestStream.combine2(
+                CategoriesService().getCategoriesStream(account.ledgerId, withDeleted: false),
+                AccountLinkService().pendingLinkRequestList(account.id),
+                (categoryList, pendingRequestList) => {
+                  'categoryList': categoryList,
+                  'pendingRequestList': pendingRequestList,
+                  'user': account,
+                },
               ),
             ),
         builder: (context, snapshot) {
@@ -95,12 +98,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
             return Text(snapshot.error.toString());
           }
 
-          final List<CategoryDataWithId> configs = !snapshot.hasData
-              ? []
-              : snapshot.data!['categoryList']!.map((c) => c as CategoryDataWithId).toList();
+          final List<CategoryDataWithId> configs =
+              !snapshot.hasData ? [] : snapshot.data!['categoryList']! as List<CategoryDataWithId>;
           final List<PendingRequest> requestList = !snapshot.hasData
               ? []
-              : snapshot.data!['pendingRequestList']!.map((r) => r as PendingRequest).toList();
+              : snapshot.data!['pendingRequestList']! as List<PendingRequest>;
+          final ExpenseUser? user =
+              !snapshot.hasData ? null : snapshot.data!['user']! as ExpenseUser;
+
           return Scaffold(
             resizeToAvoidBottomInset: true,
             body: SafeArea(
@@ -130,6 +135,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       CategoryList(
                         categoryList: configs,
+                        editable: user?.role == 'primary',
                         onEdit: _openAddCategoryOverlay,
                       ),
                       Center(
@@ -152,6 +158,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         'Send a request to another user. When they accept, all transactions will appear on each others accounts.',
                         style: Theme.of(context).textTheme.bodyMedium,
                         textAlign: TextAlign.start,
+                      ),
+                      if ((user?.linkedAccounts ?? []).isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 12.0),
+                          child: Center(
+                              child: Text(
+                            'Linked Accounts',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          )),
+                        ),
+                      Column(
+                        children: (user?.linkedAccounts ?? []).map((link) {
+                          return Card(
+                            child: Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Text(link['email']!),
+                                  ),
+                                  // Row(
+                                  //   children: [
+                                  //     TextButton(
+                                  //         onPressed: () => onRemove(request),
+                                  //         child: const Icon(Icons.delete_outline)),
+                                  //   ],
+                                  // )
+                                ],
+                              ),
+                            ),
+                          );
+                        }).toList(),
                       ),
                       RequestList(
                           requestList: requestList, onRemove: AccountLinkService().removeRequest),
@@ -286,10 +325,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
 }
 
 class CategoryList extends StatelessWidget {
-  const CategoryList({super.key, required this.categoryList, required this.onEdit});
+  const CategoryList({
+    super.key,
+    required this.categoryList,
+    required this.onEdit,
+    required this.editable,
+  });
 
   final List<CategoryDataWithId> categoryList;
   final void Function(CategoryDataWithId) onEdit;
+  final bool editable;
 
   @override
   Widget build(Object context) {
@@ -316,12 +361,13 @@ class CategoryList extends StatelessWidget {
                           'Budget Amount: \$${category.budget.toStringAsFixed(2)}',
                           textAlign: TextAlign.end,
                         ),
-                        Row(
-                          children: [
-                            TextButton(
-                                onPressed: () => onEdit(category), child: const Icon(Icons.edit)),
-                          ],
-                        )
+                        if (editable)
+                          Row(
+                            children: [
+                              TextButton(
+                                  onPressed: () => onEdit(category), child: const Icon(Icons.edit)),
+                            ],
+                          )
                       ],
                     ),
                   ),

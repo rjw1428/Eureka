@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:expense_tracker/models/category.dart';
 import 'package:expense_tracker/models/expense.dart';
+import 'package:expense_tracker/models/expense_user.dart';
 import 'package:expense_tracker/screens/login.dart';
 import 'package:expense_tracker/services/account_link.service.dart';
 import 'package:expense_tracker/services/auth.service.dart';
@@ -25,15 +26,15 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder(
-      // stream: AuthService().userStream,
-      stream: AuthService().getAccount(),
+      stream: AuthService().getAccountOrNull(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Loading();
         } else if (snapshot.hasError) {
           return const Center(child: Text('ERROR'));
         } else if (snapshot.hasData) {
-          return TransactionScreen(userId: snapshot.data!);
+          final ExpenseUser user = snapshot.data!;
+          return TransactionScreen(userId: user.id);
         } else {
           return const LoginScreen();
         }
