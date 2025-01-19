@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:expense_tracker/constants/strings.dart';
 import 'package:expense_tracker/models/category.dart';
 import 'package:expense_tracker/models/expense.dart';
 import 'package:expense_tracker/models/expense_user.dart';
@@ -151,6 +152,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
               // Accepting requeries the ledger with the new ID,
               // but permissions are not valid yet,
               // Call this and to reload the data
+
               // UPDATE: now that this is async and we await
               // the acceptLinkRequest change, maybe this isn't needed
               _setTimeRange(_selectedDate);
@@ -178,7 +180,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
     return Scaffold(
       resizeToAvoidBottomInset: false,
       appBar: AppBar(
-        title: const Text('Expense Tracker'),
+        title: const Text(APP_TITLE),
         actions: const [
           AppBarActionMenu(),
         ],

@@ -1,4 +1,5 @@
 import 'package:expense_tracker/constants/help_text.dart';
+import 'package:expense_tracker/constants/strings.dart';
 import 'package:expense_tracker/screens/settings.dart';
 import 'package:expense_tracker/services/auth.service.dart';
 import 'package:flutter/material.dart';
@@ -27,8 +28,10 @@ class AppBarActionMenu extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     Center(
-                        child: Text('About Expense Tracker',
-                            style: Theme.of(context).textTheme.headlineMedium)),
+                        child: Text(
+                      'About $APP_TITLE',
+                      style: Theme.of(context).textTheme.headlineMedium,
+                    )),
                     const SizedBox(height: 15),
                     ...helpText.expand((section) {
                       return [

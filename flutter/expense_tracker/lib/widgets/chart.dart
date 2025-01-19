@@ -137,7 +137,7 @@ class ChartBar extends StatelessWidget {
                 child: Text(
                   amount > 0 ? '\$${amount.toStringAsFixed(2)}' : '',
                   textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.labelSmall,
+                  style: ThemeData().textTheme.titleSmall,
                 ),
               ),
             ),

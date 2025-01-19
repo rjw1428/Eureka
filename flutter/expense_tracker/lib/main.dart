@@ -60,6 +60,10 @@ void main() async {
                 color: colorScheme.onSurface,
                 fontStyle: FontStyle.italic,
               ),
+              labelSmall: TextStyle(
+                fontSize: 10,
+                color: colorScheme.onSurface,
+              ),
             ),
       ),
       darkTheme: ThemeData.dark().copyWith(
