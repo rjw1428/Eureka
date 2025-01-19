@@ -63,10 +63,12 @@ class AccountLinkService {
         'role': 'secondary',
         'ledgerId': request.requestingUserLedgerId,
         'backupLedgerId': request.targetCurrentLedgerId,
-        'linkedAccounts': {
-          'id': request.requestingUser,
-          'email': request.requestingUserEmail,
-        }
+        'linkedAccounts': FieldValue.arrayUnion([
+          {
+            'id': request.requestingUser,
+            'email': request.requestingUserEmail,
+          },
+        ])
       }),
       functions.httpsCallable("triggerLinkedAccount").call({
         'requestId': request.id,

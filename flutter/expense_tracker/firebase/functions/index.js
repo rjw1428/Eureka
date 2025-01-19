@@ -84,10 +84,10 @@ exports.triggerLinkedAccount = onCall(async (request) => {
             .collection("expenseUsers")
             .doc(acceptedRequest.requestingUser)
             .update({
-                linkedAccounts: {
+                linkedAccounts: FieldValue.arrayUnion({
                     id: acceptedRequest.targetUserId,
                     email: acceptedRequest.targetEmail
-                }
+                })
             })
 
         await getFirestore()
