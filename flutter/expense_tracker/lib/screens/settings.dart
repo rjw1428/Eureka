@@ -4,6 +4,7 @@ import 'package:expense_tracker/models/pending_request.dart';
 import 'package:expense_tracker/services/account_link.service.dart';
 import 'package:expense_tracker/services/auth.service.dart';
 import 'package:expense_tracker/services/categories.service.dart';
+import 'package:expense_tracker/services/theme_color.service.dart';
 import 'package:expense_tracker/widgets/category_form.dart';
 import 'package:expense_tracker/widgets/show_dialog.dart';
 import 'package:flutter/material.dart';
@@ -52,12 +53,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _showColorSelector(BuildContext context) {
-    Color _selectedColor = Colors.red;
+    Color selectedColor = ThemeColorService().currentColor;
     showDialogNotification(
       'Select a color',
       HueRingPicker(
-        pickerColor: _selectedColor,
-        onColorChanged: (c) => _selectedColor = c,
+        pickerColor: selectedColor,
+        onColorChanged: (c) => selectedColor = c,
         enableAlpha: false,
         displayThumbColor: true,
       ),
@@ -65,11 +66,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       TextButton(
         onPressed: () async {
           final result =
-              "${_selectedColor.alpha},${_selectedColor.red},${_selectedColor.green},${_selectedColor.blue}";
-          print(_selectedColor);
-          print(result);
+              "${selectedColor.alpha},${selectedColor.red},${selectedColor.green},${selectedColor.blue}";
           SharedPreferences preferences = await SharedPreferences.getInstance();
           await preferences.setString('theme_color', result);
+          ThemeColorService().selectColor(selectedColor);
           Navigator.pop(context);
         },
         child: const Text('Save'),
