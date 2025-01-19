@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:expense_tracker/models/category.dart';
 import 'package:expense_tracker/models/expense.dart';
 import 'package:expense_tracker/screens/login.dart';
+import 'package:expense_tracker/services/account_link.service.dart';
 import 'package:expense_tracker/services/auth.service.dart';
 import 'package:expense_tracker/services/categories.service.dart';
 import 'package:expense_tracker/services/expense.service.dart';
@@ -11,6 +12,8 @@ import 'package:expense_tracker/widgets/chart.dart';
 import 'package:expense_tracker/widgets/expense_form.dart';
 import 'package:expense_tracker/widgets/expenses_list.dart';
 import 'package:expense_tracker/widgets/filter_row.dart';
+import 'package:expense_tracker/widgets/loading.dart';
+import 'package:expense_tracker/widgets/show_dialog.dart';
 import 'package:expense_tracker/widgets/time_row.dart';
 import 'package:expense_tracker/widgets/total_row.dart';
 import 'package:flutter/material.dart';
@@ -25,12 +28,8 @@ class HomeScreen extends StatelessWidget {
       // stream: AuthService().userStream,
       stream: AuthService().getAccount(),
       builder: (context, snapshot) {
-        print("---STREAM---");
-        print(snapshot.data);
-        print(snapshot.hasData);
-        print(snapshot.error);
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Text('PENDING');
+          return const Loading();
         } else if (snapshot.hasError) {
           return const Center(child: Text('ERROR'));
         } else if (snapshot.hasData) {
@@ -132,6 +131,47 @@ class _TransactionScreenState extends State<TransactionScreen> {
     setState(() => _selectedDate = date);
   }
 
+  void linkRequestNotification() {
+    final userId = AuthService().user!.uid;
+    AccountLinkService()
+        .subscribeToLinkMessage(userId)
+        .doOnError((error, stack) => print('oh no: $error'))
+        .doOnDone(() => print('complete'))
+        .listen((request) {
+      showDialogNotification(
+          'Link Account',
+          Text(
+              '''User ${request.requestingUserEmail} is requesting to link accounts. This will mean that both your expenses and their expenses will appear on your tracker. It also means that by accepting their request, they will hold a primary account will set budgeting rules for both your accounts.'''),
+          context,
+          TextButton(
+            onPressed: () async {
+              await AccountLinkService().acceptLinkRequest(request, userId);
+              Navigator.pop(context);
+              // Accepting requeries the ledger with the new ID,
+              // but permissions are not valid yet,
+              // Call this and to reload the data
+              // UPDATE: now that this is async and we await
+              // the acceptLinkRequest change, maybe this isn't needed
+              _setTimeRange(_selectedDate);
+            },
+            child: const Text('Accept'),
+          ),
+          TextButton(
+            onPressed: () {
+              AccountLinkService().rejectLinRequest(request);
+              Navigator.pop(context);
+            },
+            child: const Text('Reject'),
+          ));
+    });
+  }
+
+  @override
+  void initState() {
+    linkRequestNotification();
+    super.initState();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -143,11 +183,12 @@ class _TransactionScreenState extends State<TransactionScreen> {
         ],
       ),
       body: StreamBuilder<Map<String, List<dynamic>>>(
-        stream: CombineLatestStream.combine3(
-          ExpenseService().getExpenseStream(_selectedDate),
-          CategoriesService().getCategoriesStream(),
-          _selectedFilters.stream.startWith(null),
-          (expenses, categories, selection) {
+        stream: AuthService().getCurrentUserLedgerId().switchMap((ledgerId) {
+          print("LEDGER ID: ${ledgerId}");
+          return CombineLatestStream.combine3(
+              ExpenseService().getExpenseStream(ledgerId!, _selectedDate),
+              CategoriesService().getCategoriesStream(ledgerId),
+              _selectedFilters.stream.startWith(null), (expenses, categories, selection) {
             final List distinctCategoryIds = Set.from(
               expenses.map((el) => el.categoryId),
             ).toList();
@@ -156,14 +197,14 @@ class _TransactionScreenState extends State<TransactionScreen> {
               'categories': categories,
               'selection': selection ?? distinctCategoryIds,
             });
-          },
-        ),
+          });
+        }),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
             return Text(snapshot.error.toString());
           }
           if (!snapshot.hasData) {
-            return const Text('Loading...');
+            return const Loading();
           }
 
           _categoryConfigs = snapshot.data!['categories']!.map((el) {

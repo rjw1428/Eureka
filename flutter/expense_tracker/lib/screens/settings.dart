@@ -1,4 +1,5 @@
 import 'package:expense_tracker/models/category.dart';
+import 'package:expense_tracker/models/pending_request.dart';
 import 'package:expense_tracker/services/account_link.service.dart';
 import 'package:expense_tracker/services/auth.service.dart';
 import 'package:expense_tracker/services/categories.service.dart';
@@ -6,6 +7,8 @@ import 'package:expense_tracker/widgets/category_form.dart';
 import 'package:expense_tracker/widgets/show_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+import 'package:rxdart/rxdart.dart';
+import 'package:rxdart/streams.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -76,169 +79,206 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<List<CategoryDataWithId>>(
-        stream: CategoriesService().getCategoriesStream(withDeleted: false),
+    final keyboardSpace = MediaQuery.of(context).viewInsets.bottom;
+
+    return StreamBuilder<Map<String, List<dynamic>>>(
+        stream: AuthService().getCurrentUserLedgerId().switchMap(
+              (ledgerId) => CombineLatestStream.combine2(
+                CategoriesService().getCategoriesStream(ledgerId!, withDeleted: false),
+                AccountLinkService().pendingLinkRequestList(AuthService().user!.uid),
+                (categoryList, pendingRequestList) =>
+                    {'categoryList': categoryList, 'pendingRequestList': pendingRequestList},
+              ),
+            ),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
             return Text(snapshot.error.toString());
           }
 
-          final List<CategoryDataWithId> configs = !snapshot.hasData ? [] : snapshot.data!;
-
-          return Padding(
-            padding: const EdgeInsets.fromLTRB(8, 64, 8, 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Settings',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.close),
-                    ),
-                  ],
-                ),
-                Text(
-                  'Spending Categories:',
-                  style: Theme.of(context).textTheme.titleMedium,
-                  textAlign: TextAlign.start,
-                ),
-                CategoryList(
-                  categoryList: configs,
-                  onEdit: _openAddCategoryOverlay,
-                ),
-                Center(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8.0),
-                    child: OutlinedButton.icon(
-                      onPressed: _openAddCategoryOverlay,
-                      label: const Text('Add a spending category'),
-                      icon: const Icon(Icons.playlist_add),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Link your spending',
-                  style: Theme.of(context).textTheme.titleMedium,
-                  textAlign: TextAlign.start,
-                ),
-                Text(
-                  'Send a request to another user. When they accept, all transactions will appear on each others accounts.',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                  textAlign: TextAlign.start,
-                ),
-                if (!showLinkForm)
-                  Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8.0),
-                      child: OutlinedButton.icon(
-                        onPressed: () => setState(() => showLinkForm = true),
-                        label: const Text('Link with user'),
-                        icon: const Icon(Icons.library_add),
+          final List<CategoryDataWithId> configs = !snapshot.hasData
+              ? []
+              : snapshot.data!['categoryList']!.map((c) => c as CategoryDataWithId).toList();
+          final List<PendingRequest> requestList = !snapshot.hasData
+              ? []
+              : snapshot.data!['pendingRequestList']!.map((r) => r as PendingRequest).toList();
+          return Scaffold(
+            resizeToAvoidBottomInset: true,
+            body: SafeArea(
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(16, 16, 16, keyboardSpace + 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Settings',
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                          IconButton(
+                            onPressed: () => Navigator.pop(context),
+                            icon: const Icon(Icons.close),
+                          ),
+                        ],
                       ),
-                    ),
-                  ),
-                if (showLinkForm)
-                  Material(
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: TextField(
-                        controller: _emailField,
-                        decoration: const InputDecoration(
-                          label: Text('Email Address'),
+                      Text(
+                        'Spending Categories:',
+                        style: Theme.of(context).textTheme.titleMedium,
+                        textAlign: TextAlign.start,
+                      ),
+                      CategoryList(
+                        categoryList: configs,
+                        onEdit: _openAddCategoryOverlay,
+                      ),
+                      Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8.0),
+                          child: OutlinedButton.icon(
+                            onPressed: _openAddCategoryOverlay,
+                            label: const Text('Add a spending category'),
+                            icon: const Icon(Icons.playlist_add),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                if (showLinkForm)
-                  Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8.0),
-                      child: OutlinedButton.icon(
-                        onPressed: () async {
-                          if (_emailField.text.trim().isEmpty) {
-                            showDialogNotification(
-                              'Invalid Email',
-                              const Text('Please enter an email address'),
-                              context,
-                            );
-                            return;
-                          }
-
-                          final RegExp emailRegex = RegExp(
-                              r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+");
-                          if (!emailRegex.hasMatch(_emailField.text.trim())) {
-                            showDialogNotification(
-                              'Invalid Email',
-                              const Text('Please enter a valid email address'),
-                              context,
-                            );
-                            return;
-                          }
-                          final response = await AccountLinkService().sendLinkRequest(
-                            _emailField.text,
-                            AuthService().user!.uid,
-                          );
-                          if (!response.success) {
-                            showDialogNotification(
-                              'Invite Failed',
-                              Text(response.message!),
-                              context,
-                            );
-                            return;
-                          }
-
-                          showDialogNotification(
-                            'Invite Success!',
-                            const Text('''
-An invite has been sent to the provided email address. 
-If they have an account, they will be notified shortly. 
-If they do not already have an account, an email will be 
-sent to them inviting them to join.
-'''),
-                            context,
-                          );
-                          _emailField.text = '';
-                        },
-                        label: const Text('Send Request'),
-                        icon: const Icon(Icons.send_outlined),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Link your spending',
+                        style: Theme.of(context).textTheme.titleMedium,
+                        textAlign: TextAlign.start,
                       ),
-                    ),
-                  ),
-                if (showLinkForm)
-                  Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8.0),
-                      child: OutlinedButton.icon(
-                        onPressed: () => setState(() => showLinkForm = false),
-                        label: const Text('Cancel'),
-                        icon: const Icon(Icons.undo),
+                      Text(
+                        'Send a request to another user. When they accept, all transactions will appear on each others accounts.',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                        textAlign: TextAlign.start,
                       ),
-                    ),
+                      RequestList(
+                          requestList: requestList, onRemove: AccountLinkService().removeRequest),
+                      if (!showLinkForm)
+                        Center(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8.0),
+                            child: OutlinedButton.icon(
+                              onPressed: () => setState(() => showLinkForm = true),
+                              label: const Text('Link with user'),
+                              icon: const Icon(Icons.library_add),
+                            ),
+                          ),
+                        ),
+                      if (showLinkForm)
+                        Material(
+                          child: Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: TextField(
+                              controller: _emailField,
+                              decoration: const InputDecoration(
+                                label: Text('Email Address'),
+                              ),
+                            ),
+                          ),
+                        ),
+                      if (showLinkForm)
+                        Center(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8.0),
+                            child: OutlinedButton.icon(
+                              onPressed: () async {
+                                if (_emailField.text.trim().isEmpty) {
+                                  showDialogNotification(
+                                    'Invalid Email',
+                                    const Text('Please enter an email address'),
+                                    context,
+                                  );
+                                  return;
+                                }
+
+                                final RegExp emailRegex = RegExp(
+                                    r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+");
+                                if (!emailRegex.hasMatch(_emailField.text.trim())) {
+                                  showDialogNotification(
+                                    'Invalid Email',
+                                    const Text('Please enter a valid email address'),
+                                    context,
+                                  );
+                                  return;
+                                }
+
+                                if (requestList
+                                    .map((req) => req.targetEmail)
+                                    .contains(_emailField.text.trim())) {
+                                  showDialogNotification(
+                                    'Already Requested',
+                                    const Text(
+                                        'The email address provided has already been requested'),
+                                    context,
+                                  );
+                                  return;
+                                }
+
+                                final response = await AccountLinkService().sendLinkRequest(
+                                  _emailField.text,
+                                  AuthService().user!.uid,
+                                );
+                                if (!response.success) {
+                                  showDialogNotification(
+                                    'Invite Failed',
+                                    Text(response.message!),
+                                    context,
+                                  );
+                                  return;
+                                }
+
+                                showDialogNotification(
+                                  'Invite Success!',
+                                  const Text(
+                                      '''An invite has been sent to the provided email address. If they have an account, they will be notified shortly. If they do not already have an account, an email will be sent to them inviting them to join.'''),
+                                  context,
+                                );
+                                setState(() {
+                                  showLinkForm = false;
+                                  _emailField.text = '';
+                                });
+                              },
+                              label: const Text('Send Request'),
+                              icon: const Icon(Icons.send_outlined),
+                            ),
+                          ),
+                        ),
+                      if (showLinkForm)
+                        Center(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8.0),
+                            child: OutlinedButton.icon(
+                              onPressed: () => setState(() {
+                                showLinkForm = false;
+                                _emailField.text = '';
+                              }),
+                              label: const Text('Cancel'),
+                              icon: const Icon(Icons.undo),
+                            ),
+                          ),
+                        ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Color Theme',
+                        style: Theme.of(context).textTheme.titleMedium,
+                        textAlign: TextAlign.start,
+                      ),
+                      Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8.0),
+                          child: OutlinedButton.icon(
+                            onPressed: () => _showColorSelector(context),
+                            label: const Text('Select color'),
+                            icon: const Icon(Icons.color_lens_outlined),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                const SizedBox(height: 16),
-                Text(
-                  'Color Theme',
-                  style: Theme.of(context).textTheme.titleMedium,
-                  textAlign: TextAlign.start,
                 ),
-                Center(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8.0),
-                    child: OutlinedButton.icon(
-                      onPressed: () => _showColorSelector(context),
-                      label: const Text('Select color'),
-                      icon: const Icon(Icons.color_lens_outlined),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
           );
         });
@@ -287,5 +327,45 @@ class CategoryList extends StatelessWidget {
                   ),
                 ))
             .toList());
+  }
+}
+
+class RequestList extends StatelessWidget {
+  const RequestList({super.key, required this.requestList, required this.onRemove});
+
+  final List<PendingRequest> requestList;
+  final void Function(PendingRequest) onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        if (requestList.isNotEmpty)
+          Text(
+            'Pending Requests',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+        ...requestList.map((request) => Card(
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(request.targetEmail),
+                    ),
+                    Row(
+                      children: [
+                        TextButton(
+                            onPressed: () => onRemove(request),
+                            child: const Icon(Icons.delete_outline)),
+                      ],
+                    )
+                  ],
+                ),
+              ),
+            )),
+      ],
+    );
   }
 }

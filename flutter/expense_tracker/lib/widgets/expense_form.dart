@@ -1,4 +1,5 @@
 import 'package:expense_tracker/models/expense.dart';
+import 'package:expense_tracker/services/auth.service.dart';
 import 'package:expense_tracker/services/categories.service.dart';
 import 'package:expense_tracker/widgets/show_dialog.dart';
 import 'package:flutter/material.dart';
@@ -100,7 +101,10 @@ class _ExpenseFormState extends State<ExpenseForm> {
     final keyboardSpace = MediaQuery.of(context).viewInsets.bottom;
 
     return FutureBuilder(
-        future: CategoriesService().getCategories(),
+        future: AuthService()
+            .getCurrentUserLedgerId()
+            .first
+            .then((ledgerId) => CategoriesService().getCategories(ledgerId!)),
         builder: (context, snapshot) {
           final categoryConfig = snapshot.data ?? [];
           return SingleChildScrollView(
@@ -172,10 +176,13 @@ class _ExpenseFormState extends State<ExpenseForm> {
                       children: [
                         Expanded(
                           child: TextField(
+                            textCapitalization: TextCapitalization.sentences,
                             controller: _note,
                             maxLength: 50,
-                            decoration:
-                                const InputDecoration(label: Text('Notes'), helperText: 'Optional'),
+                            decoration: const InputDecoration(
+                              label: Text('Notes'),
+                              helperText: 'Optional',
+                            ),
                           ),
                         ),
                       ],

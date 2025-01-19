@@ -10,10 +10,10 @@ import 'package:rxdart/rxdart.dart';
 
 // ignore: non_constant_identifier_names
 final WEB_CLIENT_ID = dotenv.env['WEB_CLIENT_ID'];
-FirebaseFunctions functions = FirebaseFunctions.instance;
 
 class AuthService {
   AuthService._internal();
+  FirebaseFunctions functions = FirebaseFunctions.instance;
   static final _instance = AuthService._internal();
   factory AuthService() {
     return _instance;
@@ -27,12 +27,29 @@ class AuthService {
     return _getUserLedgerId(user!.uid);
   }
 
+  Stream getAccount() {
+    return userStream.switchMap((user) {
+      if (user == null) {
+        return const Stream.empty().startWith(null);
+      }
+      print("LOGGED IN AS: ${user.uid}");
+      return _db
+          .collection('expenseUsers')
+          .doc(user.uid)
+          .snapshots()
+          .map((event) => event.data())
+          .where((data) => data != null)
+          .map((d) => user.uid);
+    });
+  }
+
   Stream<String> _getUserLedgerId(String uid) {
     return _db
         .collection('expenseUsers')
         .doc(uid)
         .snapshots()
-        .map((doc) => doc.get('ledgerId') as String);
+        .map((doc) => doc.get('ledgerId') as String)
+        .shareReplay(maxSize: 1);
   }
 
   Future<bool> createUser(String email, String password) async {
@@ -110,6 +127,7 @@ class AuthService {
   }
 
   Future<bool> initializeAccount(String email, String userId) async {
+    // Completer here is just used to trigger an error message
     Completer<bool> completer = Completer();
     try {
       final resp = await functions.httpsCallable("initializeExpenseTrackerAccount").call({
@@ -117,27 +135,12 @@ class AuthService {
         'email': email,
       });
       print(resp.data);
+      completer.complete(true);
     } catch (e) {
       print(e);
       completer.complete(false);
     }
     return completer.future;
-  }
-
-  Stream getAccount() {
-    return userStream.switchMap((user) {
-      if (user == null) {
-        return const Stream.empty().startWith(null);
-      }
-      print("LOGGED IN AS: ${user.uid}");
-      return _db
-          .collection('expenseUsers')
-          .doc(user!.uid)
-          .snapshots()
-          .map((event) => event.data())
-          .where((data) => data != null)
-          .map((d) => user!.uid);
-    });
   }
 
   Future<void> logOut() async {

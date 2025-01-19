@@ -49,29 +49,32 @@ class CategoriesService {
     return _db.collection('ledger').doc(ledgerId);
   }
 
-  Stream<List<CategoryDataWithId>> getCategoriesStream({withDeleted = true}) {
-    return AuthService()
-        .getCurrentUserLedgerId()
-        .switchMap((ledgerId) => _db.collection('ledger').doc(ledgerId).snapshots())
+  Stream<List<CategoryDataWithId>> getCategoriesStream(String ledgerId, {withDeleted = true}) {
+    return _db
+        .collection('ledger')
+        .doc(ledgerId)
+        .snapshots()
         .map(
-      (snapshot) {
-        final data = snapshot.get('budgetConfig') as LinkedHashMap<String, dynamic>;
-        List<CategoryDataWithId> configs = data.entries.map((element) {
-          return CategoryDataWithId.fromJson({...element.value, 'id': element.key});
-        }).toList();
+          (snapshot) {
+            final data = snapshot.get('budgetConfig') as LinkedHashMap<String, dynamic>;
+            List<CategoryDataWithId> configs = data.entries.map((element) {
+              return CategoryDataWithId.fromJson({...element.value, 'id': element.key});
+            }).toList();
 
-        if (!withDeleted) {
-          configs = configs.where((config) => !config.deleted).toList();
-        }
+            if (!withDeleted) {
+              configs = configs.where((config) => !config.deleted).toList();
+            }
 
-        configs.sort((a, b) => a.label.compareTo(b.label));
-        return configs;
-      },
-    ).shareReplay(maxSize: 1);
+            configs.sort((a, b) => a.label.compareTo(b.label));
+            return configs;
+          },
+        )
+        .handleError((err) => print('Category Stream: ${err.toString()}'))
+        .shareReplay(maxSize: 1);
   }
 
-  Future<List<CategoryDataWithId>> getCategories({withDeleted = true}) async {
-    return getCategoriesStream().first;
+  Future<List<CategoryDataWithId>> getCategories(String ledgerId, {withDeleted = true}) async {
+    return getCategoriesStream(ledgerId).first;
   }
 
   Future<void> updateCategory(CategoryDataWithId category) async {

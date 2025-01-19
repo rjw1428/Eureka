@@ -15,27 +15,26 @@ class ExpenseService {
     return _instance;
   }
 
+  Stream<List<Expense>> getExpenseStream(String ledgerId, DateTime date) {
+    final month = formatMonth(date);
+
+    return _db
+        .collection('ledger')
+        .doc(ledgerId)
+        .collection(month)
+        .orderBy('date', descending: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.map((doc) {
+              return Expense.fromJson({...doc.data(), "id": doc.id});
+            }).toList())
+        .handleError((err) => print('Expense Stream: ${err.toString()}'))
+        .shareReplay(maxSize: 1);
+  }
+
   Future<CollectionReference<Map<String, dynamic>>> expenseCollection(DateTime date) async {
     final ledgerId = await AuthService().getCurrentUserLedgerId().first;
     final month = formatMonth(date);
     return _db.collection('ledger').doc(ledgerId).collection(month);
-  }
-
-  Stream<List<Expense>> getExpenseStream(DateTime date) {
-    final ledgerId$ = AuthService().getCurrentUserLedgerId();
-    final month = formatMonth(date);
-
-    return ledgerId$
-        .switchMap((ledgerId) => _db
-            .collection('ledger')
-            .doc(ledgerId)
-            .collection(month)
-            .orderBy('date', descending: true)
-            .snapshots())
-        .map((snapshot) => snapshot.docs.map((doc) {
-              return Expense.fromJson({...doc.data(), "id": doc.id});
-            }).toList())
-        .shareReplay(maxSize: 1);
   }
 
   Future<void> updateExpense(Expense expense, Expense previousExpense) async {

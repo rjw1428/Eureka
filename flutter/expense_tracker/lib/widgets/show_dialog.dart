@@ -8,11 +8,8 @@ void showDialogNotification(
   Widget content,
   BuildContext context, [
   Widget? callback,
+  Widget? reject,
 ]) {
-  if (context.findRenderObject() == null) {
-    return;
-  }
-
   bool isIos = false;
   try {
     isIos = Platform.isIOS;
@@ -26,7 +23,14 @@ void showDialogNotification(
       builder: (ctx) => CupertinoAlertDialog(
         title: Text(title),
         content: content,
-        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Okay'))],
+        actions: callback == null
+            ? [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Okay'))]
+            : reject == null
+                ? [
+                    callback,
+                    TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel'))
+                  ]
+                : [callback, reject],
       ),
     );
   } else {
@@ -42,10 +46,12 @@ void showDialogNotification(
         ),
         actions: callback == null
             ? [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Okay'))]
-            : [
-                callback,
-                TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel'))
-              ],
+            : reject == null
+                ? [
+                    callback,
+                    TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel'))
+                  ]
+                : [callback, reject],
       ),
     );
   }
