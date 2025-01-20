@@ -3,6 +3,9 @@ import 'package:expense_tracker/constants/icons.dart';
 import 'package:expense_tracker/models/category.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:uuid/uuid.dart';
+
+const uuid = Uuid();
 
 class CategoryForm extends StatefulWidget {
   const CategoryForm({
@@ -80,21 +83,17 @@ class _CategoryFormState extends State<CategoryForm> {
       return;
     }
 
-    // VALIDATION: Make sure that the name doesn't already exist
-
     final newCategory = CategoryDataWithId(
       budget: enteredBudget,
       label: enteredLabel,
       icon: _selectedIcon,
-      id: enteredLabel.toUpperCase(),
+      id: uuid.v4(),
     );
 
     if (widget.initialCategory != null) {
       newCategory.updateId(widget.initialCategory!.id);
-      widget.onSubmit(newCategory);
-    } else {
-      widget.onSubmit(newCategory);
     }
+    widget.onSubmit(newCategory);
 
     Navigator.pop(context);
     return;

@@ -1,11 +1,11 @@
 {
-    "name": "expense_tracker",
-    "short_name": "expense_tracker",
+    "name": "SpendWatch",
+    "short_name": "SpendWatch",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Providing financial visibility over spending and budgeting",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
