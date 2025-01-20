@@ -32,9 +32,17 @@ class HomeScreen extends StatelessWidget {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Loading();
         } else if (snapshot.hasError) {
-          return const Center(child: Text('ERROR'));
-        } else if (snapshot.hasData) {
-          final ExpenseUser user = snapshot.data!;
+          return Center(
+            child: Column(children: [
+              const Text('ERROR'),
+              Text(
+                snapshot.error.toString(),
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ]),
+          );
+        } else if (snapshot.hasData && snapshot.data != null) {
+          final ExpenseUser user = snapshot.data;
           return TransactionScreen(userId: user.id);
         } else {
           return const LoginScreen();

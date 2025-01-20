@@ -6,7 +6,6 @@ import 'package:expense_tracker/firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
   // SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]).then((fn) {
   //   // Run App Function
   // });
@@ -15,6 +14,7 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   final initialSeedColor = await ThemeColorService().init();
+  WidgetsFlutterBinding.ensureInitialized();
 
   runApp(
     StreamBuilder<Object>(

@@ -106,7 +106,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final keyboardSpace = MediaQuery.of(context).viewInsets.bottom;
 
     return StreamBuilder(
-        stream: AuthService().getAccount().switchMap(
+        stream: AuthService().getAccount(AuthService().user!).switchMap(
               (account) => CombineLatestStream.combine2(
                 CategoriesService().getCategoriesStream(account.ledgerId, withDeleted: false),
                 AccountLinkService().pendingLinkRequestList(account.id),

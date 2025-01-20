@@ -43,18 +43,18 @@ class AuthService {
         return const Stream.empty().startWith(null);
       }
       print("LOGGED IN AS: ${user.uid}");
-      return getAccount();
+      return getAccount(user);
     });
   }
 
-  Stream<ExpenseUser> getAccount() {
+  Stream<ExpenseUser> getAccount(User user) {
     return _db
         .collection('expenseUsers')
-        .doc(user!.uid)
+        .doc(user.uid)
         .snapshots()
         .map((event) => event.data())
         .where((data) => data != null)
-        .map((d) => ExpenseUser.fromJson({'id': user!.uid, ...d!}));
+        .map((d) => ExpenseUser.fromJson({'id': user.uid, ...d!}));
   }
 
   Future<bool> createUser(String email, String password) async {

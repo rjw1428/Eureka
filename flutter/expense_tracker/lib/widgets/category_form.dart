@@ -168,7 +168,7 @@ class _CategoryFormState extends State<CategoryForm> {
                       controller: _budget,
                       decoration: const InputDecoration(
                         prefixText: '\$',
-                        label: Text('Budget'),
+                        label: Text('Monthly Budget'),
                       ),
                       keyboardType:
                           const TextInputType.numberWithOptions(signed: true, decimal: true),

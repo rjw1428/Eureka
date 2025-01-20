@@ -116,6 +116,10 @@ class _ExpenseFormState extends State<ExpenseForm> {
                     formTitle,
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
+                  if (categoryConfig.isEmpty)
+                    const Text(
+                      'No budget categories found. Navigate to the Settings menu in the upper right corner and configure your budget categories.',
+                    ),
                   Row(children: [
                     Expanded(
                       child: DropdownButton(
@@ -191,10 +195,11 @@ class _ExpenseFormState extends State<ExpenseForm> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      ElevatedButton(
-                        onPressed: _submit,
-                        child: Text(actionButtonLabel),
-                      ),
+                      if (categoryConfig.isNotEmpty)
+                        ElevatedButton(
+                          onPressed: _submit,
+                          child: Text(actionButtonLabel),
+                        ),
                       if (widget.initialExpense != null)
                         TextButton(
                           onPressed: () {
