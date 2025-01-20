@@ -78,14 +78,10 @@ class CategoriesService {
   }
 
   Future<void> updateCategory(CategoryDataWithId category) async {
-    try {
-      final docRef = await budgetCategoryCollection();
-      var categoryUpdate = category.toJson();
-      categoryUpdate.remove('id');
-      return docRef.update({"budgetConfig.${category.id}": categoryUpdate});
-    } catch (e) {
-      return;
-    }
+    final docRef = await budgetCategoryCollection();
+    var categoryUpdate = category.toJson();
+    categoryUpdate.remove('id');
+    return docRef.update({"budgetConfig.${category.id}": categoryUpdate});
   }
 
   Future<void> remove(CategoryDataWithId category) async {
@@ -97,13 +93,9 @@ class CategoriesService {
   }
 
   Future<void> addCategory(CategoryDataWithId category) async {
-    try {
-      final docRef = await budgetCategoryCollection();
-      var categoryUpdate = category.toJson();
-      categoryUpdate.remove('id');
-      return docRef.update({"budgetConfig.${category.id}": categoryUpdate});
-    } catch (e) {
-      return;
-    }
+    final docRef = await budgetCategoryCollection();
+    var categoryUpdate = category.toJson();
+    categoryUpdate.remove('id');
+    return docRef.update({"budgetConfig.${category.id}": categoryUpdate});
   }
 }

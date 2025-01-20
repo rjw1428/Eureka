@@ -41,15 +41,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _addCategory(CategoryDataWithId category) {
-    CategoriesService().addCategory(category);
+    try {
+      CategoriesService().addCategory(category);
+    } catch (e) {
+      showDialogNotification(
+        'Unable to add category',
+        const Text('An error has occurred. Please change something and try again.'),
+        context,
+      );
+    }
   }
 
   void _updateCategory(CategoryDataWithId category) {
-    CategoriesService().updateCategory(category);
+    try {
+      CategoriesService().updateCategory(category);
+    } catch (e) {
+      showDialogNotification(
+        'Unable to update category',
+        const Text('An error has occurred. Please change something and try again.'),
+        context,
+      );
+    }
   }
 
   void _removeCategory(CategoryDataWithId category) {
-    CategoriesService().remove(category);
+    try {
+      CategoriesService().remove(category);
+    } catch (e) {
+      showDialogNotification(
+        'Unable to delete category',
+        const Text('An error has occurred. Please change something and try again.'),
+        context,
+      );
+    }
   }
 
   void _showColorSelector(BuildContext context) {
@@ -106,6 +130,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           final ExpenseUser? user =
               !snapshot.hasData ? null : snapshot.data!['user']! as ExpenseUser;
 
+          final double totalBudget = configs.fold(0, (sum, val) => sum + val.budget);
+
           return Scaffold(
             resizeToAvoidBottomInset: true,
             body: SafeArea(
@@ -128,10 +154,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                         ],
                       ),
-                      Text(
-                        'Spending Categories:',
-                        style: Theme.of(context).textTheme.titleMedium,
-                        textAlign: TextAlign.start,
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Spending Categories:',
+                            style: Theme.of(context).textTheme.titleMedium,
+                            textAlign: TextAlign.start,
+                          ),
+                          Text(
+                            'Total: \$${totalBudget.toStringAsFixed(2)}',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          )
+                        ],
                       ),
                       CategoryList(
                         categoryList: configs,
@@ -358,7 +393,7 @@ class CategoryList extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          'Budget Amount: \$${category.budget.toStringAsFixed(2)}',
+                          'Budget: \$${category.budget.toStringAsFixed(2)}',
                           textAlign: TextAlign.end,
                         ),
                         if (editable)
