@@ -156,6 +156,7 @@ class _CategoryFormState extends State<CategoryForm> {
                   ),
                   Expanded(
                     child: TextField(
+                      textCapitalization: TextCapitalization.words,
                       controller: _label,
                       decoration: const InputDecoration(
                         label: Text('Category Name'),
