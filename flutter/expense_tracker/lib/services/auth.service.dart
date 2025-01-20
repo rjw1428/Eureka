@@ -28,19 +28,22 @@ class AuthService {
     return _getUserLedgerId(user!.uid);
   }
 
+  Stream<String> _getUserLedgerId(String uid) {
+    return _db
+        .collection('expenseUsers')
+        .doc(uid)
+        .snapshots()
+        .map((doc) => doc.get('ledgerId') as String)
+        .shareReplay(maxSize: 1);
+  }
+
   Stream getAccountOrNull() {
     return userStream.switchMap((user) {
       if (user == null) {
         return const Stream.empty().startWith(null);
       }
       print("LOGGED IN AS: ${user.uid}");
-      return _db
-          .collection('expenseUsers')
-          .doc(user.uid)
-          .snapshots()
-          .map((event) => event.data())
-          .where((data) => data != null)
-          .map((d) => ExpenseUser.fromJson({'id': user.uid, ...d!}));
+      return getAccount();
     });
   }
 
@@ -52,15 +55,6 @@ class AuthService {
         .map((event) => event.data())
         .where((data) => data != null)
         .map((d) => ExpenseUser.fromJson({'id': user!.uid, ...d!}));
-  }
-
-  Stream<String> _getUserLedgerId(String uid) {
-    return _db
-        .collection('expenseUsers')
-        .doc(uid)
-        .snapshots()
-        .map((doc) => doc.get('ledgerId') as String)
-        .shareReplay(maxSize: 1);
   }
 
   Future<bool> createUser(String email, String password) async {

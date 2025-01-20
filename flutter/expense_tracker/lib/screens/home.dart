@@ -63,6 +63,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
   final _selectedFilters =
       StreamController<List<String>?>.broadcast(); // Only selected category ids
   DateTime _selectedDate = DateTime.now();
+  late String appVersion = '';
 
   void _openAddExpenseOverlay([ExpenseWithCategoryData? expense]) {
     showModalBottomSheet(
@@ -181,8 +182,8 @@ class _TransactionScreenState extends State<TransactionScreen> {
       resizeToAvoidBottomInset: false,
       appBar: AppBar(
         title: const Text(APP_TITLE),
-        actions: const [
-          AppBarActionMenu(),
+        actions: [
+          AppBarActionMenu(appVersion: appVersion),
         ],
       ),
       body: StreamBuilder<Map<String, List<dynamic>>>(
