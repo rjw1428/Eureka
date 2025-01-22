@@ -1,9 +1,9 @@
 name: expense_tracker
-description: "A new Flutter project."
+description: "Application is a way to provide visibility to budget and expenses for where multiple users can interact with a shared ledger"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
-version: 1.0.0+2
+version: 1.1.0+2
 
 environment:
   sdk: '>=3.4.0 <4.0.0'
