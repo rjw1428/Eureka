@@ -144,6 +144,18 @@ class _TransactionScreenState extends State<TransactionScreen> {
 
   void linkRequestNotification() {
     final userId = AuthService().user!.uid;
+
+    // AccountLinkService()
+    //     .subscribeToUnLinkMessage(userId)
+    //     .doOnError((error, stack) => print('oops: $error'))
+    //     .doOnDone(() => print('complete'))
+    //     .listen((email) => showDialogNotification(
+    //           'Your Account Has Been Unlinked',
+    //           Text(
+    //               '''$email has unlink your account. You will no longer be able to see any expenses from them or any expenses that were added by you. You have been reverted back to the your ledger before your account was linked '''),
+    //           context,
+    //         ));
+
     AccountLinkService()
         .subscribeToLinkMessage(userId)
         .doOnError((error, stack) => print('oh no: $error'))

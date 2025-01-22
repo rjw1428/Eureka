@@ -101,6 +101,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  void _openUnlinkConfirmationDialog(Map<String, String> linkedAccount, ExpenseUser user) {
+    showDialogNotification(
+      'Are you sure you want to unlink?',
+      Text(
+        user.role == 'primary'
+            ? 'If you remove this account, they will no longer be able to see any expenses from you or any expenses that were added to your ledger. The ones that they have already added will remain.'
+            : 'If you remove your account link, you will no longer be able to see any expenses from them or any expenses that were added to by you. You will be reverted back to the your ledger before your account was linked',
+      ),
+      context,
+      TextButton(
+        onPressed: () {
+          AccountLinkService().onUnlink(linkedAccount, user);
+          Navigator.pop(context);
+        },
+        child: const Text('Confirm'),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final keyboardSpace = MediaQuery.of(context).viewInsets.bottom;
@@ -214,13 +233,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   Expanded(
                                     child: Text(link['email']!),
                                   ),
-                                  // Row(
-                                  //   children: [
-                                  //     TextButton(
-                                  //         onPressed: () => onRemove(request),
-                                  //         child: const Icon(Icons.delete_outline)),
-                                  //   ],
-                                  // )
+                                  TextButton(
+                                      onPressed: () => _openUnlinkConfirmationDialog(link, user!),
+                                      child: const Icon(Icons.link_off_outlined)),
                                 ],
                               ),
                             ),

@@ -118,3 +118,32 @@ exports.clearLinkRequest = onCall(async (request) => {
 
     return true;
 });
+
+exports.unlinkRequest = onCall(async (request) => {
+    try {
+        const docRef = await getFirestore()
+            .collection("expenseUsers")
+            .doc(request.data["targetId"])
+            .get()
+
+        const doc = docRef.data()
+        const restoreLedgerId = doc.backupLedgerId
+        const updatedLinkedAccounts = doc.linkedAccounts.filter((account) => account.id != request.data["linkedUser"])
+        
+        await getFirestore()
+            .collection("expenseUsers")
+            .doc(request.data["targetId"])
+            .update({
+                pendingRequest: null,
+                linkedAccounts: updatedLinkedAccounts,
+                role: 'primary',
+                backupLedgerId: null,
+                ledgerId: restoreLedgerId,
+                unlinked: true
+        })
+
+    } catch(e) {
+        return false;
+    }
+    return true;
+})

@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:expense_tracker/models/expense_user.dart';
 import 'package:expense_tracker/models/pending_request.dart';
 import 'package:expense_tracker/models/response.dart';
 import 'package:rxdart/rxdart.dart';
@@ -56,6 +57,15 @@ class AccountLinkService {
         );
   }
 
+  Stream<String> subscribeToUnLinkMessage(String userId) {
+    return _db.collection('expenseUsers').doc(userId).snapshots().where((snapshot) {
+      final unlink = snapshot.data()!['unlinked'] as bool?;
+      return unlink != null && unlink;
+    }).map(
+      (snapshot) => snapshot.data()!['email'] as String,
+    );
+  }
+
   Future acceptLinkRequest(PendingRequest request, String userId) {
     return Future.wait([
       _db.collection('expenseUsers').doc(userId).update({
@@ -93,6 +103,20 @@ class AccountLinkService {
       functions.httpsCallable("clearLinkRequest").call({
         'targetId': request.targetUserId,
       })
+    ]);
+  }
+
+  Future<void> onUnlink(Map<String, String> linkedAccount, ExpenseUser user) {
+    // Linked account {id, email }
+
+    return Future.wait([
+      _db.collection('expenseUsers').doc(user.id).update({
+        'linkedAccounts': FieldValue.arrayRemove([linkedAccount]),
+      }),
+      functions.httpsCallable("unlinkRequest").call({
+        'targetId': linkedAccount['id'],
+        'linkedUser': user.id,
+      }),
     ]);
   }
 }
