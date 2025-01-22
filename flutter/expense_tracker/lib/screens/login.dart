@@ -239,13 +239,12 @@ class _LoginScreenState extends State<LoginScreen> {
                         return;
                       }
 
-                      final success = await AuthService()
+                      final response = await AuthService()
                           .createUser(_emailControl.text.trim(), _passwordControl.text);
-                      if (!success) {
+                      if (!response.success) {
                         showDialogNotification(
                           'An Error Occurred',
-                          const Text(
-                              'Something went wrong, unable to create an account, please try again.'),
+                          Text(response.message!),
                           context,
                         );
                         return;

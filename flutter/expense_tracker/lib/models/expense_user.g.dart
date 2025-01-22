@@ -17,6 +17,10 @@ ExpenseUser _$ExpenseUserFromJson(Map<String, dynamic> json) => ExpenseUser(
       userSettings: (json['userSettings'] as Map<String, dynamic>?)?.map(
         (k, e) => MapEntry(k, e as String),
       ),
+      notification: json['notification'] == null
+          ? null
+          : Notification.fromJson(json['notification'] as Map<String, dynamic>),
+      backupLedgerId: json['backupLedgerId'] as String?,
     );
 
 Map<String, dynamic> _$ExpenseUserToJson(ExpenseUser instance) =>
@@ -27,4 +31,6 @@ Map<String, dynamic> _$ExpenseUserToJson(ExpenseUser instance) =>
       'role': instance.role,
       'linkedAccounts': instance.linkedAccounts,
       'userSettings': instance.userSettings,
+      'notification': instance.notification,
+      'backupLedgerId': instance.backupLedgerId,
     };

@@ -1,9 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:expense_tracker/models/expense_user.dart';
+import 'package:expense_tracker/models/notification.dart';
 import 'package:expense_tracker/models/pending_request.dart';
 import 'package:expense_tracker/models/response.dart';
-import 'package:rxdart/rxdart.dart';
+import 'package:expense_tracker/services/auth.service.dart';
 
 class AccountLinkService {
   AccountLinkService._internal();
@@ -40,36 +41,18 @@ class AccountLinkService {
     });
   }
 
-  Stream<PendingRequest> subscribeToLinkMessage(String userId) {
-    return _db
-        .collection('expenseUsers')
-        .doc(userId)
-        .snapshots()
-        .map((snapshot) => snapshot.data()!['pendingRequest'] as String?)
-        .where((requestId) => requestId != null)
-        .map((requestId) => requestId as String)
-        .switchMap(
-          (requestId) => Stream.fromFuture(_db
-              .collection('pendingShareRequests')
-              .doc(requestId)
-              .get()
-              .then((request) => PendingRequest.fromJson({...request.data()!, 'id': requestId}))),
-        );
-  }
-
-  Stream<String> subscribeToUnLinkMessage(String userId) {
-    return _db.collection('expenseUsers').doc(userId).snapshots().where((snapshot) {
-      final unlink = snapshot.data()!['unlinked'] as bool?;
-      return unlink != null && unlink;
-    }).map(
-      (snapshot) => snapshot.data()!['email'] as String,
-    );
+  Stream<Notification> subscribeToMessage() {
+    return AuthService()
+        .user$
+        .map((snapshot) => ExpenseUser.fromJson({'id': snapshot.id, ...snapshot.data()!}))
+        .where((user) => user.notification != null)
+        .map((user) => user.notification!);
   }
 
   Future acceptLinkRequest(PendingRequest request, String userId) {
     return Future.wait([
       _db.collection('expenseUsers').doc(userId).update({
-        'pendingRequest': null,
+        'notification': null,
         'role': 'secondary',
         'ledgerId': request.requestingUserLedgerId,
         'backupLedgerId': request.targetCurrentLedgerId,
@@ -86,12 +69,16 @@ class AccountLinkService {
     ]);
   }
 
+  Future<void> clearNotification(String userId) {
+    return _db.collection('expenseUsers').doc(userId).update({
+      'notification': null,
+    });
+  }
+
   // When a user rejects, they can clear they're own pending request
   Future rejectLinRequest(PendingRequest request) {
     return Future.wait([
-      _db.collection('expenseUsers').doc(request.targetUserId).update({
-        'pendingRequest': null,
-      }),
+      clearNotification(request.targetUserId!),
       _db.collection('pendingShareRequests').doc(request.id).delete(),
     ]);
   }
@@ -109,14 +96,30 @@ class AccountLinkService {
   Future<void> onUnlink(Map<String, String> linkedAccount, ExpenseUser user) {
     // Linked account {id, email }
 
+    final initiatorUpdate = user.role == 'primary'
+        ? {
+            'linkedAccounts': FieldValue.arrayRemove([linkedAccount]),
+          }
+        : {
+            'linkedAccounts': FieldValue.arrayRemove([linkedAccount]),
+            'role': 'primary',
+            'backupLedgerId': null,
+            'ledgerId': user.backupLedgerId,
+          };
     return Future.wait([
-      _db.collection('expenseUsers').doc(user.id).update({
-        'linkedAccounts': FieldValue.arrayRemove([linkedAccount]),
-      }),
+      // Update to initiator's account
+      _db.collection('expenseUsers').doc(user.id).update(initiatorUpdate),
+      // Update targets account
       functions.httpsCallable("unlinkRequest").call({
         'targetId': linkedAccount['id'],
-        'linkedUser': user.id,
+        'initiatorId': user.id,
       }),
     ]);
+  }
+
+  Future<PendingRequest> getPendingRequest(String requestId) {
+    return _db.collection('pendingShareRequests').doc(requestId).get().then(
+          (request) => PendingRequest.fromJson({...request.data()!, 'id': requestId}),
+        );
   }
 }

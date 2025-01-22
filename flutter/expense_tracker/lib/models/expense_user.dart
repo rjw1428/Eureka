@@ -1,3 +1,4 @@
+import 'package:expense_tracker/models/notification.dart';
 import 'package:json_annotation/json_annotation.dart';
 part 'expense_user.g.dart';
 
@@ -9,6 +10,8 @@ class ExpenseUser {
   final String role;
   final List<Map<String, String>>? linkedAccounts;
   final Map<String, String>? userSettings;
+  final Notification? notification;
+  final String? backupLedgerId;
 
   ExpenseUser({
     required this.id,
@@ -17,6 +20,8 @@ class ExpenseUser {
     required this.role,
     this.linkedAccounts,
     this.userSettings,
+    this.notification,
+    this.backupLedgerId,
   });
 
   factory ExpenseUser.fromJson(Map<String, dynamic> json) => _$ExpenseUserFromJson(json);

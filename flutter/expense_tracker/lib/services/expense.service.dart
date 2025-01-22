@@ -11,6 +11,7 @@ class ExpenseService {
 
   final _db = FirebaseFirestore.instance;
   static final ExpenseService _instance = ExpenseService._internal();
+
   factory ExpenseService() {
     return _instance;
   }

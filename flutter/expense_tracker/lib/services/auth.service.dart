@@ -19,22 +19,28 @@ class AuthService {
   factory AuthService() {
     return _instance;
   }
-  final _db = FirebaseFirestore.instance;
+  // final _db = FirebaseFirestore.instance;
   final userStream = FirebaseAuth.instance.authStateChanges().shareReplay(maxSize: 1);
   User? user = FirebaseAuth.instance.currentUser;
 
+  final Stream<DocumentSnapshot<Map<String, dynamic>>> user$ = FirebaseAuth.instance
+      .authStateChanges()
+      .where((user) => user != null)
+      .switchMap((user) => FirebaseFirestore.instance
+          .collection('expenseUsers')
+          .doc(user!.uid)
+          .snapshots()
+          .shareReplay(maxSize: 1))
+      .shareReplay(maxSize: 1);
   Stream<String?> getCurrentUserLedgerId() {
-    if (user == null) return const Stream.empty();
-    return _getUserLedgerId(user!.uid);
+    return userStream.take(1).switchMap((user) {
+      if (user == null) return const Stream.empty();
+      return _getUserLedgerId();
+    });
   }
 
-  Stream<String> _getUserLedgerId(String uid) {
-    return _db
-        .collection('expenseUsers')
-        .doc(uid)
-        .snapshots()
-        .map((doc) => doc.get('ledgerId') as String)
-        .shareReplay(maxSize: 1);
+  Stream<String> _getUserLedgerId() {
+    return user$.map((doc) => doc.get('ledgerId') as String).shareReplay(maxSize: 1);
   }
 
   Stream getAccountOrNull() {
@@ -48,34 +54,39 @@ class AuthService {
   }
 
   Stream<ExpenseUser> getAccount(User user) {
-    return _db
-        .collection('expenseUsers')
-        .doc(user.uid)
-        .snapshots()
+    return user$
         .map((event) => event.data())
         .where((data) => data != null)
         .map((d) => ExpenseUser.fromJson({'id': user.uid, ...d!}));
   }
 
-  Future<bool> createUser(String email, String password) async {
+  Future<Response> createUser(String email, String password) async {
     try {
       await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
       user = await userStream.first;
-
-      return await initializeAccount(email, user!.uid);
+      await initializeAccount(email, user!.uid);
     } on FirebaseAuthException catch (e) {
       if (e.code == 'weak-password') {
-        print('The password provided is too weak.');
+        return const Response(
+          success: false,
+          message: 'The password provided is too weak.',
+        );
       } else if (e.code == 'email-already-in-use') {
-        print('The account already exists for that email.');
+        return const Response(
+          success: false,
+          message: 'The account already exists for that email.',
+        );
       }
     } catch (e) {
-      print(e);
+      return const Response(
+        success: false,
+        message: 'Something went wrong, unable to create an account, please try again.',
+      );
     }
-    return false;
+    return const Response(success: true);
   }
 
   Future<void> googleLogin() async {

@@ -62,7 +62,10 @@ exports.triggerShareExpenseNotification = onDocumentCreated('/pendingShareReques
         });
 
         await userDoc.ref.update({
-            pendingRequest: event.data.id
+            notification: {
+                type: 'pendingRequest',
+                data: { requestId: event.data.id }
+            }
         })
     } catch(e) {
         logger.error(e);
@@ -72,7 +75,6 @@ exports.triggerShareExpenseNotification = onDocumentCreated('/pendingShareReques
 
 exports.triggerLinkedAccount = onCall(async (request) => {
     try {
-        logger.log(request.data['requestId'])
         const acceptedRequestSnapshot = await getFirestore()
             .collection("pendingShareRequests")
             .doc(request.data["requestId"])
@@ -105,10 +107,10 @@ exports.triggerLinkedAccount = onCall(async (request) => {
 
 exports.clearLinkRequest = onCall(async (request) => {
     try {
-         await getFirestore()
+        await getFirestore()
             .collection("expenseUsers")
             .doc(request.data["targetId"])
-            .update({pendingRequest: null})
+            .update({notification: null})
 
 
     } catch (e) {
@@ -121,28 +123,49 @@ exports.clearLinkRequest = onCall(async (request) => {
 
 exports.unlinkRequest = onCall(async (request) => {
     try {
-        const docRef = await getFirestore()
+
+        // TARGET ID = TARGET ACCOUNT ID
+        // initiatorId = INITIATOR ACCOUNT ID
+        const targetDocRef = await getFirestore()
             .collection("expenseUsers")
             .doc(request.data["targetId"])
             .get()
 
-        const doc = docRef.data()
-        const restoreLedgerId = doc.backupLedgerId
-        const updatedLinkedAccounts = doc.linkedAccounts.filter((account) => account.id != request.data["linkedUser"])
+        const targetDoc = targetDocRef.data(); // GET TARGET's DATA
+        const restoreLedgerId = targetDoc.backupLedgerId
+        const sourceEmail = targetDoc.linkedAccounts.find((account) => account.id === request.data["initiatorId"])?.email || 'A linked account';
+        const updatedLinkedAccounts = targetDoc.linkedAccounts.filter((account) => account.id != request.data["initiatorId"]);
         
-        await getFirestore()
-            .collection("expenseUsers")
-            .doc(request.data["targetId"])
-            .update({
-                pendingRequest: null,
+        // TARGET'S ROLE IS PRIMARY, UNLINKING THE SECONDARY
+        if (doc.role === 'primary') {
+            targetUpdate = {
+                linkedAccounts: updatedLinkedAccounts,
+                notification: { // notification
+                    type: 'primaryUnlink',
+                    data: { email : sourceEmail }
+                },
+            }
+        // TARGET'S ROLE IS SECONDARY, UNLINKING THE PRIMARY, U
+        } else if (doc.role === 'secondary') {
+            update = {
                 linkedAccounts: updatedLinkedAccounts,
                 role: 'primary',
                 backupLedgerId: null,
                 ledgerId: restoreLedgerId,
-                unlinked: true
-        })
+                notification: {
+                    type: 'secondaryUnlink',
+                    data: { email : sourceEmail }
+                },
+            }
+        }
+
+        await getFirestore()
+            .collection("expenseUsers")
+            .doc(request.data["targetId"])
+            .update(update);
 
     } catch(e) {
+        logger.error(e);
         return false;
     }
     return true;

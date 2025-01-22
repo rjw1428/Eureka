@@ -157,11 +157,14 @@ class _TransactionScreenState extends State<TransactionScreen> {
     //         ));
 
     AccountLinkService()
-        .subscribeToLinkMessage(userId)
+        .subscribeToMessage()
         .doOnError((error, stack) => print('oh no: $error'))
         .doOnDone(() => print('complete'))
-        .listen((request) {
-      showDialogNotification(
+        .listen((notification) async {
+      if (notification.type == 'pendingRequest') {
+        final request =
+            await AccountLinkService().getPendingRequest(notification.data!['requestId']);
+        showDialogNotification(
           'Link Account',
           Text(
               '''User ${request.requestingUserEmail} is requesting to link accounts. This will mean that both your expenses and their expenses will appear on your tracker. It also means that by accepting their request, they will hold a primary account will set budgeting rules for both your accounts.'''),
@@ -186,7 +189,35 @@ class _TransactionScreenState extends State<TransactionScreen> {
               Navigator.pop(context);
             },
             child: const Text('Reject'),
-          ));
+          ),
+        );
+        return;
+      }
+      // If a secondary user unlinks from a primary user
+      if (notification.type == 'primaryUnlink') {
+        final String sourceEmail = notification.data!['email'];
+
+        showDialogNotification(
+          'Account Unlinked',
+          Text('$sourceEmail has unlinked there account from your ledger.'),
+          context,
+        );
+        await AccountLinkService().clearNotification(userId);
+        return;
+      }
+
+      // If a secondary user unlinks from a primary user
+      if (notification.type == 'secondaryUnlink') {
+        final String sourceEmail = notification.data!['email'];
+
+        showDialogNotification(
+          'Account Unlinked',
+          Text('$sourceEmail has unlinked you account from there ledger.'),
+          context,
+        );
+        await AccountLinkService().clearNotification(userId);
+        return;
+      }
     });
   }
 
