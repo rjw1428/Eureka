@@ -148,6 +148,23 @@ class AuthService {
     return completer.future;
   }
 
+  Future<Response> forgotPassword(String email) async {
+    const successMessage =
+        "An email has been sent to the provided address. If an account exists, you will be provided a link to reset your password.";
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+      return const Response(success: true, message: successMessage);
+      // ignore: unused_catch_clause
+    } on FirebaseAuthException catch (e) {
+      return const Response(success: true, message: successMessage);
+    } catch (e) {
+      return Response(
+        success: false,
+        message: "An unexpected error occurred: ${e.toString()}",
+      );
+    }
+  }
+
   Future<void> logOut() async {
     await FirebaseAuth.instance.signOut();
   }

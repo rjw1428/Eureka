@@ -98,58 +98,84 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         const SizedBox(height: 16),
+                        TextButton(
+                          onPressed: () async {
+                            if (_emailControl.text.isEmpty) {
+                              showDialogNotification(
+                                'Email missing',
+                                const Text('Enter your email address and try again.'),
+                                context,
+                              );
+                              return;
+                            }
+                            final response = await AuthService().forgotPassword(_emailControl.text);
+                            showDialogNotification(
+                              response.success
+                                  ? 'Password Reset Email Sent'
+                                  : 'An error has occurred',
+                              Text(response.message!),
+                              context,
+                            );
+                          },
+                          child: Text(
+                            'Forgot Password',
+                            style: Theme.of(context).textTheme.labelSmall,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
                       ],
                     ),
                   ),
+
                 ElevatedButton.icon(
-                  icon: const Icon(
-                    FontAwesomeIcons.envelope,
-                    size: 20,
-                  ),
-                  onPressed: () async {
-                    if (!_showLoginForm) {
-                      setState(() {
-                        _showLoginForm = true;
-                        _showCreateAccountForm = false;
-                      });
-                    } else {
-                      if (_emailControl.text.isEmpty) {
-                        showDialogNotification(
-                          'Email missing',
-                          const Text('Enter your email address and try again.'),
-                          context,
-                        );
-                        return;
-                      }
+                    icon: const Icon(
+                      FontAwesomeIcons.envelope,
+                      size: 20,
+                    ),
+                    onPressed: () async {
+                      if (!_showLoginForm) {
+                        setState(() {
+                          _showLoginForm = true;
+                          _showCreateAccountForm = false;
+                        });
+                      } else {
+                        if (_emailControl.text.isEmpty) {
+                          showDialogNotification(
+                            'Email missing',
+                            const Text('Enter your email address and try again.'),
+                            context,
+                          );
+                          return;
+                        }
 
-                      if (_passwordControl.text.isEmpty) {
-                        showDialogNotification(
-                          'Password missing',
-                          const Text('Enter your password and try again.'),
-                          context,
-                        );
-                        return;
-                      }
+                        if (_passwordControl.text.isEmpty) {
+                          showDialogNotification(
+                            'Password missing',
+                            const Text('Enter your password and try again.'),
+                            context,
+                          );
+                          return;
+                        }
 
-                      final response = await AuthService().emailLogin(
-                        _emailControl.text.trim(),
-                        _passwordControl.text,
-                      );
-
-                      if (!response.success) {
-                        showDialogNotification(
-                          'Login Unsuccessful',
-                          Text(response.message!),
-                          context,
+                        final response = await AuthService().emailLogin(
+                          _emailControl.text.trim(),
+                          _passwordControl.text,
                         );
+
+                        if (!response.success) {
+                          showDialogNotification(
+                            'Login Unsuccessful',
+                            Text(response.message!),
+                            context,
+                          );
+                        }
                       }
-                    }
-                  },
-                  label: Text(
-                    _showLoginForm ? "Login" : "Login with Email",
-                    textAlign: TextAlign.center,
-                  ),
-                ),
+                    },
+                    label: Text(
+                      _showLoginForm ? "Login" : "Login with Email",
+                      textAlign: TextAlign.center,
+                    )),
+
                 const Padding(
                   padding: EdgeInsets.only(top: 8.0),
                   child: Text('or'),
