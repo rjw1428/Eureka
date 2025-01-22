@@ -5,6 +5,7 @@ import 'package:expense_tracker/models/notification.dart';
 import 'package:expense_tracker/models/pending_request.dart';
 import 'package:expense_tracker/models/response.dart';
 import 'package:expense_tracker/services/auth.service.dart';
+import 'package:rxdart/transformers.dart';
 
 class AccountLinkService {
   AccountLinkService._internal();
@@ -38,7 +39,7 @@ class AccountLinkService {
       return snapshot.docs.map((doc) {
         return PendingRequest.fromJson({...doc.data(), 'id': doc.id});
       }).toList();
-    });
+    }).startWith([]);
   }
 
   Stream<Notification> subscribeToMessage() {
@@ -49,24 +50,23 @@ class AccountLinkService {
         .map((user) => user.notification!);
   }
 
-  Future acceptLinkRequest(PendingRequest request, String userId) {
-    return Future.wait([
-      _db.collection('expenseUsers').doc(userId).update({
-        'notification': null,
-        'role': 'secondary',
-        'ledgerId': request.requestingUserLedgerId,
-        'backupLedgerId': request.targetCurrentLedgerId,
-        'linkedAccounts': FieldValue.arrayUnion([
-          {
-            'id': request.requestingUser,
-            'email': request.requestingUserEmail,
-          },
-        ])
-      }),
-      functions.httpsCallable("triggerLinkedAccount").call({
-        'requestId': request.id,
-      })
-    ]);
+  Future acceptLinkRequest(PendingRequest request, String userId) async {
+    await _db.collection('expenseUsers').doc(userId).update({
+      'notification': null,
+      'role': 'secondary',
+      'ledgerId': request.requestingUserLedgerId,
+      'backupLedgerId': request.targetCurrentLedgerId,
+      'linkedAccounts': FieldValue.arrayUnion([
+        {
+          'id': request.requestingUser,
+          'email': request.requestingUserEmail,
+        },
+      ])
+    });
+
+    return functions.httpsCallable("triggerLinkedAccount").call({
+      'requestId': request.id,
+    });
   }
 
   Future<void> clearNotification(String userId) {
@@ -76,11 +76,9 @@ class AccountLinkService {
   }
 
   // When a user rejects, they can clear they're own pending request
-  Future rejectLinRequest(PendingRequest request) {
-    return Future.wait([
-      clearNotification(request.targetUserId!),
-      _db.collection('pendingShareRequests').doc(request.id).delete(),
-    ]);
+  Future rejectLinRequest(PendingRequest request) async {
+    await clearNotification(request.targetUserId!);
+    return _db.collection('pendingShareRequests').doc(request.id).delete();
   }
 
   // When a user deletes the request, they need a cloud function to remove the target's pending request
@@ -93,7 +91,7 @@ class AccountLinkService {
     ]);
   }
 
-  Future<void> onUnlink(Map<String, String> linkedAccount, ExpenseUser user) {
+  Future onUnlink(Map<String, String> linkedAccount, ExpenseUser user) async {
     // Linked account {id, email }
 
     final initiatorUpdate = user.role == 'primary'
@@ -106,15 +104,14 @@ class AccountLinkService {
             'backupLedgerId': null,
             'ledgerId': user.backupLedgerId,
           };
-    return Future.wait([
-      // Update to initiator's account
-      _db.collection('expenseUsers').doc(user.id).update(initiatorUpdate),
-      // Update targets account
-      functions.httpsCallable("unlinkRequest").call({
-        'targetId': linkedAccount['id'],
-        'initiatorId': user.id,
-      }),
-    ]);
+    // Update to initiator's account
+    await _db.collection('expenseUsers').doc(user.id).update(initiatorUpdate);
+
+    // Update to target's account
+    return functions.httpsCallable("unlinkRequest").call({
+      'targetId': linkedAccount['id'],
+      'initiatorId': user.id,
+    });
   }
 
   Future<PendingRequest> getPendingRequest(String requestId) {

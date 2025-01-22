@@ -126,27 +126,27 @@ exports.unlinkRequest = onCall(async (request) => {
 
         // TARGET ID = TARGET ACCOUNT ID
         // initiatorId = INITIATOR ACCOUNT ID
-        const targetDocRef = await getFirestore()
+        const targetDocRef = getFirestore()
             .collection("expenseUsers")
             .doc(request.data["targetId"])
-            .get()
-
-        const targetDoc = targetDocRef.data(); // GET TARGET's DATA
+        
+        const targetSnapshot = await targetDocRef.get()
+        const targetDoc = targetSnapshot.data(); // GET TARGET's DATA
+        logger.info(targetDoc);
         const restoreLedgerId = targetDoc.backupLedgerId
         const sourceEmail = targetDoc.linkedAccounts.find((account) => account.id === request.data["initiatorId"])?.email || 'A linked account';
         const updatedLinkedAccounts = targetDoc.linkedAccounts.filter((account) => account.id != request.data["initiatorId"]);
         
-        // TARGET'S ROLE IS PRIMARY, UNLINKING THE SECONDARY
-        if (doc.role === 'primary') {
-            targetUpdate = {
+        let update;
+        if (targetDoc.role === 'primary') {
+            update = {
                 linkedAccounts: updatedLinkedAccounts,
                 notification: { // notification
                     type: 'primaryUnlink',
                     data: { email : sourceEmail }
                 },
             }
-        // TARGET'S ROLE IS SECONDARY, UNLINKING THE PRIMARY, U
-        } else if (doc.role === 'secondary') {
+        } else if (targetDoc.role === 'secondary') {
             update = {
                 linkedAccounts: updatedLinkedAccounts,
                 role: 'primary',
@@ -159,10 +159,7 @@ exports.unlinkRequest = onCall(async (request) => {
             }
         }
 
-        await getFirestore()
-            .collection("expenseUsers")
-            .doc(request.data["targetId"])
-            .update(update);
+        await targetDocRef.update(update);
 
     } catch(e) {
         logger.error(e);
