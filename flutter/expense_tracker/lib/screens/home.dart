@@ -88,8 +88,8 @@ class _TransactionScreenState extends State<TransactionScreen> {
     );
   }
 
-  void _addExpense(Expense expense, [int index = 0]) async {
-    final resp = await ExpenseService().addExpense(expense, index);
+  void _addExpense(Expense expense) async {
+    final resp = await ExpenseService().addExpense(expense);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -116,7 +116,6 @@ class _TransactionScreenState extends State<TransactionScreen> {
   void _removeExpense(ExpenseWithCategoryData expense) async {
     ScaffoldMessenger.of(context).clearSnackBars();
 
-    final index = _expenses.indexOf(expense);
     ExpenseService().remove(expense);
 
     final title = expense.title;
@@ -127,7 +126,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
           content: Text('Expense for $title deleted!'),
           action: SnackBarAction(
             label: 'Undo',
-            onPressed: () => _addExpense(expense, index),
+            onPressed: () => _addExpense(expense),
           ),
         ),
       );

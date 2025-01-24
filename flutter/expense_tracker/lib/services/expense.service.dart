@@ -25,11 +25,24 @@ class ExpenseService {
         .collection(month)
         .orderBy('date', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) {
-              return Expense.fromJson({...doc.data(), "id": doc.id});
-            }).toList())
+        .map((snapshot) =>
+            snapshot.docs.map((doc) => Expense.fromJson({...doc.data(), "id": doc.id})).toList())
         .handleError((err) => print('Expense Stream: ${err.toString()}'))
         .shareReplay(maxSize: 1);
+  }
+
+  Future<void> getSummary(DateTime start, DateTime? end) async {
+    DateTime queryEnd = end ?? DateTime.now();
+    final ledgerId = await AuthService().getCurrentUserLedgerId().first;
+    final snapshot = await _db
+        .collection('ledger')
+        .doc(ledgerId)
+        .collection('summaries')
+        .where('startDate', isGreaterThanOrEqualTo: start)
+        .where('startDate', isLessThanOrEqualTo: queryEnd)
+        .get();
+
+    snapshot.docs.forEach((doc) => print(doc.data()));
   }
 
   Future<CollectionReference<Map<String, dynamic>>> expenseCollection(DateTime date) async {
@@ -38,11 +51,45 @@ class ExpenseService {
     return _db.collection('ledger').doc(ledgerId).collection(month);
   }
 
+  Future<DocumentReference<Map<String, dynamic>>> summaryCollection(Expense expense) async {
+    final ledgerId = await AuthService().getCurrentUserLedgerId().first;
+    final docId = summaryId(expense);
+    return _db.collection('ledger').doc(ledgerId).collection('summaries').doc(docId);
+  }
+
+  Future checkSummaryCollection(Expense expense) async {
+    final ledgerId = await AuthService().getCurrentUserLedgerId().first;
+    final ref = _db.collection('ledger').doc(ledgerId).collection('summaries');
+    final docId = summaryId(expense);
+
+    final summaryDoc = await ref.doc(docId).get();
+    if (!summaryDoc.exists) {
+      ref.doc(docId).set({
+        'startDate': DateTime(expense.date.year, expense.date.month),
+      });
+    }
+  }
+
   Future<void> updateExpense(Expense expense, Expense previousExpense) async {
-    if (expense.date.month == previousExpense.date.month &&
-        expense.date.year == previousExpense.date.year) {
-      final collectionRef = await expenseCollection(previousExpense.date);
-      return collectionRef.doc(previousExpense.id).set(expense.toJson());
+    final isSameDate = expense.date.month == previousExpense.date.month &&
+        expense.date.year == previousExpense.date.year;
+    if (isSameDate) {
+      List<Future> actions = [
+        expenseCollection(previousExpense.date)
+            .then((ref) => ref.doc(previousExpense.id).set(expense.toJson())),
+      ];
+      // Skip updating summary if the amount hasn't changed
+      if (expense.amount - previousExpense.amount != 0) {
+        actions.add(
+          summaryCollection(expense).then(
+            (ref) => ref.update({
+              'lastUpdate': FieldValue.serverTimestamp(),
+              'total': FieldValue.increment(expense.amount - previousExpense.amount),
+            }),
+          ),
+        );
+      }
+      await Future.wait(actions);
     }
     await remove(previousExpense);
     await addExpense(expense);
@@ -50,16 +97,33 @@ class ExpenseService {
   }
 
   Future<void> remove(Expense expense) async {
-    final collectionRef = await expenseCollection(expense.date);
-    return collectionRef.doc(expense.id!).delete();
+    await Future.wait([
+      summaryCollection(expense).then((ref) => ref.update({
+            'lastUpdate': FieldValue.serverTimestamp(),
+            'total': FieldValue.increment(-1 * expense.amount),
+            'count': FieldValue.increment(-1),
+          })),
+      expenseCollection(expense.date).then((ref) => ref.doc(expense.id!).delete()),
+    ]);
   }
 
-  Future<DocumentReference<Map<String, dynamic>>?> addExpense(Expense expense, [index = 0]) async {
+  Future addExpense(Expense expense) async {
+    await checkSummaryCollection(expense);
     try {
-      final collectionRef = await expenseCollection(expense.date);
-      var newExpenseData = expense.toJson();
-      newExpenseData.remove('id');
-      return collectionRef.add(newExpenseData);
+      return Future.wait([
+        summaryCollection(expense).then(
+          (summaryDocRef) => summaryDocRef.update({
+            'lastUpdate': FieldValue.serverTimestamp(),
+            'total': FieldValue.increment(expense.amount),
+            'count': FieldValue.increment(1)
+          }),
+        ),
+        expenseCollection(expense.date).then((collectionRef) {
+          var newExpenseData = expense.toJson();
+          newExpenseData.remove('id');
+          collectionRef.add(newExpenseData);
+        })
+      ]);
     } catch (e) {
       return null;
     }
@@ -67,5 +131,10 @@ class ExpenseService {
 
   String formatMonth(DateTime date) {
     return "${date.year}_${formatter.format(date).toUpperCase()}";
+  }
+
+  String summaryId(Expense expense) {
+    final yearMonth = formatMonth(expense.date);
+    return "${yearMonth}_${expense.categoryId}";
   }
 }
