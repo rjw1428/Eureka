@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 void showDialogNotification(
   String title,
@@ -45,11 +46,23 @@ void showDialogNotification(
           ),
         ),
         actions: callback == null
-            ? [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Okay'))]
+            ? [
+                TextButton(
+                    onPressed: () {
+                      HapticFeedback.selectionClick();
+                      Navigator.pop(ctx);
+                    },
+                    child: const Text('Okay'))
+              ]
             : reject == null
                 ? [
                     callback,
-                    TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel'))
+                    TextButton(
+                        onPressed: () {
+                          HapticFeedback.selectionClick();
+                          Navigator.pop(ctx);
+                        },
+                        child: const Text('Cancel'))
                   ]
                 : [callback, reject],
       ),

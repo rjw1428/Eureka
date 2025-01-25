@@ -91,7 +91,9 @@ class BarChart extends StatelessWidget {
                                   ? '\$${bucket.totalExpenses.toStringAsFixed(2)}'
                                   : '',
                               textAlign: TextAlign.center,
-                              style: ThemeData().textTheme.labelMedium,
+                              style: isDarkMode
+                                  ? ThemeData.dark().textTheme.labelMedium
+                                  : ThemeData().textTheme.labelMedium,
                               softWrap: false,
                             ),
                             SelectableText(

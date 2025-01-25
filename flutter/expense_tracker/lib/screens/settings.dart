@@ -79,7 +79,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final keyboardSpace = MediaQuery.of(context).viewInsets.bottom;
-
     return StreamBuilder(
         stream: AuthService().expenseUser$.switchMap(
               (account) => AccountLinkService().pendingLinkRequestList(account.id).map(
@@ -136,7 +135,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             shape: BoxShape.circle,
                             color: ThemeColorService().currentColor,
                             border: Border.all(
-                              color: Theme.of(context).appBarTheme.foregroundColor!,
+                              color: ThemeData().cardColor,
                               width: 4.0,
                             ),
                           ),

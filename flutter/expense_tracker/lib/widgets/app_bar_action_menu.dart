@@ -5,11 +5,11 @@ import 'package:expense_tracker/screens/report.dart';
 import 'package:expense_tracker/screens/settings.dart';
 import 'package:expense_tracker/services/auth.service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 class AppBarActionMenu extends StatelessWidget {
-  const AppBarActionMenu({super.key, required this.appVersion});
-  final String appVersion;
+  const AppBarActionMenu({super.key});
   @override
   Widget build(BuildContext context) {
     return FutureBuilder(
@@ -20,6 +20,7 @@ class AppBarActionMenu extends StatelessWidget {
             tooltip: 'Menu',
             position: PopupMenuPosition.under,
             onSelected: (value) {
+              HapticFeedback.selectionClick();
               if (value == "SETTINGS") {
                 Navigator.push(
                     context, MaterialPageRoute(builder: (ctx) => const SettingsScreen()));
@@ -61,6 +62,7 @@ class AppBarActionMenu extends StatelessWidget {
                           Center(
                             child: TextButton(
                               onPressed: () {
+                                HapticFeedback.selectionClick();
                                 Navigator.pop(context);
                               },
                               child: const Text('Close'),

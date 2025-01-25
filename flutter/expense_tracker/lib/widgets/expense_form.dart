@@ -3,6 +3,7 @@ import 'package:expense_tracker/services/categories.service.dart';
 import 'package:expense_tracker/services/category_form.provider.dart';
 import 'package:expense_tracker/widgets/show_dialog.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class ExpenseForm extends StatefulWidget {
   const ExpenseForm({
@@ -38,6 +39,7 @@ class _ExpenseFormState extends State<ExpenseForm> {
   }
 
   void _submit() {
+    HapticFeedback.selectionClick();
     final enteredAmount = double.tryParse(_amount.text);
     if (enteredAmount == null || enteredAmount == 0) {
       showDialogNotification(
@@ -207,12 +209,16 @@ class _ExpenseFormState extends State<ExpenseForm> {
                         TextButton(
                           onPressed: () {
                             widget.onRemove(widget.initialExpense!);
+                            HapticFeedback.selectionClick();
                             Navigator.pop(context);
                           },
                           child: const Text('Remove'),
                         ),
                       TextButton(
-                        onPressed: () => Navigator.pop(context),
+                        onPressed: () {
+                          HapticFeedback.selectionClick();
+                          Navigator.pop(context);
+                        },
                         child: const Text('Cancel'),
                       ),
                     ],

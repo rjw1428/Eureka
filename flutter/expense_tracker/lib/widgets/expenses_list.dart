@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:expense_tracker/models/expense.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class ExpenseList extends StatelessWidget {
   const ExpenseList({
@@ -33,7 +34,10 @@ class ExpenseList extends StatelessWidget {
                     )
                   : GestureDetector(
                       key: ValueKey(list[i].id),
-                      onLongPress: () => onEdit(filteredList[i]),
+                      onLongPress: () {
+                        HapticFeedback.lightImpact();
+                        onEdit(filteredList[i]);
+                      },
                       child: ExpenseItem(
                         expense: filteredList[i],
                         onEdit: (e) => {},
@@ -87,13 +91,13 @@ class ExpenseItem extends StatelessWidget {
                       Text(expense.formattedDate, style: Theme.of(context).textTheme.titleSmall),
                       SizedBox(
                         width: constraints.maxWidth - 200,
-                        child: SelectableText(expense.title),
+                        child: Text(expense.title),
                       ),
                     ],
                   ),
                 ],
               ),
-              SelectableText(
+              Text(
                 '\$${expense.amount.toStringAsFixed(2)}',
               ),
             ],

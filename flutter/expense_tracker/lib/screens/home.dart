@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:expense_tracker/constants/strings.dart';
 import 'package:expense_tracker/models/category.dart';
 import 'package:expense_tracker/models/expense.dart';
-import 'package:expense_tracker/models/expense_user.dart';
 import 'package:expense_tracker/screens/login.dart';
 import 'package:expense_tracker/services/account_link.service.dart';
 import 'package:expense_tracker/services/auth.service.dart';
@@ -19,6 +18,7 @@ import 'package:expense_tracker/widgets/show_dialog.dart';
 import 'package:expense_tracker/widgets/time_row.dart';
 import 'package:expense_tracker/widgets/total_row.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:rxdart/rxdart.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -68,9 +68,9 @@ class _TransactionScreenState extends State<TransactionScreen> {
   final _selectedFilters =
       StreamController<List<String>?>.broadcast(); // Only selected category ids
   DateTime _selectedDate = DateTime.now();
-  late String appVersion = '';
 
   void _openAddExpenseOverlay([ExpenseWithCategoryData? expense]) {
+    HapticFeedback.selectionClick();
     showModalBottomSheet(
       useSafeArea: true,
       isScrollControlled: true,
@@ -218,8 +218,8 @@ class _TransactionScreenState extends State<TransactionScreen> {
       resizeToAvoidBottomInset: false,
       appBar: AppBar(
         title: const Text(APP_TITLE),
-        actions: [
-          AppBarActionMenu(appVersion: appVersion),
+        actions: const [
+          AppBarActionMenu(),
         ],
       ),
       body: StreamBuilder<Map<String, List<dynamic>>>(
@@ -253,8 +253,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
             return el as CategoryDataWithId;
           }).toList();
 
-          final ExpenseUser _user = snapshot.data!['user']![0];
-
+          // final ExpenseUser _user = snapshot.data!['user']![0];
           _expenses = snapshot.data!['expenses']!.map((exp) {
             final e = exp as Expense;
             final CategoryDataWithId category = _categoryConfigs.firstWhere((cat) {
