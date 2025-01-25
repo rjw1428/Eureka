@@ -55,8 +55,7 @@ class ExpenseService {
               });
               return summaryPoint;
             }).toList(),
-          )
-          .startWith([]);
+          );
     });
   }
 

@@ -3,8 +3,7 @@ import 'package:expense_tracker/models/expense_user.dart';
 import 'package:expense_tracker/models/pending_request.dart';
 import 'package:expense_tracker/services/auth.service.dart';
 import 'package:expense_tracker/services/categories.service.dart';
-import 'package:expense_tracker/widgets/category_form.dart';
-import 'package:expense_tracker/widgets/show_dialog.dart';
+import 'package:expense_tracker/services/category_form.provider.dart';
 import 'package:flutter/material.dart';
 import 'package:rxdart/rxdart.dart';
 
@@ -18,57 +17,6 @@ class BudgetConfigScreen extends StatefulWidget {
 }
 
 class _BudgetConfigScreenState extends State<BudgetConfigScreen> {
-  void _openAddCategoryOverlay([CategoryDataWithId? category]) {
-    showModalBottomSheet(
-      useSafeArea: true,
-      isScrollControlled: true,
-      context: context,
-      builder: (ctx) {
-        return CategoryForm(
-          onSubmit: category == null ? _addCategory : _updateCategory,
-          initialCategory: category,
-          onRemove: _removeCategory,
-        );
-      },
-    );
-  }
-
-  void _addCategory(CategoryDataWithId category) {
-    try {
-      CategoriesService().addCategory(category);
-    } catch (e) {
-      showDialogNotification(
-        'Unable to add category',
-        const Text('An error has occurred. Please change something and try again.'),
-        context,
-      );
-    }
-  }
-
-  void _updateCategory(CategoryDataWithId category) {
-    try {
-      CategoriesService().updateCategory(category);
-    } catch (e) {
-      showDialogNotification(
-        'Unable to update category',
-        const Text('An error has occurred. Please change something and try again.'),
-        context,
-      );
-    }
-  }
-
-  void _removeCategory(CategoryDataWithId category) {
-    try {
-      CategoriesService().remove(category);
-    } catch (e) {
-      showDialogNotification(
-        'Unable to delete category',
-        const Text('An error has occurred. Please change something and try again.'),
-        context,
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final keyboardSpace = MediaQuery.of(context).viewInsets.bottom;
@@ -131,13 +79,13 @@ class _BudgetConfigScreenState extends State<BudgetConfigScreen> {
                       CategoryList(
                         categoryList: configs,
                         editable: user?.role == 'primary',
-                        onEdit: _openAddCategoryOverlay,
+                        onEdit: (id) => openAddCategoryOverlay(context, id),
                       ),
                       Center(
                         child: Padding(
                           padding: const EdgeInsets.symmetric(vertical: 8.0),
                           child: OutlinedButton.icon(
-                            onPressed: _openAddCategoryOverlay,
+                            onPressed: () => openAddCategoryOverlay(context),
                             label: const Text('Add a spending category'),
                             icon: const Icon(Icons.playlist_add),
                           ),

@@ -1,6 +1,6 @@
 import 'package:expense_tracker/models/expense.dart';
-import 'package:expense_tracker/services/auth.service.dart';
 import 'package:expense_tracker/services/categories.service.dart';
+import 'package:expense_tracker/services/category_form.provider.dart';
 import 'package:expense_tracker/widgets/show_dialog.dart';
 import 'package:flutter/material.dart';
 
@@ -100,11 +100,8 @@ class _ExpenseFormState extends State<ExpenseForm> {
   Widget build(BuildContext context) {
     final keyboardSpace = MediaQuery.of(context).viewInsets.bottom;
 
-    return FutureBuilder(
-        future: AuthService()
-            .expenseUser$
-            .first
-            .then((user) => CategoriesService().getCategories(user.ledgerId)),
+    return StreamBuilder(
+        stream: CategoriesService().categoryStream$,
         builder: (context, snapshot) {
           final categoryConfig = snapshot.data ?? [];
           return SingleChildScrollView(
@@ -144,6 +141,12 @@ class _ExpenseFormState extends State<ExpenseForm> {
                         onChanged: (value) => setState(() => _selectedCategory = value),
                       ),
                     ),
+                    IconButton(
+                      onPressed: () => openAddCategoryOverlay(context),
+                      icon: const Icon(
+                        Icons.playlist_add,
+                      ),
+                    )
                   ]),
                   Row(
                     children: [
