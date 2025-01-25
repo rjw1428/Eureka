@@ -87,13 +87,13 @@ class ExpenseItem extends StatelessWidget {
                       Text(expense.formattedDate, style: Theme.of(context).textTheme.titleSmall),
                       SizedBox(
                         width: constraints.maxWidth - 200,
-                        child: Text(expense.title),
+                        child: SelectableText(expense.title),
                       ),
                     ],
                   ),
                 ],
               ),
-              Text(
+              SelectableText(
                 '\$${expense.amount.toStringAsFixed(2)}',
               ),
             ],

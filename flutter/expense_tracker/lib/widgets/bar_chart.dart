@@ -94,7 +94,7 @@ class BarChart extends StatelessWidget {
                               style: ThemeData().textTheme.labelMedium,
                               softWrap: false,
                             ),
-                            Text(
+                            SelectableText(
                                 budgetConfigs
                                     .firstWhere((config) => config.id == bucket.category)
                                     .label,

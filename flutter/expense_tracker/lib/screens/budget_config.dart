@@ -70,7 +70,7 @@ class _BudgetConfigScreenState extends State<BudgetConfigScreen> {
                             style: Theme.of(context).textTheme.titleMedium,
                             textAlign: TextAlign.start,
                           ),
-                          Text(
+                          SelectableText(
                             'Total: \$${totalBudget.toStringAsFixed(2)}',
                             style: Theme.of(context).textTheme.titleMedium,
                           )
