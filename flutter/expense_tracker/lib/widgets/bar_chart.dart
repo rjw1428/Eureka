@@ -81,31 +81,36 @@ class BarChart extends StatelessWidget {
                   (bucket) => Expanded(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            bucket.totalExpenses > 0
-                                ? '\$${bucket.totalExpenses.toStringAsFixed(2)}'
-                                : '',
-                            textAlign: TextAlign.center,
-                            style: ThemeData().textTheme.labelMedium,
-                          ),
-                          Text(
+                      child: SizedBox(
+                        height: 80,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              bucket.totalExpenses > 0
+                                  ? '\$${bucket.totalExpenses.toStringAsFixed(2)}'
+                                  : '',
+                              textAlign: TextAlign.center,
+                              style: ThemeData().textTheme.labelMedium,
+                              softWrap: false,
+                            ),
+                            Text(
+                                budgetConfigs
+                                    .firstWhere((config) => config.id == bucket.category)
+                                    .label,
+                                textAlign: TextAlign.center,
+                                maxLines: 2,
+                                style: Theme.of(context).textTheme.labelSmall),
+                            Icon(
                               budgetConfigs
                                   .firstWhere((config) => config.id == bucket.category)
-                                  .label,
-                              textAlign: TextAlign.center,
-                              style: Theme.of(context).textTheme.labelSmall),
-                          Icon(
-                            budgetConfigs
-                                .firstWhere((config) => config.id == bucket.category)
-                                .iconData,
-                            color: isDarkMode
-                                ? Theme.of(context).colorScheme.secondary
-                                : Theme.of(context).colorScheme.primary.withOpacity(0.7),
-                          ),
-                        ],
+                                  .iconData,
+                              color: isDarkMode
+                                  ? Theme.of(context).colorScheme.secondary
+                                  : Theme.of(context).colorScheme.primary.withOpacity(0.7),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
