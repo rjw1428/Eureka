@@ -1,10 +1,13 @@
 import 'dart:async';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:expense_tracker/services/auth.service.dart';
 import 'package:flutter/material.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ThemeColorService {
+  final _db = FirebaseFirestore.instance;
   final _colorStreamController = StreamController<Color>();
   ThemeColorService._internal();
   Color currentColor = Colors.red;
@@ -31,9 +34,21 @@ class ThemeColorService {
     return initialColor;
   }
 
-  void selectColor(Color color) {
+  void selectColor(Color color) async {
     currentColor = color;
     _colorStreamController.sink.add(color);
+  }
+
+  Future<void> updateColor(String color) async {
+    SharedPreferences preferences = await SharedPreferences.getInstance();
+    await preferences.setString('theme_color', color);
+
+    final uid = await AuthService().userId$.first;
+    await _db.collection('expenseUsers').doc(uid).update({
+      'userSettings': {
+        'color': color,
+      }
+    });
   }
 
   void dispose() {

@@ -8,7 +8,6 @@ import 'package:expense_tracker/widgets/show_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:rxdart/rxdart.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -38,8 +37,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         onPressed: () async {
           final result =
               "${selectedColor.alpha},${selectedColor.red},${selectedColor.green},${selectedColor.blue}";
-          SharedPreferences preferences = await SharedPreferences.getInstance();
-          await preferences.setString('theme_color', result);
+          ThemeColorService().updateColor(result);
           ThemeColorService().selectColor(selectedColor);
           Navigator.pop(context);
         },
