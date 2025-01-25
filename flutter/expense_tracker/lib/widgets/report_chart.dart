@@ -43,85 +43,97 @@ class ReportChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    final int dataMax = data.fold(0, (max, entry) => max > entry.total ? max : entry.total.toInt());
+    final int yMax = budgetData.fold(
+        dataMax, (max, category) => max > category.budget ? max : category.budget.toInt());
+
     final coffeeBudget = budgetData.firstWhere((config) => config.id == 'COFFEE');
-    final dataMax = data
-        .asMap()
-        .entries
-        .where((entry) => entry.value.categoryId == 'COFFEE')
-        .map((entry) => entry.value)
-        .fold(coffeeBudget.budget, (max, cur) => max > cur.total ? max : cur.total);
 
-    return LineChart(
-      LineChartData(
-        lineTouchData: LineTouchData(
-          handleBuiltInTouches: true,
-          touchTooltipData: LineTouchTooltipData(
-            fitInsideHorizontally: true,
-            fitInsideVertically: true,
-            getTooltipColor: (touchedSpot) => Colors.blueGrey.withOpacity(0.8),
-            getTooltipItems: (data) => data.map((spot) {
-              // print(spot.toString());
-              return LineTooltipItem(spot.y.toString(), const TextStyle(color: Colors.red));
-            }).toList(),
-          ),
-        ),
-        gridData: const FlGridData(show: false),
-        titlesData: FlTitlesData(
-          bottomTitles: AxisTitles(
-            sideTitles: SideTitles(
-                showTitles: true,
-                reservedSize: 32,
-                interval: 1,
-                getTitlesWidget: (double value, TitleMeta meta) => SideTitleWidget(
-                    axisSide: meta.axisSide,
-                    child: Text(formatter.format(DateTime(2025, value.toInt())),
-                        style: Theme.of(context).textTheme.labelSmall))),
-          ),
-          rightTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
-          ),
-          topTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
-          ),
-          leftTitles: AxisTitles(
-            sideTitles: SideTitles(
-                getTitlesWidget: (value, meta) =>
-                    Text(value.toString(), style: Theme.of(context).textTheme.labelSmall),
-                showTitles: true,
-                interval: 2
-                // reservedSize: 40,
-                ),
-          ),
-        ),
-        borderData: FlBorderData(
-          show: true,
-          border: const Border(
-            bottom: BorderSide(color: Colors.black, width: 4),
-            left: BorderSide(color: Colors.transparent),
-            right: BorderSide(color: Colors.transparent),
-            top: BorderSide(color: Colors.transparent),
-          ),
-        ),
-        extraLinesData: ExtraLinesData(
-          horizontalLines: [
-            HorizontalLine(
-              y: coffeeBudget.budget,
-              color: Colors.green,
-              strokeWidth: 3,
-              dashArray: [20, 10],
-            ),
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 8, vertical: width < 600 ? 16 : 0),
+      padding: const EdgeInsets.symmetric(
+        vertical: 16,
+        horizontal: 8,
+      ),
+      width: double.infinity,
+      height: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        gradient: LinearGradient(
+          colors: [
+            Theme.of(context).cardTheme.color!.withOpacity(.7),
+            Theme.of(context).cardTheme.color!.withOpacity(0)
           ],
+          begin: Alignment.bottomCenter,
+          end: Alignment.topCenter,
         ),
-        lineBarsData: lineChartBarData1(data),
-        // lineChartBarData1_2,
-        // lineChartBarData1_3,
-
-        // minX: 0,
-        // maxX: chartData.length + 1,
-        // minX: chartData.length.toDouble(),
-        // maxX: -1,
-        maxY: dataMax + 10,
-        minY: 0,
+      ),
+      child: LineChart(
+        LineChartData(
+          lineTouchData: LineTouchData(
+            handleBuiltInTouches: true,
+            touchTooltipData: LineTouchTooltipData(
+              fitInsideHorizontally: true,
+              fitInsideVertically: true,
+              getTooltipColor: (touchedSpot) => Colors.blueGrey.withOpacity(0.8),
+              getTooltipItems: (data) => data.map((spot) {
+                // print(spot.toString());
+                return LineTooltipItem(spot.y.toString(), const TextStyle(color: Colors.red));
+              }).toList(),
+            ),
+          ),
+          gridData: const FlGridData(show: false),
+          titlesData: FlTitlesData(
+            bottomTitles: AxisTitles(
+              sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: 32,
+                  interval: 1,
+                  getTitlesWidget: (double value, TitleMeta meta) => SideTitleWidget(
+                      axisSide: meta.axisSide,
+                      child: Text(formatter.format(DateTime(2025, value.toInt())),
+                          style: Theme.of(context).textTheme.labelSmall))),
+            ),
+            rightTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            topTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            leftTitles: AxisTitles(
+              sideTitles: SideTitles(
+                  getTitlesWidget: (value, meta) =>
+                      Text(value.toString(), style: Theme.of(context).textTheme.labelSmall),
+                  showTitles: true,
+                  interval: (yMax ~/ 10).toDouble()),
+            ),
+          ),
+          borderData: FlBorderData(
+            show: true,
+            border: const Border(
+              bottom: BorderSide(color: Colors.black, width: 3),
+              left: BorderSide(color: Colors.transparent),
+              right: BorderSide(color: Colors.transparent),
+              top: BorderSide(color: Colors.transparent),
+            ),
+          ),
+          extraLinesData: ExtraLinesData(
+            horizontalLines: [
+              HorizontalLine(
+                y: coffeeBudget.budget,
+                color: Colors.red.withAlpha(150),
+                strokeWidth: 2,
+                dashArray: [20, 10],
+              ),
+            ],
+          ),
+          lineBarsData: lineChartBarData1(data),
+          // lineChartBarData1_2,
+          // lineChartBarData1_3,
+          maxY: yMax + 10,
+          minY: 0,
+        ),
       ),
     );
   }

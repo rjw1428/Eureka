@@ -79,18 +79,18 @@ class AppBarActionMenu extends StatelessWidget {
               }
             },
             itemBuilder: (context) => [
-              PopupMenuItem(
-                value: "REPORT",
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.line_axis_outlined,
-                      color: Theme.of(context).textTheme.headlineLarge?.color,
-                    ),
-                    const Padding(padding: EdgeInsets.only(left: 8), child: Text('Report'))
-                  ],
-                ),
-              ),
+              // PopupMenuItem(
+              //   value: "REPORT",
+              //   child: Row(
+              //     children: [
+              //       Icon(
+              //         Icons.line_axis_outlined,
+              //         color: Theme.of(context).textTheme.headlineLarge?.color,
+              //       ),
+              //       const Padding(padding: EdgeInsets.only(left: 8), child: Text('Report'))
+              //     ],
+              //   ),
+              // ),
               PopupMenuItem(
                 value: "BUDGET",
                 child: Row(

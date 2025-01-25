@@ -130,8 +130,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       Center(
                         child: Container(
-                          width: 100,
-                          height: 100,
+                          width: 80,
+                          height: 80,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: ThemeColorService().currentColor,
@@ -143,7 +143,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           child: Center(
                             child: Text(
                               "${user.firstName[0].toUpperCase()}${user.lastName[0].toUpperCase()}",
-                              style: Theme.of(context).textTheme.headlineLarge,
+                              style: const TextStyle(fontSize: 36),
                               textAlign: TextAlign.center,
                             ),
                           ),
