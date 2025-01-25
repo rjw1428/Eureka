@@ -19,45 +19,48 @@ class AuthService {
   factory AuthService() {
     return _instance;
   }
-  // final _db = FirebaseFirestore.instance;
-  final userStream = FirebaseAuth.instance.authStateChanges().shareReplay(maxSize: 1);
-  User? user = FirebaseAuth.instance.currentUser;
 
-  final Stream<DocumentSnapshot<Map<String, dynamic>>> user$ = FirebaseAuth.instance
+  final userId$ = FirebaseAuth.instance
       .authStateChanges()
-      .where((user) => user != null)
-      .switchMap((user) => FirebaseFirestore.instance
-          .collection('expenseUsers')
-          .doc(user!.uid)
-          .snapshots()
-          .shareReplay(maxSize: 1))
+      .map((user) => user?.uid)
+      .distinct((prev, cur) => prev == cur)
       .shareReplay(maxSize: 1);
-  Stream<String?> getCurrentUserLedgerId() {
-    return userStream.take(1).switchMap((user) {
-      if (user == null) return const Stream.empty();
-      return _getUserLedgerId();
-    });
-  }
 
-  Stream<String> _getUserLedgerId() {
-    return user$.map((doc) => doc.get('ledgerId') as String).shareReplay(maxSize: 1);
-  }
+  Stream get userLoggedOut$ => userId$
+      .where((user) => user == null)
+      .doOnData((d) => print("USER LOGGED OUT"))
+      .doOnDone(() => print('userLoggedOut stream closed'));
 
-  Stream getAccountOrNull() {
-    return userStream.switchMap((user) {
-      if (user == null) {
-        return const Stream.empty().startWith(null);
-      }
-      print("LOGGED IN AS: ${user.uid}");
-      return getAccount(user);
-    });
-  }
+  Stream<bool> get hasUser$ => userId$
+      .map((id) => id != null)
+      .doOnDone(() => print('CLOSED: hasUser stream'))
+      .doOnError((e, s) => print('ohShit: hasUser stream errored ${e.toString()}'));
 
-  Stream<ExpenseUser> getAccount(User user) {
-    return user$
-        .map((event) => event.data())
-        .where((data) => data != null)
-        .map((d) => ExpenseUser.fromJson({'id': user.uid, ...d!}));
+  Stream get expenseUser$ => userId$
+      .doOnData((id) => print('USER EVENT: hasUser $id'))
+      .switchMap((id) {
+        if (id == null) {
+          print('NULL USER');
+          return const Stream.empty().startWith(null);
+        }
+        return _getExpenseUser(id);
+      })
+      .shareReplay(maxSize: 1)
+      .doOnDone(() => print('CLOSED: expenseUser stream'))
+      .doOnError((e, s) => print('ohShit: expenseUser stream errored ${e.toString()}'));
+
+  Stream _getExpenseUser(String id) {
+    return FirebaseFirestore.instance
+        .collection('expenseUsers')
+        .doc(id)
+        .snapshots()
+        .where((event) => event.data() != null)
+        .map((event) => ExpenseUser.fromJson({
+              'id': event.id,
+              ...event.data()!,
+            }))
+        .doOnDone(() => print('CLOSED: expenseUserFetch stream'))
+        .handleError((err) => print('WARN: expenseUserFetch stream errored ${err.toString()}'));
   }
 
   Future<Response> createUser(String email, String password) async {
@@ -66,8 +69,8 @@ class AuthService {
         email: email,
         password: password,
       );
-      user = await userStream.first;
-      await initializeAccount(email, user!.uid);
+      final id = await userId$.first;
+      await initializeAccount(email, id!);
     } on FirebaseAuthException catch (e) {
       if (e.code == 'weak-password') {
         return const Response(
@@ -104,7 +107,6 @@ class AuthService {
         );
         await FirebaseAuth.instance.signInWithCredential(credential);
       }
-      user = FirebaseAuth.instance.currentUser;
     } on FirebaseAuthException catch (e) {
       print('googleLogin exception: $e');
     }
@@ -126,7 +128,6 @@ class AuthService {
   Future<Response> emailLogin(String email, String password) async {
     try {
       await FirebaseAuth.instance.signInWithEmailAndPassword(email: email, password: password);
-      user = FirebaseAuth.instance.currentUser;
       return const Response(success: true);
     } on FirebaseAuthException catch (e) {
       print('Login error: ${e.code}: ${e.message}');

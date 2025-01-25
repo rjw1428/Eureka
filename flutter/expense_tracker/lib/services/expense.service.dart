@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:expense_tracker/models/expense.dart';
+import 'package:expense_tracker/models/summary_entry.dart';
 import 'package:expense_tracker/services/auth.service.dart';
 import 'package:intl/intl.dart';
 import 'package:rxdart/rxdart.dart';
@@ -31,35 +32,49 @@ class ExpenseService {
         .shareReplay(maxSize: 1);
   }
 
-  Future<void> getSummary(DateTime start, DateTime? end) async {
+  Stream<List<SummaryEntry>> getSummary(DateTime start, DateTime? end) {
     DateTime queryEnd = end ?? DateTime.now();
-    final ledgerId = await AuthService().getCurrentUserLedgerId().first;
-    final snapshot = await _db
-        .collection('ledger')
-        .doc(ledgerId)
-        .collection('summaries')
-        .where('startDate', isGreaterThanOrEqualTo: start)
-        .where('startDate', isLessThanOrEqualTo: queryEnd)
-        .get();
-
-    snapshot.docs.forEach((doc) => print(doc.data()));
+    return AuthService().expenseUser$.switchMap((user) {
+      return _db
+          .collection('ledger')
+          .doc(user.ledgerId)
+          .collection('summaries')
+          .where('startDate', isGreaterThanOrEqualTo: start)
+          .where('startDate', isLessThanOrEqualTo: queryEnd)
+          .snapshots()
+          .map(
+            (snapshot) => snapshot.docs.map((doc) {
+              final data = doc.data();
+              final startDate = data['startDate'].toDate() as DateTime;
+              final lastUpdate = data['lastUpdate'].toDate() as DateTime;
+              final summaryPoint = SummaryEntry.fromJson({
+                'id': doc.id,
+                ...data,
+                'startDate': startDate.toIso8601String(),
+                'lastUpdate': lastUpdate.toIso8601String(),
+              });
+              return summaryPoint;
+            }).toList(),
+          )
+          .startWith([]);
+    });
   }
 
   Future<CollectionReference<Map<String, dynamic>>> expenseCollection(DateTime date) async {
-    final ledgerId = await AuthService().getCurrentUserLedgerId().first;
+    final user = await AuthService().expenseUser$.first;
     final month = formatMonth(date);
-    return _db.collection('ledger').doc(ledgerId).collection(month);
+    return _db.collection('ledger').doc(user.ledgerId).collection(month);
   }
 
   Future<DocumentReference<Map<String, dynamic>>> summaryCollection(Expense expense) async {
-    final ledgerId = await AuthService().getCurrentUserLedgerId().first;
+    final user = await AuthService().expenseUser$.first;
     final docId = summaryId(expense);
-    return _db.collection('ledger').doc(ledgerId).collection('summaries').doc(docId);
+    return _db.collection('ledger').doc(user.ledgerId).collection('summaries').doc(docId);
   }
 
   Future checkSummaryCollection(Expense expense) async {
-    final ledgerId = await AuthService().getCurrentUserLedgerId().first;
-    final ref = _db.collection('ledger').doc(ledgerId).collection('summaries');
+    final user = await AuthService().expenseUser$.first;
+    final ref = _db.collection('ledger').doc(user.ledgerId).collection('summaries');
     final docId = summaryId(expense);
 
     final summaryDoc = await ref.doc(docId).get();

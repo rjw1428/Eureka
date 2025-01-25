@@ -1,5 +1,6 @@
 import 'package:expense_tracker/constants/help_text.dart';
 import 'package:expense_tracker/constants/strings.dart';
+import 'package:expense_tracker/screens/budget_config.dart';
 import 'package:expense_tracker/screens/settings.dart';
 import 'package:expense_tracker/services/auth.service.dart';
 import 'package:flutter/material.dart';
@@ -21,6 +22,11 @@ class AppBarActionMenu extends StatelessWidget {
               if (value == "SETTINGS") {
                 Navigator.push(
                     context, MaterialPageRoute(builder: (ctx) => const SettingsScreen()));
+                return;
+              }
+              if (value == "BUDGET") {
+                Navigator.push(
+                    context, MaterialPageRoute(builder: (ctx) => const BudgetConfigScreen()));
                 return;
               }
               if (value == "HELP") {
@@ -68,6 +74,16 @@ class AppBarActionMenu extends StatelessWidget {
               }
             },
             itemBuilder: (context) => [
+              PopupMenuItem(
+                value: "BUDGET",
+                child: Row(
+                  children: [
+                    Icon(Icons.monetization_on,
+                        color: Theme.of(context).textTheme.headlineLarge?.color),
+                    const Padding(padding: EdgeInsets.only(left: 8), child: Text('Budget'))
+                  ],
+                ),
+              ),
               PopupMenuItem(
                 value: "SETTINGS",
                 child: Row(

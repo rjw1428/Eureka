@@ -3,8 +3,8 @@ import 'package:expense_tracker/models/category.dart';
 import 'package:flutter/material.dart';
 import 'package:expense_tracker/models/expense.dart';
 
-class Chart extends StatelessWidget {
-  const Chart({
+class BarChart extends StatelessWidget {
+  const BarChart({
     super.key,
     required this.expenses,
     required this.selectedFilters,

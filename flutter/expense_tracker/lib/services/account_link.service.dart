@@ -1,10 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:expense_tracker/models/expense_user.dart';
-import 'package:expense_tracker/models/notification.dart';
 import 'package:expense_tracker/models/pending_request.dart';
 import 'package:expense_tracker/models/response.dart';
-import 'package:expense_tracker/services/auth.service.dart';
 import 'package:rxdart/transformers.dart';
 
 class AccountLinkService {
@@ -40,14 +38,6 @@ class AccountLinkService {
         return PendingRequest.fromJson({...doc.data(), 'id': doc.id});
       }).toList();
     }).startWith([]);
-  }
-
-  Stream<Notification> subscribeToMessage() {
-    return AuthService()
-        .user$
-        .map((snapshot) => ExpenseUser.fromJson({'id': snapshot.id, ...snapshot.data()!}))
-        .where((user) => user.notification != null)
-        .map((user) => user.notification!);
   }
 
   Future acceptLinkRequest(PendingRequest request, String userId) async {

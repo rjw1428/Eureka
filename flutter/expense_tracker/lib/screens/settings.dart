@@ -3,9 +3,7 @@ import 'package:expense_tracker/models/expense_user.dart';
 import 'package:expense_tracker/models/pending_request.dart';
 import 'package:expense_tracker/services/account_link.service.dart';
 import 'package:expense_tracker/services/auth.service.dart';
-import 'package:expense_tracker/services/categories.service.dart';
 import 'package:expense_tracker/services/theme_color.service.dart';
-import 'package:expense_tracker/widgets/category_form.dart';
 import 'package:expense_tracker/widgets/show_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
@@ -24,57 +22,6 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   bool showLinkForm = false;
   final _emailField = TextEditingController();
-
-  void _openAddCategoryOverlay([CategoryDataWithId? category]) {
-    showModalBottomSheet(
-      useSafeArea: true,
-      isScrollControlled: true,
-      context: context,
-      builder: (ctx) {
-        return CategoryForm(
-          onSubmit: category == null ? _addCategory : _updateCategory,
-          initialCategory: category,
-          onRemove: _removeCategory,
-        );
-      },
-    );
-  }
-
-  void _addCategory(CategoryDataWithId category) {
-    try {
-      CategoriesService().addCategory(category);
-    } catch (e) {
-      showDialogNotification(
-        'Unable to add category',
-        const Text('An error has occurred. Please change something and try again.'),
-        context,
-      );
-    }
-  }
-
-  void _updateCategory(CategoryDataWithId category) {
-    try {
-      CategoriesService().updateCategory(category);
-    } catch (e) {
-      showDialogNotification(
-        'Unable to update category',
-        const Text('An error has occurred. Please change something and try again.'),
-        context,
-      );
-    }
-  }
-
-  void _removeCategory(CategoryDataWithId category) {
-    try {
-      CategoriesService().remove(category);
-    } catch (e) {
-      showDialogNotification(
-        'Unable to delete category',
-        const Text('An error has occurred. Please change something and try again.'),
-        context,
-      );
-    }
-  }
 
   void _showColorSelector(BuildContext context) {
     Color selectedColor = ThemeColorService().currentColor;
@@ -125,14 +72,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final keyboardSpace = MediaQuery.of(context).viewInsets.bottom;
 
     return StreamBuilder(
-        stream: AuthService().getAccount(AuthService().user!).switchMap(
-              (account) => CombineLatestStream.combine2(
-                CategoriesService().getCategoriesStream(account.ledgerId, withDeleted: false),
-                AccountLinkService().pendingLinkRequestList(account.id),
-                (categoryList, pendingRequestList) => {
-                  'categoryList': categoryList,
-                  'pendingRequestList': pendingRequestList,
-                  'user': account,
+        stream: AuthService().expenseUser$.switchMap(
+              (account) => AccountLinkService().pendingLinkRequestList(account.id).map(
+                (pendingRequestList) {
+                  return {
+                    'pendingRequestList': pendingRequestList,
+                    'user': account,
+                  };
                 },
               ),
             ),
@@ -141,15 +87,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             return Text(snapshot.error.toString());
           }
 
-          final List<CategoryDataWithId> configs =
-              !snapshot.hasData ? [] : snapshot.data!['categoryList']! as List<CategoryDataWithId>;
           final List<PendingRequest> requestList = !snapshot.hasData
               ? []
               : snapshot.data!['pendingRequestList']! as List<PendingRequest>;
           final ExpenseUser? user =
               !snapshot.hasData ? null : snapshot.data!['user']! as ExpenseUser;
-
-          final double totalBudget = configs.fold(0, (sum, val) => sum + val.budget);
 
           return Scaffold(
             resizeToAvoidBottomInset: true,
@@ -172,35 +114,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             icon: const Icon(Icons.close),
                           ),
                         ],
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Spending Categories:',
-                            style: Theme.of(context).textTheme.titleMedium,
-                            textAlign: TextAlign.start,
-                          ),
-                          Text(
-                            'Total: \$${totalBudget.toStringAsFixed(2)}',
-                            style: Theme.of(context).textTheme.titleMedium,
-                          )
-                        ],
-                      ),
-                      CategoryList(
-                        categoryList: configs,
-                        editable: user?.role == 'primary',
-                        onEdit: _openAddCategoryOverlay,
-                      ),
-                      Center(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8.0),
-                          child: OutlinedButton.icon(
-                            onPressed: _openAddCategoryOverlay,
-                            label: const Text('Add a spending category'),
-                            icon: const Icon(Icons.playlist_add),
-                          ),
-                        ),
                       ),
                       const SizedBox(height: 16),
                       Text(
@@ -304,10 +217,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   );
                                   return;
                                 }
-
+                                final user = await AuthService().expenseUser$.first;
                                 final response = await AccountLinkService().sendLinkRequest(
                                   _emailField.text,
-                                  AuthService().user!.uid,
+                                  user.id,
                                 );
                                 if (!response.success) {
                                   showDialogNotification(

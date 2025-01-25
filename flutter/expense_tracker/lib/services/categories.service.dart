@@ -2,6 +2,7 @@ import 'dart:collection';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:expense_tracker/models/category.dart';
+import 'package:expense_tracker/models/expense_user.dart';
 import 'package:expense_tracker/services/auth.service.dart';
 import 'package:rxdart/rxdart.dart';
 
@@ -44,41 +45,29 @@ class CategoriesService {
     return _instance;
   }
 
-  Future<DocumentReference<Map<String, dynamic>>> budgetCategoryCollection() async {
-    final ledgerId = await AuthService().getCurrentUserLedgerId().first;
-    return _db.collection('ledger').doc(ledgerId);
-  }
+  Stream<List<CategoryDataWithId>> get categoryStream$ => AuthService()
+      .expenseUser$
+      .whereNotNull()
+      .map((user) => user as ExpenseUser)
+      .switchMap((user) => _db.collection('ledger').doc(user.ledgerId).snapshots().map(
+            (snapshot) {
+              final data = snapshot.get('budgetConfig') as LinkedHashMap<String, dynamic>;
+              List<CategoryDataWithId> configs = data.entries.map((element) {
+                return CategoryDataWithId.fromJson({...element.value, 'id': element.key});
+              }).toList();
+              configs.sort((a, b) => a.label.compareTo(b.label));
+              return configs;
+            },
+          ))
+      .handleError((err) => print('Category Stream: ${err.toString()}'))
+      .shareReplay(maxSize: 1);
 
-  Stream<List<CategoryDataWithId>> getCategoriesStream(String ledgerId, {withDeleted = true}) {
-    return _db
-        .collection('ledger')
-        .doc(ledgerId)
-        .snapshots()
-        .map(
-          (snapshot) {
-            final data = snapshot.get('budgetConfig') as LinkedHashMap<String, dynamic>;
-            List<CategoryDataWithId> configs = data.entries.map((element) {
-              return CategoryDataWithId.fromJson({...element.value, 'id': element.key});
-            }).toList();
-
-            if (!withDeleted) {
-              configs = configs.where((config) => !config.deleted).toList();
-            }
-
-            configs.sort((a, b) => a.label.compareTo(b.label));
-            return configs;
-          },
-        )
-        .handleError((err) => print('Category Stream: ${err.toString()}'))
-        .shareReplay(maxSize: 1);
-  }
-
-  Future<List<CategoryDataWithId>> getCategories(String ledgerId, {withDeleted = true}) async {
-    return getCategoriesStream(ledgerId).first;
+  Future<List<CategoryDataWithId>> getCategories(String ledgerId) async {
+    return categoryStream$.first;
   }
 
   Future<void> updateCategory(CategoryDataWithId category) async {
-    final docRef = await budgetCategoryCollection();
+    final docRef = await _budgetCategoryCollection();
     var categoryUpdate = category.toJson();
     categoryUpdate.remove('id');
     return docRef.update({"budgetConfig.${category.id}": categoryUpdate});
@@ -88,14 +77,19 @@ class CategoriesService {
     category.deleted = true;
     defaultCategories[category.id] = category;
 
-    final doc = await budgetCategoryCollection();
+    final doc = await _budgetCategoryCollection();
     doc.update({"budgetConfig.${category.id}.deleted": true});
   }
 
   Future<void> addCategory(CategoryDataWithId category) async {
-    final docRef = await budgetCategoryCollection();
+    final docRef = await _budgetCategoryCollection();
     var categoryUpdate = category.toJson();
     categoryUpdate.remove('id');
     return docRef.update({"budgetConfig.${category.id}": categoryUpdate});
+  }
+
+  Future<DocumentReference<Map<String, dynamic>>> _budgetCategoryCollection() async {
+    final user = await AuthService().expenseUser$.first;
+    return _db.collection('ledger').doc(user.ledgerId);
   }
 }

@@ -102,9 +102,9 @@ class _ExpenseFormState extends State<ExpenseForm> {
 
     return FutureBuilder(
         future: AuthService()
-            .getCurrentUserLedgerId()
+            .expenseUser$
             .first
-            .then((ledgerId) => CategoriesService().getCategories(ledgerId!)),
+            .then((user) => CategoriesService().getCategories(user.ledgerId)),
         builder: (context, snapshot) {
           final categoryConfig = snapshot.data ?? [];
           return SingleChildScrollView(

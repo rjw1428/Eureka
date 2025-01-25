@@ -3,17 +3,18 @@ import 'dart:async';
 import 'package:expense_tracker/constants/strings.dart';
 import 'package:expense_tracker/models/category.dart';
 import 'package:expense_tracker/models/expense.dart';
-import 'package:expense_tracker/models/expense_user.dart';
+import 'package:expense_tracker/models/summary_entry.dart';
 import 'package:expense_tracker/screens/login.dart';
 import 'package:expense_tracker/services/account_link.service.dart';
 import 'package:expense_tracker/services/auth.service.dart';
 import 'package:expense_tracker/services/categories.service.dart';
 import 'package:expense_tracker/services/expense.service.dart';
 import 'package:expense_tracker/widgets/app_bar_action_menu.dart';
-import 'package:expense_tracker/widgets/chart.dart';
+import 'package:expense_tracker/widgets/bar_chart.dart';
 import 'package:expense_tracker/widgets/expense_form.dart';
 import 'package:expense_tracker/widgets/expenses_list.dart';
 import 'package:expense_tracker/widgets/filter_row.dart';
+import 'package:expense_tracker/widgets/line_chart.dart';
 import 'package:expense_tracker/widgets/loading.dart';
 import 'package:expense_tracker/widgets/show_dialog.dart';
 import 'package:expense_tracker/widgets/time_row.dart';
@@ -26,8 +27,8 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder(
-      stream: AuthService().getAccountOrNull(),
+    return StreamBuilder<bool>(
+      stream: AuthService().hasUser$,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Loading();
@@ -41,9 +42,8 @@ class HomeScreen extends StatelessWidget {
               ),
             ]),
           );
-        } else if (snapshot.hasData && snapshot.data != null) {
-          final ExpenseUser user = snapshot.data;
-          return TransactionScreen(userId: user.id);
+        } else if (snapshot.hasData && snapshot.data!) {
+          return const TransactionScreen();
         } else {
           return const LoginScreen();
         }
@@ -53,9 +53,7 @@ class HomeScreen extends StatelessWidget {
 }
 
 class TransactionScreen extends StatefulWidget {
-  const TransactionScreen({super.key, required this.userId});
-
-  final String userId;
+  const TransactionScreen({super.key});
 
   @override
   State<StatefulWidget> createState() {
@@ -142,24 +140,13 @@ class _TransactionScreenState extends State<TransactionScreen> {
   }
 
   void linkRequestNotification() {
-    final userId = AuthService().user!.uid;
-
-    // AccountLinkService()
-    //     .subscribeToUnLinkMessage(userId)
-    //     .doOnError((error, stack) => print('oops: $error'))
-    //     .doOnDone(() => print('complete'))
-    //     .listen((email) => showDialogNotification(
-    //           'Your Account Has Been Unlinked',
-    //           Text(
-    //               '''$email has unlink your account. You will no longer be able to see any expenses from them or any expenses that were added by you. You have been reverted back to the your ledger before your account was linked '''),
-    //           context,
-    //         ));
-
-    AccountLinkService()
-        .subscribeToMessage()
-        .doOnError((error, stack) => print('oh no: $error'))
-        .doOnDone(() => print('complete'))
-        .listen((notification) async {
+    AuthService()
+        .expenseUser$
+        .where((user) => user != null && user.notification != null)
+        .doOnDone(() => print('notification listener closed'))
+        .doOnError((e, s) => print('ohShit: notification listener errored ${e.toString()}'))
+        .listen((user) async {
+      final notification = user.notification!;
       if (notification.type == 'pendingRequest') {
         final request =
             await AccountLinkService().getPendingRequest(notification.data!['requestId']);
@@ -170,7 +157,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
           context,
           TextButton(
             onPressed: () async {
-              await AccountLinkService().acceptLinkRequest(request, userId);
+              await AccountLinkService().acceptLinkRequest(request, user.id);
               Navigator.pop(context);
               // Accepting requeries the ledger with the new ID,
               // but permissions are not valid yet,
@@ -201,7 +188,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
           Text('$sourceEmail has unlinked there account from your ledger.'),
           context,
         );
-        await AccountLinkService().clearNotification(userId);
+        await AccountLinkService().clearNotification(user.id);
         return;
       }
 
@@ -214,7 +201,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
           Text('$sourceEmail has unlinked you account from there ledger.'),
           context,
         );
-        await AccountLinkService().clearNotification(userId);
+        await AccountLinkService().clearNotification(user.id);
         return;
       }
     });
@@ -237,12 +224,16 @@ class _TransactionScreenState extends State<TransactionScreen> {
         ],
       ),
       body: StreamBuilder<Map<String, List<dynamic>>>(
-        stream: AuthService().getCurrentUserLedgerId().switchMap((ledgerId) {
-          print("LEDGER ID: ${ledgerId}");
-          return CombineLatestStream.combine3(
-              ExpenseService().getExpenseStream(ledgerId!, _selectedDate),
-              CategoriesService().getCategoriesStream(ledgerId),
-              _selectedFilters.stream.startWith(null), (expenses, categories, selection) {
+        stream:
+            AuthService().expenseUser$.takeUntil(AuthService().userLoggedOut$).switchMap((user) {
+          print("LEDGER ID: ${user.ledgerId}");
+          return CombineLatestStream.combine4(
+              ExpenseService().getExpenseStream(user.ledgerId, _selectedDate),
+              CategoriesService().categoryStream$,
+              _selectedFilters.stream.startWith(null),
+              ExpenseService().getSummary(DateTime(2024), null),
+              // Stream.value([]),
+              (expenses, categories, selection, summary) {
             final List distinctCategoryIds = Set.from(
               expenses.map((el) => el.categoryId),
             ).toList();
@@ -250,6 +241,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
               'expenses': expenses,
               'categories': categories,
               'selection': selection ?? distinctCategoryIds,
+              'summary': summary,
             });
           });
         }),
@@ -280,7 +272,13 @@ class _TransactionScreenState extends State<TransactionScreen> {
           _categoryOptions =
               _categoryConfigs.where((config) => distinctCategoryIds.contains(config.id)).toList();
 
+          List<SummaryEntry> _summaryData = [];
           final selectedIds = snapshot.data!['selection'];
+          // final _summary = snapshot.data!['summaryData'] as List<SummaryEntry>;
+
+          // final _summaryData = _summary.map((entry) {
+          //   return entry;
+          // }).toList();
 
           _filterList = selectedIds == null
               ? distinctCategoryIds.toList()
@@ -318,7 +316,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
                 TotalRow(sum: totalExpenses),
                 SizedBox(
                   height: 200,
-                  child: Chart(
+                  child: BarChart(
                     expenses: expenses,
                     selectedFilters: _filterList,
                     budgetConfigs: _categoryConfigs,
@@ -335,9 +333,10 @@ class _TransactionScreenState extends State<TransactionScreen> {
                 Expanded(
                   child: Column(
                     children: [
+                      LineChart(data: _summaryData),
                       TotalRow(sum: totalExpenses),
                       Expanded(
-                        child: Chart(
+                        child: BarChart(
                           expenses: expenses,
                           selectedFilters: _filterList,
                           budgetConfigs: _categoryConfigs,
