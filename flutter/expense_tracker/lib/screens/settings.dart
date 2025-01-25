@@ -4,6 +4,7 @@ import 'package:expense_tracker/models/pending_request.dart';
 import 'package:expense_tracker/services/account_link.service.dart';
 import 'package:expense_tracker/services/auth.service.dart';
 import 'package:expense_tracker/services/theme_color.service.dart';
+import 'package:expense_tracker/widgets/loading.dart';
 import 'package:expense_tracker/widgets/show_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
@@ -21,6 +22,8 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   bool showLinkForm = false;
   final _emailField = TextEditingController();
+  final _firstNameField = TextEditingController();
+  final _lastNameField = TextEditingController();
 
   void _showColorSelector(BuildContext context) {
     Color selectedColor = ThemeColorService().currentColor;
@@ -66,6 +69,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   @override
+  void dispose() {
+    _firstNameField.dispose();
+    _lastNameField.dispose();
+    _emailField.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final keyboardSpace = MediaQuery.of(context).viewInsets.bottom;
 
@@ -85,11 +96,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
             return Text(snapshot.error.toString());
           }
 
-          final List<PendingRequest> requestList = !snapshot.hasData
-              ? []
-              : snapshot.data!['pendingRequestList']! as List<PendingRequest>;
-          final ExpenseUser? user =
-              !snapshot.hasData ? null : snapshot.data!['user']! as ExpenseUser;
+          if (!snapshot.hasData) {
+            return const Loading();
+          }
+
+          final List<PendingRequest> requestList =
+              snapshot.data!['pendingRequestList'] as List<PendingRequest>;
+          final ExpenseUser user = snapshot.data!['user'] as ExpenseUser;
+          _firstNameField.text = user.firstName;
+          _lastNameField.text = user.lastName;
 
           return Scaffold(
             resizeToAvoidBottomInset: true,
@@ -113,6 +128,55 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                         ],
                       ),
+                      Center(
+                        child: Container(
+                          width: 100,
+                          height: 100,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: ThemeColorService().currentColor,
+                            border: Border.all(
+                              color: Theme.of(context).appBarTheme.foregroundColor!,
+                              width: 4.0,
+                            ),
+                          ),
+                          child: Center(
+                            child: Text(
+                              "${user.firstName[0].toUpperCase()}${user.lastName[0].toUpperCase()}",
+                              style: Theme.of(context).textTheme.headlineLarge,
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Profile',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      Row(children: [
+                        const Text('First Name:'),
+                        Padding(
+                          padding: const EdgeInsets.only(left: 8.0),
+                          child: Text(user.firstName),
+                        ),
+                      ]),
+                      Row(children: [
+                        const Text('Last Name:'),
+                        Padding(
+                          padding: const EdgeInsets.only(left: 8.0),
+                          child: Text(user.lastName),
+                        ),
+                      ]),
+                      Row(
+                        children: [
+                          const Text('Email Address:'),
+                          Padding(
+                            padding: const EdgeInsets.only(left: 8.0),
+                            child: Text(user.email),
+                          ),
+                        ],
+                      ),
                       const SizedBox(height: 16),
                       Text(
                         'Link your spending',
@@ -124,7 +188,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         style: Theme.of(context).textTheme.bodyMedium,
                         textAlign: TextAlign.start,
                       ),
-                      if ((user?.linkedAccounts ?? []).isNotEmpty)
+                      if ((user.linkedAccounts ?? []).isNotEmpty)
                         Padding(
                           padding: const EdgeInsets.only(top: 12.0),
                           child: Center(
@@ -134,7 +198,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           )),
                         ),
                       Column(
-                        children: (user?.linkedAccounts ?? []).map((link) {
+                        children: (user.linkedAccounts ?? []).map((link) {
                           return Card(
                             child: Padding(
                               padding: const EdgeInsets.all(8.0),
@@ -145,7 +209,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     child: Text(link['email']!),
                                   ),
                                   TextButton(
-                                      onPressed: () => _openUnlinkConfirmationDialog(link, user!),
+                                      onPressed: () => _openUnlinkConfirmationDialog(link, user),
                                       child: const Icon(Icons.link_off_outlined)),
                                 ],
                               ),

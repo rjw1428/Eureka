@@ -87,9 +87,11 @@ class AccountLinkService {
     final initiatorUpdate = user.role == 'primary'
         ? {
             'linkedAccounts': FieldValue.arrayRemove([linkedAccount]),
+            'archivedLinkedAccounts': FieldValue.arrayUnion([linkedAccount])
           }
         : {
             'linkedAccounts': FieldValue.arrayRemove([linkedAccount]),
+            'archivedLinkedAccounts': FieldValue.arrayUnion([linkedAccount]),
             'role': 'primary',
             'backupLedgerId': null,
             'ledgerId': user.backupLedgerId,

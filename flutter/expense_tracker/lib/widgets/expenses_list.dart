@@ -61,6 +61,7 @@ class ExpenseItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    expense.submittedBy;
     return LayoutBuilder(
       builder: (ctx, constraints) => Card(
         child: Padding(

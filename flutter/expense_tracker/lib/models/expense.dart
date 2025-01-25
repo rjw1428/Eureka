@@ -13,6 +13,7 @@ class Expense {
     required this.amount,
     required this.date,
     required this.categoryId,
+    this.submittedBy,
     this.note,
     this.id,
   });
@@ -20,6 +21,7 @@ class Expense {
   String categoryId;
   String? id;
   String? note;
+  String? submittedBy;
   double amount;
   DateTime date;
 
@@ -43,6 +45,7 @@ class ExpenseWithCategoryData extends Expense {
     required super.amount,
     required super.date,
     required super.categoryId,
+    required super.submittedBy,
     required this.category,
   });
 

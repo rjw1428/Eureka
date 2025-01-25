@@ -15,6 +15,8 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   bool _showLoginForm = false;
   bool _showCreateAccountForm = false;
+  final _firstNameControl = TextEditingController();
+  final _lastNameControl = TextEditingController();
   final _emailControl = TextEditingController();
   final _passwordControl = TextEditingController();
   final _confirmPasswordControl = TextEditingController();
@@ -24,6 +26,8 @@ class _LoginScreenState extends State<LoginScreen> {
     _emailControl.dispose();
     _passwordControl.dispose();
     _confirmPasswordControl.dispose();
+    _firstNameControl.dispose();
+    _lastNameControl.dispose();
     super.dispose();
   }
 
@@ -186,6 +190,18 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: Column(
                       children: [
                         TextField(
+                          controller: _firstNameControl,
+                          decoration: const InputDecoration(
+                            label: Text('First Name'),
+                          ),
+                        ),
+                        TextField(
+                          controller: _lastNameControl,
+                          decoration: const InputDecoration(
+                            label: Text('Last Name'),
+                          ),
+                        ),
+                        TextField(
                           controller: _emailControl,
                           decoration: const InputDecoration(
                             label: Text('Email'),
@@ -221,6 +237,22 @@ class _LoginScreenState extends State<LoginScreen> {
                         _showLoginForm = false;
                       });
                     } else {
+                      if (_firstNameControl.text.trim().isEmpty) {
+                        showDialogNotification(
+                          'First Name Missing',
+                          const Text('A first name is required to create an account'),
+                          context,
+                        );
+                        return;
+                      }
+                      if (_lastNameControl.text.trim().isEmpty) {
+                        showDialogNotification(
+                          'Last Name Missing',
+                          const Text('A last name is required to create an account'),
+                          context,
+                        );
+                        return;
+                      }
                       if (_passwordControl.text.length < 6) {
                         showDialogNotification(
                           'Password too short',
@@ -239,8 +271,12 @@ class _LoginScreenState extends State<LoginScreen> {
                         return;
                       }
 
-                      final response = await AuthService()
-                          .createUser(_emailControl.text.trim(), _passwordControl.text);
+                      final response = await AuthService().createUser(
+                        _firstNameControl.text.trim(),
+                        _lastNameControl.text.trim(),
+                        _emailControl.text.trim(),
+                        _passwordControl.text,
+                      );
                       if (!response.success) {
                         showDialogNotification(
                           'An Error Occurred',

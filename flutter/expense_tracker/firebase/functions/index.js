@@ -3,7 +3,7 @@ const { onCall } = require("firebase-functions/v2/https");
 const logger = require("firebase-functions/logger");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
-const { onDocumentCreated, onDocumentDeleted } = require("firebase-functions/firestore");
+const { onDocumentCreated } = require("firebase-functions/firestore");
 
 initializeApp();
 
@@ -19,6 +19,8 @@ exports.initializeExpenseTrackerAccount = onCall(async (request) => {
         .set({
             role: "primary",
             email: request.data["email"],
+            firstName: request.data["firstName"],
+            lastName: request.data["lastName"],
             ledgerId: ledgerSnapshot.id,
             userSettings: {},
         });
@@ -134,13 +136,15 @@ exports.unlinkRequest = onCall(async (request) => {
         const targetDoc = targetSnapshot.data(); // GET TARGET's DATA
         logger.info(targetDoc);
         const restoreLedgerId = targetDoc.backupLedgerId
-        const sourceEmail = targetDoc.linkedAccounts.find((account) => account.id === request.data["initiatorId"])?.email || 'A linked account';
+        const sourceUser = targetDoc.linkedAccounts.find((account) => account.id === request.data["initiatorId"])
+        const sourceEmail = sourceUser?.email || 'A linked account';
         const updatedLinkedAccounts = targetDoc.linkedAccounts.filter((account) => account.id != request.data["initiatorId"]);
         
         let update;
         if (targetDoc.role === 'primary') {
             update = {
                 linkedAccounts: updatedLinkedAccounts,
+                archivedLinkedAccounts: FieldValue.arrayUnion([sourceUser]),
                 notification: { // notification
                     type: 'primaryUnlink',
                     data: { email : sourceEmail }

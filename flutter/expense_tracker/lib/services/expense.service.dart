@@ -80,6 +80,7 @@ class ExpenseService {
     if (!summaryDoc.exists) {
       ref.doc(docId).set({
         'startDate': DateTime(expense.date.year, expense.date.month),
+        'categoryId': expense.categoryId
       });
     }
   }

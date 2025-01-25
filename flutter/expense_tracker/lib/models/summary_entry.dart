@@ -9,6 +9,7 @@ class SummaryEntry {
   final double total;
   final DateTime lastUpdate;
   final DateTime startDate;
+  final String categoryId;
 
   SummaryEntry({
     required this.id,
@@ -16,6 +17,7 @@ class SummaryEntry {
     required this.total,
     required this.lastUpdate,
     required this.startDate,
+    required this.categoryId,
   });
 
   factory SummaryEntry.fromJson(Map<String, dynamic> json) => _$SummaryEntryFromJson(json);

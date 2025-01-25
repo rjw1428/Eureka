@@ -12,6 +12,7 @@ SummaryEntry _$SummaryEntryFromJson(Map<String, dynamic> json) => SummaryEntry(
       total: (json['total'] as num).toDouble(),
       lastUpdate: DateTime.parse(json['lastUpdate'] as String),
       startDate: DateTime.parse(json['startDate'] as String),
+      categoryId: json['categoryId'] as String,
     );
 
 Map<String, dynamic> _$SummaryEntryToJson(SummaryEntry instance) =>
@@ -21,4 +22,5 @@ Map<String, dynamic> _$SummaryEntryToJson(SummaryEntry instance) =>
       'total': instance.total,
       'lastUpdate': instance.lastUpdate.toIso8601String(),
       'startDate': instance.startDate.toIso8601String(),
+      'categoryId': instance.categoryId,
     };

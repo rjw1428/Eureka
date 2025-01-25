@@ -63,14 +63,15 @@ class AuthService {
         .handleError((err) => print('WARN: expenseUserFetch stream errored ${err.toString()}'));
   }
 
-  Future<Response> createUser(String email, String password) async {
+  Future<Response> createUser(
+      String firstName, String lastName, String email, String password) async {
     try {
       await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
       final id = await userId$.first;
-      await initializeAccount(email, id!);
+      await initializeAccount(firstName, lastName, email, id!);
     } on FirebaseAuthException catch (e) {
       if (e.code == 'weak-password') {
         return const Response(
@@ -143,18 +144,20 @@ class AuthService {
     }
   }
 
-  Future<bool> initializeAccount(String email, String userId) async {
+  Future<bool> initializeAccount(
+      String firstName, String lastName, String email, String userId) async {
     // Completer here is just used to trigger an error message
     Completer<bool> completer = Completer();
     try {
-      final resp = await functions.httpsCallable("initializeExpenseTrackerAccount").call({
+      // This could be moved to a local call - no need for a cloud function
+      await functions.httpsCallable("initializeExpenseTrackerAccount").call({
+        'firstName': firstName,
+        'lastName': lastName,
         'userId': userId,
         'email': email,
       });
-      print(resp.data);
       completer.complete(true);
     } catch (e) {
-      print(e);
       completer.complete(false);
     }
     return completer.future;

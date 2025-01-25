@@ -1,6 +1,7 @@
 import 'package:expense_tracker/constants/help_text.dart';
 import 'package:expense_tracker/constants/strings.dart';
 import 'package:expense_tracker/screens/budget_config.dart';
+import 'package:expense_tracker/screens/report.dart';
 import 'package:expense_tracker/screens/settings.dart';
 import 'package:expense_tracker/services/auth.service.dart';
 import 'package:flutter/material.dart';
@@ -27,6 +28,10 @@ class AppBarActionMenu extends StatelessWidget {
               if (value == "BUDGET") {
                 Navigator.push(
                     context, MaterialPageRoute(builder: (ctx) => const BudgetConfigScreen()));
+                return;
+              }
+              if (value == "REPORT") {
+                Navigator.push(context, MaterialPageRoute(builder: (ctx) => const ReportScreen()));
                 return;
               }
               if (value == "HELP") {
@@ -75,11 +80,25 @@ class AppBarActionMenu extends StatelessWidget {
             },
             itemBuilder: (context) => [
               PopupMenuItem(
+                value: "REPORT",
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.line_axis_outlined,
+                      color: Theme.of(context).textTheme.headlineLarge?.color,
+                    ),
+                    const Padding(padding: EdgeInsets.only(left: 8), child: Text('Report'))
+                  ],
+                ),
+              ),
+              PopupMenuItem(
                 value: "BUDGET",
                 child: Row(
                   children: [
-                    Icon(Icons.monetization_on,
-                        color: Theme.of(context).textTheme.headlineLarge?.color),
+                    Icon(
+                      Icons.monetization_on,
+                      color: Theme.of(context).textTheme.headlineLarge?.color,
+                    ),
                     const Padding(padding: EdgeInsets.only(left: 8), child: Text('Budget'))
                   ],
                 ),
@@ -88,7 +107,10 @@ class AppBarActionMenu extends StatelessWidget {
                 value: "SETTINGS",
                 child: Row(
                   children: [
-                    Icon(Icons.settings, color: Theme.of(context).textTheme.headlineLarge?.color),
+                    Icon(
+                      Icons.settings,
+                      color: Theme.of(context).textTheme.headlineLarge?.color,
+                    ),
                     const Padding(padding: EdgeInsets.only(left: 8), child: Text('Settings'))
                   ],
                 ),
@@ -97,7 +119,10 @@ class AppBarActionMenu extends StatelessWidget {
                 value: "HELP",
                 child: Row(
                   children: [
-                    Icon(Icons.help, color: Theme.of(context).textTheme.headlineLarge?.color),
+                    Icon(
+                      Icons.help,
+                      color: Theme.of(context).textTheme.headlineLarge?.color,
+                    ),
                     const Padding(padding: EdgeInsets.only(left: 8), child: Text('Help'))
                   ],
                 ),
@@ -106,7 +131,10 @@ class AppBarActionMenu extends StatelessWidget {
                 value: "LOGOUT",
                 child: Row(
                   children: [
-                    Icon(Icons.logout, color: Theme.of(context).textTheme.headlineLarge?.color),
+                    Icon(
+                      Icons.logout,
+                      color: Theme.of(context).textTheme.headlineLarge?.color,
+                    ),
                     const Padding(padding: EdgeInsets.only(left: 8), child: Text('Log Out'))
                   ],
                 ),

@@ -72,19 +72,30 @@ class BarChart extends StatelessWidget {
               }).toList(),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Row(
+            mainAxisAlignment: MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: buckets
                 .map(
                   (bucket) => Expanded(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 4),
                       child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
+                          Text(
+                            bucket.totalExpenses > 0
+                                ? '\$${bucket.totalExpenses.toStringAsFixed(2)}'
+                                : '',
+                            textAlign: TextAlign.center,
+                            style: ThemeData().textTheme.labelMedium,
+                          ),
                           Text(
                               budgetConfigs
                                   .firstWhere((config) => config.id == bucket.category)
                                   .label,
+                              textAlign: TextAlign.center,
                               style: Theme.of(context).textTheme.labelSmall),
                           Icon(
                             budgetConfigs
@@ -133,11 +144,6 @@ class ChartBar extends StatelessWidget {
                   color: isDarkMode
                       ? Theme.of(context).colorScheme.secondary
                       : Theme.of(context).colorScheme.primary.withOpacity(0.65),
-                ),
-                child: Text(
-                  amount > 0 ? '\$${amount.toStringAsFixed(2)}' : '',
-                  textAlign: TextAlign.center,
-                  style: ThemeData().textTheme.titleSmall,
                 ),
               ),
             ),

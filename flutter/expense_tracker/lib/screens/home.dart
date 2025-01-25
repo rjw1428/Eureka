@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:expense_tracker/constants/strings.dart';
 import 'package:expense_tracker/models/category.dart';
 import 'package:expense_tracker/models/expense.dart';
-import 'package:expense_tracker/models/summary_entry.dart';
+import 'package:expense_tracker/models/expense_user.dart';
 import 'package:expense_tracker/screens/login.dart';
 import 'package:expense_tracker/services/account_link.service.dart';
 import 'package:expense_tracker/services/auth.service.dart';
@@ -14,7 +14,6 @@ import 'package:expense_tracker/widgets/bar_chart.dart';
 import 'package:expense_tracker/widgets/expense_form.dart';
 import 'package:expense_tracker/widgets/expenses_list.dart';
 import 'package:expense_tracker/widgets/filter_row.dart';
-import 'package:expense_tracker/widgets/line_chart.dart';
 import 'package:expense_tracker/widgets/loading.dart';
 import 'package:expense_tracker/widgets/show_dialog.dart';
 import 'package:expense_tracker/widgets/time_row.dart';
@@ -227,13 +226,10 @@ class _TransactionScreenState extends State<TransactionScreen> {
         stream:
             AuthService().expenseUser$.takeUntil(AuthService().userLoggedOut$).switchMap((user) {
           print("LEDGER ID: ${user.ledgerId}");
-          return CombineLatestStream.combine4(
+          return CombineLatestStream.combine3(
               ExpenseService().getExpenseStream(user.ledgerId, _selectedDate),
               CategoriesService().categoryStream$,
-              _selectedFilters.stream.startWith(null),
-              ExpenseService().getSummary(DateTime(2024), null),
-              // Stream.value([]),
-              (expenses, categories, selection, summary) {
+              _selectedFilters.stream.startWith(null), (expenses, categories, selection) {
             final List distinctCategoryIds = Set.from(
               expenses.map((el) => el.categoryId),
             ).toList();
@@ -241,7 +237,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
               'expenses': expenses,
               'categories': categories,
               'selection': selection ?? distinctCategoryIds,
-              'summary': summary,
+              'user': [user],
             });
           });
         }),
@@ -257,11 +253,16 @@ class _TransactionScreenState extends State<TransactionScreen> {
             return el as CategoryDataWithId;
           }).toList();
 
+          final ExpenseUser _user = snapshot.data!['user']![0];
+
           _expenses = snapshot.data!['expenses']!.map((exp) {
             final e = exp as Expense;
             final CategoryDataWithId category = _categoryConfigs.firstWhere((cat) {
               return cat.id == e.categoryId;
             });
+            // print(_user.id);
+            // print(_user.linkedAccounts);
+            // print(_user.archivedLinkedAccounts);
             return ExpenseWithCategoryData.fromJson({...e.toJson(), 'category': category.toJson()});
           }).toList();
 
@@ -272,13 +273,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
           _categoryOptions =
               _categoryConfigs.where((config) => distinctCategoryIds.contains(config.id)).toList();
 
-          List<SummaryEntry> _summaryData = [];
           final selectedIds = snapshot.data!['selection'];
-          // final _summary = snapshot.data!['summaryData'] as List<SummaryEntry>;
-
-          // final _summaryData = _summary.map((entry) {
-          //   return entry;
-          // }).toList();
 
           _filterList = selectedIds == null
               ? distinctCategoryIds.toList()
@@ -333,7 +328,6 @@ class _TransactionScreenState extends State<TransactionScreen> {
                 Expanded(
                   child: Column(
                     children: [
-                      LineChart(data: _summaryData),
                       TotalRow(sum: totalExpenses),
                       Expanded(
                         child: BarChart(
