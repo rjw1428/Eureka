@@ -311,6 +311,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
                 SizedBox(
                   height: 200,
                   child: BarChart(
+                    screenWidth: MediaQuery.of(context).size.width,
                     expenses: expenses,
                     selectedFilters: _filterList,
                     budgetConfigs: _categoryConfigs,
@@ -330,6 +331,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
                       TotalRow(sum: totalExpenses),
                       Expanded(
                         child: BarChart(
+                          screenWidth: MediaQuery.of(context).size.width,
                           expenses: expenses,
                           selectedFilters: _filterList,
                           budgetConfigs: _categoryConfigs,
