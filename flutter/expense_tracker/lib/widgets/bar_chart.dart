@@ -28,6 +28,7 @@ class _BarChartState extends State<BarChart> with SingleTickerProviderStateMixin
   final double _scrollGradientOpacity = 0.8;
   final double _barColumnWidth = 64.0;
   final ScrollController _scrollController = ScrollController();
+
   List<ExpenseBucket> getBuckets(List<CategoryDataWithId> data) {
     return data
         .where((config) => widget.selectedFilters.contains(config.id))
@@ -41,9 +42,13 @@ class _BarChartState extends State<BarChart> with SingleTickerProviderStateMixin
   }
 
   void _checkGradients() {
+    // we are setting the _showGradient values in the build method (so
+    //that they are updated as category selections change). I think the
+    // only thing all this does is trigger a new "build" call from setState
+    // on scroll, thus recalculating the visibility
     final newLeftGradientState = _scrollController.hasClients && _scrollController.offset > 0;
-    final newRightGradientState = _scrollController.hasClients && _scrollController.offset == 0 ||
-        !_scrollController.position.atEdge;
+    final newRightGradientState = _scrollController.hasClients &&
+        (_scrollController.offset == 0 || !_scrollController.position.atEdge);
 
     if (newRightGradientState != _showRightGradient || newLeftGradientState != _showLeftGradient) {
       setState(() {
@@ -77,6 +82,14 @@ class _BarChartState extends State<BarChart> with SingleTickerProviderStateMixin
     final buckets = getBuckets(widget.budgetConfigs);
     final maxTotalExpense = getMaxTotalExpense(buckets);
     final chartWidth = buckets.length * _barColumnWidth;
+
+    if (_scrollController.hasClients) {
+      _showRightGradient = (_scrollController.offset == 0 && widget.screenWidth < chartWidth) ||
+          (!_scrollController.position.atEdge && widget.screenWidth < chartWidth);
+
+      _showLeftGradient = (_scrollController.offset > 0 && widget.screenWidth < chartWidth) ||
+          (!_scrollController.position.atEdge && widget.screenWidth < chartWidth);
+    }
 
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 8, vertical: widget.screenWidth < 600 ? 8 : 0),
@@ -273,7 +286,8 @@ class ChartBar extends StatelessWidget {
                     ..close();
                 },
                 child: FractionallySizedBox(
-                  heightFactor: threshold,
+                  heightFactor:
+                      threshold != null && threshold! >= 2.0 ? threshold! - 2.0 : threshold,
                   widthFactor: 100,
                 ),
               )
