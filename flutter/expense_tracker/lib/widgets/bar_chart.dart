@@ -1,5 +1,8 @@
+import 'dart:ui';
+
 import 'package:dotted_border/dotted_border.dart';
 import 'package:expense_tracker/models/category.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:expense_tracker/models/expense.dart';
 
@@ -153,87 +156,104 @@ class _BarChartState extends State<BarChart> with SingleTickerProviderStateMixin
             ),
           ),
           // SCROLLABLE CONTENT
-          SingleChildScrollView(
-            controller: _scrollController,
-            scrollDirection: Axis.horizontal,
-            child: SizedBox(
-              width: widget.screenWidth > chartWidth ? widget.screenWidth - 32 : chartWidth,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  vertical: 16,
-                  horizontal: 8,
-                ),
-                child: Column(
-                  children: [
-                    Expanded(
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: buckets.map((bucket) {
-                          final size = bucket.totalExpenses == 0
-                              ? 0
-                              : bucket.totalExpenses / maxTotalExpense;
-                          final threshold = bucket.budgetLimit < maxTotalExpense
-                              ? bucket.budgetLimit / maxTotalExpense
-                              : null;
-                          return ChartBar(
-                            amount: bucket.totalExpenses,
-                            size: size.toDouble(),
-                            threshold: threshold,
-                          );
-                        }).toList(),
-                      ),
+          ScrollConfiguration(
+            behavior: ScrollConfiguration.of(context).copyWith(
+              dragDevices: {
+                PointerDeviceKind.touch,
+                PointerDeviceKind.mouse,
+              },
+              platform: TargetPlatform.linux, // This enables mouse drag scrolling
+            ),
+            child: Scrollbar(
+              controller: _scrollController,
+              thumbVisibility: kIsWeb,
+              thickness: kIsWeb ? 8.0 : 2.0,
+              radius: const Radius.circular(4),
+              child: SingleChildScrollView(
+                controller: _scrollController,
+                scrollDirection: Axis.horizontal,
+                child: SizedBox(
+                  width: widget.screenWidth > chartWidth ? widget.screenWidth - 32 : chartWidth,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 16,
+                      horizontal: 8,
                     ),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: buckets
-                          .map(
-                            (bucket) => Expanded(
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 4),
-                                child: SizedBox(
-                                  height: 80,
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        bucket.totalExpenses > 0
-                                            ? '\$${bucket.totalExpenses.toStringAsFixed(2)}'
-                                            : '',
-                                        textAlign: TextAlign.center,
-                                        style: isDarkMode
-                                            ? ThemeData.dark().textTheme.labelMedium
-                                            : ThemeData().textTheme.labelMedium,
-                                        softWrap: false,
+                    child: Column(
+                      children: [
+                        Expanded(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: buckets.map((bucket) {
+                              final size = bucket.totalExpenses == 0
+                                  ? 0
+                                  : bucket.totalExpenses / maxTotalExpense;
+                              final threshold = bucket.budgetLimit < maxTotalExpense
+                                  ? bucket.budgetLimit / maxTotalExpense
+                                  : null;
+                              return ChartBar(
+                                amount: bucket.totalExpenses,
+                                size: size.toDouble(),
+                                threshold: threshold,
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: buckets
+                              .map(
+                                (bucket) => Expanded(
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                                    child: SizedBox(
+                                      height: 80,
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            bucket.totalExpenses > 0
+                                                ? '\$${bucket.totalExpenses.toStringAsFixed(2)}'
+                                                : '',
+                                            textAlign: TextAlign.center,
+                                            style: isDarkMode
+                                                ? ThemeData.dark().textTheme.labelMedium
+                                                : ThemeData().textTheme.labelMedium,
+                                            softWrap: false,
+                                          ),
+                                          SelectableText(
+                                              widget.budgetConfigs
+                                                  .firstWhere(
+                                                      (config) => config.id == bucket.category)
+                                                  .label,
+                                              textAlign: TextAlign.center,
+                                              maxLines: 2,
+                                              style: Theme.of(context).textTheme.labelSmall),
+                                          Icon(
+                                            widget.budgetConfigs
+                                                .firstWhere(
+                                                    (config) => config.id == bucket.category)
+                                                .iconData,
+                                            color: isDarkMode
+                                                ? Theme.of(context).colorScheme.secondary
+                                                : Theme.of(context)
+                                                    .colorScheme
+                                                    .primary
+                                                    .withOpacity(0.7),
+                                          ),
+                                        ],
                                       ),
-                                      SelectableText(
-                                          widget.budgetConfigs
-                                              .firstWhere((config) => config.id == bucket.category)
-                                              .label,
-                                          textAlign: TextAlign.center,
-                                          maxLines: 2,
-                                          style: Theme.of(context).textTheme.labelSmall),
-                                      Icon(
-                                        widget.budgetConfigs
-                                            .firstWhere((config) => config.id == bucket.category)
-                                            .iconData,
-                                        color: isDarkMode
-                                            ? Theme.of(context).colorScheme.secondary
-                                            : Theme.of(context)
-                                                .colorScheme
-                                                .primary
-                                                .withOpacity(0.7),
-                                      ),
-                                    ],
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ),
-                          )
-                          .toList(),
-                    )
-                  ],
+                              )
+                              .toList(),
+                        )
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),
