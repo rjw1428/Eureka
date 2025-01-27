@@ -190,12 +190,14 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: Column(
                       children: [
                         TextField(
+                          textCapitalization: TextCapitalization.sentences,
                           controller: _firstNameControl,
                           decoration: const InputDecoration(
                             label: Text('First Name'),
                           ),
                         ),
                         TextField(
+                          textCapitalization: TextCapitalization.sentences,
                           controller: _lastNameControl,
                           decoration: const InputDecoration(
                             label: Text('Last Name'),
