@@ -282,6 +282,10 @@ class _TransactionScreenState extends State<TransactionScreen> {
               .where((expense) => _filterList.contains(expense.categoryId))
               .fold(0, (sum, exp) => exp.amount + sum);
 
+          final double totalBudget = _categoryConfigs
+              .where((config) => _filterList.contains(config.id))
+              .fold(0, (sum, config) => config.budget + sum);
+
           Widget listContent(List<ExpenseWithCategoryData> expenses) {
             return ExpenseList(
               list: expenses,
@@ -307,7 +311,10 @@ class _TransactionScreenState extends State<TransactionScreen> {
               children: [
                 timeFilter,
                 categoryFilter,
-                TotalRow(sum: totalExpenses),
+                TotalRow(
+                  sum: totalExpenses,
+                  totalBudget: totalBudget,
+                ),
                 SizedBox(
                   height: 200,
                   child: BarChart(
@@ -328,10 +335,13 @@ class _TransactionScreenState extends State<TransactionScreen> {
                 Expanded(
                   child: Column(
                     children: [
-                      TotalRow(sum: totalExpenses),
+                      TotalRow(
+                        sum: totalExpenses,
+                        totalBudget: totalBudget,
+                      ),
                       Expanded(
                         child: BarChart(
-                          screenWidth: MediaQuery.of(context).size.width,
+                          screenWidth: MediaQuery.of(context).size.width / 2,
                           expenses: expenses,
                           selectedFilters: _filterList,
                           budgetConfigs: _categoryConfigs,
