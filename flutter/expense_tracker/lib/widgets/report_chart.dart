@@ -47,12 +47,13 @@ class ReportChart extends StatelessWidget {
     final width = MediaQuery.of(context).size.width;
     final int dataMax = data.fold(0, (max, entry) => max > entry.total ? max : entry.total.toInt());
     final int yMax = dataMax > budgetData.budget ? dataMax : budgetData.budget.toInt();
-    print(yMax);
     final int yInterval = yMax < 100
         ? 10
-        : yMax < 5000
+        : yMax < 500
             ? 50
-            : 100;
+            : yMax < 1000
+                ? 100
+                : 300;
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 8, vertical: width < 600 ? 16 : 0),
       padding: const EdgeInsets.symmetric(
@@ -111,6 +112,7 @@ class ReportChart extends StatelessWidget {
               drawBelowEverything: true,
               sideTitles: SideTitles(
                 showTitles: true,
+                reservedSize: yMax > 1000 ? 32 : 22,
                 interval: yInterval.toDouble(),
                 getTitlesWidget: (value, meta) =>
                     Text(value.toStringAsFixed(0), style: Theme.of(context).textTheme.labelSmall),
