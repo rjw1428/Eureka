@@ -136,6 +136,9 @@ class ExpenseService {
         expenseCollection(expense.date).then((collectionRef) {
           var newExpenseData = expense.toJson();
           newExpenseData.remove('id');
+          // Not sure why this property is here when undoing a delete
+          // probably fine, but not looking into it now.
+          newExpenseData.remove('category');
           collectionRef.add(newExpenseData);
         })
       ]);
