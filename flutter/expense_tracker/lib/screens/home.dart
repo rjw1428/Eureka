@@ -278,13 +278,17 @@ class _TransactionScreenState extends State<TransactionScreen> {
               ? distinctCategoryIds.toList()
               : distinctCategoryIds.toList().where((id) => selectedIds.contains(id)).toList();
 
+          final isAllSelected = (selectedIds?.length ?? 0) == distinctCategoryIds.length;
+
           final double totalExpenses = _expenses
               .where((expense) => _filterList.contains(expense.categoryId))
               .fold(0, (sum, exp) => exp.amount + sum);
 
-          final double totalBudget = _categoryConfigs
-              .where((config) => _filterList.contains(config.id))
-              .fold(0, (sum, config) => config.budget + sum);
+          final double? totalBudget = isAllSelected
+              ? _categoryConfigs
+                  .where((config) => !config.deleted)
+                  .fold(0, (sum, config) => sum! + config.budget)
+              : null;
 
           Widget listContent(List<ExpenseWithCategoryData> expenses) {
             return ExpenseList(

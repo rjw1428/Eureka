@@ -185,16 +185,10 @@ class _BarChartState extends State<BarChart> with SingleTickerProviderStateMixin
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: buckets.map((bucket) {
-                              final size = bucket.totalExpenses == 0
-                                  ? 0
-                                  : bucket.totalExpenses / maxTotalExpense;
-                              final threshold = bucket.budgetLimit < maxTotalExpense
-                                  ? bucket.budgetLimit / maxTotalExpense
-                                  : null;
                               return ChartBar(
                                 amount: bucket.totalExpenses,
-                                size: size.toDouble(),
-                                threshold: threshold,
+                                max: maxTotalExpense,
+                                limit: bucket.budgetLimit,
                               );
                             }).toList(),
                           ),
@@ -265,23 +259,32 @@ class _BarChartState extends State<BarChart> with SingleTickerProviderStateMixin
 }
 
 class ChartBar extends StatelessWidget {
-  const ChartBar({super.key, required this.size, required this.amount, this.threshold});
+  const ChartBar({
+    super.key,
+    required this.max,
+    required this.amount,
+    required this.limit,
+  });
 
-  final double size;
+  final double max;
   final double amount;
-  final double? threshold;
+  final double limit;
 
   @override
   Widget build(BuildContext context) {
     final isDarkMode = MediaQuery.of(context).platformBrightness == Brightness.dark;
+    final size = max == 0 ? 0 : amount / max;
+    final threshold = limit > 0 && limit <= max ? limit / max : null;
+    final remaining = limit - amount;
     return Expanded(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 4),
         child: Stack(
+          clipBehavior: Clip.none,
           alignment: Alignment.bottomCenter,
           children: [
             FractionallySizedBox(
-              heightFactor: size,
+              heightFactor: size.toDouble(),
               widthFactor: .9,
               child: Container(
                 decoration: BoxDecoration(
@@ -301,19 +304,56 @@ class ChartBar extends StatelessWidget {
                 strokeWidth: 2,
                 customPath: (size) {
                   return Path()
-                    ..moveTo(0, 0)
-                    ..lineTo(size.width, 0)
+                    ..moveTo(0, 1)
+                    ..lineTo(size.width, 1)
                     ..close();
                 },
                 child: FractionallySizedBox(
-                  heightFactor:
-                      threshold != null && threshold! >= 2.0 ? threshold! - 2.0 : threshold,
+                  heightFactor: threshold,
                   widthFactor: 100,
                 ),
-              )
+              ),
+            Positioned(
+              top: -25,
+              child: Text(
+                '\$${remaining.toStringAsFixed(2)}',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: remaining >= 0 ? Colors.green : Colors.red, shadows: const [
+                  Shadow(
+                    offset: Offset(1.0, 1.0),
+                    blurRadius: 1.0,
+                    color: Colors.black,
+                  ),
+                ]),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 }
+
+
+                // child: Column(
+                //   children: [
+                //     Text(
+                //       '\$${remaining.toStringAsFixed(2)}',
+                //       textAlign: TextAlign.center,
+                //       style: TextStyle(
+                //         color: remaining >= 0 ? Colors.green : Colors.red,
+                //       ),
+                //     ),
+                //     Expanded(
+                //       child: Container(
+                //         decoration: BoxDecoration(
+                //           shape: BoxShape.rectangle,
+                //           borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+                //           color: isDarkMode
+                //               ? Theme.of(context).colorScheme.secondary
+                //               : Theme.of(context).colorScheme.primary.withOpacity(0.65),
+                //         ),
+                //       ),
+                //     )
+                //   ],
+                // )
