@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:dotted_border/dotted_border.dart';
 import 'package:expense_tracker/models/category.dart';
+import 'package:expense_tracker/screens/report.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:expense_tracker/models/expense.dart';
@@ -61,6 +62,17 @@ class _BarChartState extends State<BarChart> with SingleTickerProviderStateMixin
     }
   }
 
+  void _openAnnualReport(ExpenseBucket bucket) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (ctx) => ReportScreen(
+          categoryId: bucket.category,
+        ),
+      ),
+    );
+  }
+
   @override
   void initState() {
     final chartWidth =
@@ -95,7 +107,7 @@ class _BarChartState extends State<BarChart> with SingleTickerProviderStateMixin
     }
 
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 8, vertical: widget.screenWidth < 600 ? 8 : 0),
+      margin: const EdgeInsets.fromLTRB(8, 0, 8, 8),
       width: double.infinity,
       height: double.infinity,
       decoration: BoxDecoration(
@@ -175,10 +187,7 @@ class _BarChartState extends State<BarChart> with SingleTickerProviderStateMixin
                 child: SizedBox(
                   width: widget.screenWidth > chartWidth ? widget.screenWidth - 32 : chartWidth,
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 16,
-                      horizontal: 8,
-                    ),
+                    padding: const EdgeInsets.fromLTRB(8, 25, 8, 16),
                     child: Column(
                       children: [
                         Expanded(
@@ -202,42 +211,45 @@ class _BarChartState extends State<BarChart> with SingleTickerProviderStateMixin
                                 (bucket) => Expanded(
                                   child: Padding(
                                     padding: const EdgeInsets.symmetric(horizontal: 4),
-                                    child: SizedBox(
-                                      height: 80,
-                                      child: Column(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(
-                                            bucket.totalExpenses > 0
-                                                ? '\$${bucket.totalExpenses.toStringAsFixed(2)}'
-                                                : '',
-                                            textAlign: TextAlign.center,
-                                            style: isDarkMode
-                                                ? ThemeData.dark().textTheme.labelMedium
-                                                : ThemeData().textTheme.labelMedium,
-                                            softWrap: false,
-                                          ),
-                                          SelectableText(
+                                    child: GestureDetector(
+                                      onTap: () => _openAnnualReport(bucket),
+                                      child: SizedBox(
+                                        height: 80,
+                                        child: Column(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              bucket.totalExpenses > 0
+                                                  ? '\$${bucket.totalExpenses.toStringAsFixed(2)}'
+                                                  : '',
+                                              textAlign: TextAlign.center,
+                                              style: isDarkMode
+                                                  ? ThemeData.dark().textTheme.labelMedium
+                                                  : ThemeData().textTheme.labelMedium,
+                                              softWrap: false,
+                                            ),
+                                            Text(
+                                                widget.budgetConfigs
+                                                    .firstWhere(
+                                                        (config) => config.id == bucket.category)
+                                                    .label,
+                                                textAlign: TextAlign.center,
+                                                maxLines: 2,
+                                                style: Theme.of(context).textTheme.labelSmall),
+                                            Icon(
                                               widget.budgetConfigs
                                                   .firstWhere(
                                                       (config) => config.id == bucket.category)
-                                                  .label,
-                                              textAlign: TextAlign.center,
-                                              maxLines: 2,
-                                              style: Theme.of(context).textTheme.labelSmall),
-                                          Icon(
-                                            widget.budgetConfigs
-                                                .firstWhere(
-                                                    (config) => config.id == bucket.category)
-                                                .iconData,
-                                            color: isDarkMode
-                                                ? Theme.of(context).colorScheme.secondary
-                                                : Theme.of(context)
-                                                    .colorScheme
-                                                    .primary
-                                                    .withOpacity(0.7),
-                                          ),
-                                        ],
+                                                  .iconData,
+                                              color: isDarkMode
+                                                  ? Theme.of(context).colorScheme.secondary
+                                                  : Theme.of(context)
+                                                      .colorScheme
+                                                      .primary
+                                                      .withOpacity(0.7),
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -280,21 +292,42 @@ class ChartBar extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 4),
         child: Stack(
-          clipBehavior: Clip.none,
           alignment: Alignment.bottomCenter,
           children: [
-            FractionallySizedBox(
-              heightFactor: size.toDouble(),
-              widthFactor: .9,
-              child: Container(
-                decoration: BoxDecoration(
-                  shape: BoxShape.rectangle,
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
-                  color: isDarkMode
-                      ? Theme.of(context).colorScheme.secondary
-                      : Theme.of(context).colorScheme.primary.withOpacity(0.65),
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                FractionallySizedBox(
+                  heightFactor: size.toDouble(),
+                  widthFactor: .9,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.rectangle,
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+                      color: isDarkMode
+                          ? Theme.of(context).colorScheme.secondary
+                          : Theme.of(context).colorScheme.primary.withOpacity(0.65),
+                    ),
+                  ),
                 ),
-              ),
+                Positioned(
+                  top: -20,
+                  width: 64,
+                  child: Text(
+                    '\$${remaining.toStringAsFixed(2)}',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        color: remaining >= 0 ? Colors.green : Colors.red,
+                        shadows: const [
+                          Shadow(
+                            offset: Offset(1.0, 1.0),
+                            blurRadius: 1.0,
+                            color: Colors.black,
+                          ),
+                        ]),
+                  ),
+                ),
+              ],
             ),
             if (threshold != null)
               DottedBorder(
@@ -313,47 +346,9 @@ class ChartBar extends StatelessWidget {
                   widthFactor: 100,
                 ),
               ),
-            Positioned(
-              top: -25,
-              child: Text(
-                '\$${remaining.toStringAsFixed(2)}',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: remaining >= 0 ? Colors.green : Colors.red, shadows: const [
-                  Shadow(
-                    offset: Offset(1.0, 1.0),
-                    blurRadius: 1.0,
-                    color: Colors.black,
-                  ),
-                ]),
-              ),
-            ),
           ],
         ),
       ),
     );
   }
 }
-
-
-                // child: Column(
-                //   children: [
-                //     Text(
-                //       '\$${remaining.toStringAsFixed(2)}',
-                //       textAlign: TextAlign.center,
-                //       style: TextStyle(
-                //         color: remaining >= 0 ? Colors.green : Colors.red,
-                //       ),
-                //     ),
-                //     Expanded(
-                //       child: Container(
-                //         decoration: BoxDecoration(
-                //           shape: BoxShape.rectangle,
-                //           borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
-                //           color: isDarkMode
-                //               ? Theme.of(context).colorScheme.secondary
-                //               : Theme.of(context).colorScheme.primary.withOpacity(0.65),
-                //         ),
-                //       ),
-                //     )
-                //   ],
-                // )

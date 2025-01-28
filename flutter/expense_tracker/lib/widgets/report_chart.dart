@@ -1,5 +1,6 @@
 import 'package:expense_tracker/models/category.dart';
 import 'package:expense_tracker/models/summary_entry.dart';
+import 'package:expense_tracker/services/theme_color.service.dart';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
@@ -9,7 +10,7 @@ final formatter = DateFormat('MMM');
 class ReportChart extends StatelessWidget {
   const ReportChart({super.key, required this.data, required this.budgetData});
   final List<SummaryEntry> data;
-  final List<CategoryDataWithId> budgetData;
+  final CategoryDataWithId budgetData;
 
   List<LineChartBarData> lineChartBarData1(List<SummaryEntry> chartData) {
     chartData.sort((a, b) => a.startDate.compareTo(b.startDate));
@@ -31,7 +32,7 @@ class ReportChart extends StatelessWidget {
       LineChartBarData(
         isCurved: true,
         show: true,
-        color: Colors.red,
+        color: ThemeColorService().currentColor,
         barWidth: 2,
         isStrokeCapRound: true,
         dotData: const FlDotData(show: true),
@@ -45,11 +46,13 @@ class ReportChart extends StatelessWidget {
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
     final int dataMax = data.fold(0, (max, entry) => max > entry.total ? max : entry.total.toInt());
-    final int yMax = budgetData.fold(
-        dataMax, (max, category) => max > category.budget ? max : category.budget.toInt());
-
-    final coffeeBudget = budgetData.firstWhere((config) => config.id == 'COFFEE');
-
+    final int yMax = dataMax > budgetData.budget ? dataMax : budgetData.budget.toInt();
+    print(yMax);
+    final int yInterval = yMax < 100
+        ? 10
+        : yMax < 5000
+            ? 50
+            : 100;
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 8, vertical: width < 600 ? 16 : 0),
       padding: const EdgeInsets.symmetric(
@@ -79,7 +82,10 @@ class ReportChart extends StatelessWidget {
               getTooltipColor: (touchedSpot) => Colors.blueGrey.withOpacity(0.8),
               getTooltipItems: (data) => data.map((spot) {
                 // print(spot.toString());
-                return LineTooltipItem(spot.y.toString(), const TextStyle(color: Colors.red));
+                return LineTooltipItem(
+                  '\$${spot.y.toString()}',
+                  const TextStyle(color: Colors.black),
+                );
               }).toList(),
             ),
           ),
@@ -102,17 +108,19 @@ class ReportChart extends StatelessWidget {
               sideTitles: SideTitles(showTitles: false),
             ),
             leftTitles: AxisTitles(
+              drawBelowEverything: true,
               sideTitles: SideTitles(
-                  getTitlesWidget: (value, meta) =>
-                      Text(value.toString(), style: Theme.of(context).textTheme.labelSmall),
-                  showTitles: true,
-                  interval: (yMax ~/ 10).toDouble()),
+                showTitles: true,
+                interval: yInterval.toDouble(),
+                getTitlesWidget: (value, meta) =>
+                    Text(value.toStringAsFixed(0), style: Theme.of(context).textTheme.labelSmall),
+              ),
             ),
           ),
           borderData: FlBorderData(
             show: true,
             border: const Border(
-              bottom: BorderSide(color: Colors.black, width: 3),
+              bottom: BorderSide(color: Colors.black, width: 2),
               left: BorderSide(color: Colors.transparent),
               right: BorderSide(color: Colors.transparent),
               top: BorderSide(color: Colors.transparent),
@@ -121,17 +129,15 @@ class ReportChart extends StatelessWidget {
           extraLinesData: ExtraLinesData(
             horizontalLines: [
               HorizontalLine(
-                y: coffeeBudget.budget,
-                color: Colors.red.withAlpha(150),
+                y: budgetData.budget,
+                color: ThemeColorService().currentColor.withAlpha(150),
                 strokeWidth: 2,
                 dashArray: [20, 10],
               ),
             ],
           ),
           lineBarsData: lineChartBarData1(data),
-          // lineChartBarData1_2,
-          // lineChartBarData1_3,
-          maxY: yMax + 10,
+          maxY: yMax.toDouble(),
           minY: 0,
         ),
       ),

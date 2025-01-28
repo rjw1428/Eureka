@@ -32,7 +32,7 @@ class ExpenseService {
         .shareReplay(maxSize: 1);
   }
 
-  Stream<List<SummaryEntry>> getSummary(DateTime start, DateTime? end) {
+  Stream<List<SummaryEntry>> getSummary(DateTime start, DateTime? end, String categoryId) {
     DateTime queryEnd = end ?? DateTime.now();
     return AuthService().expenseUser$.switchMap((user) {
       return _db
@@ -41,7 +41,9 @@ class ExpenseService {
           .collection('summaries')
           .where('startDate', isGreaterThanOrEqualTo: start)
           .where('startDate', isLessThanOrEqualTo: queryEnd)
+          .where('categoryId', isEqualTo: categoryId)
           .snapshots()
+          .doOnError((e, s) => print(e))
           .map(
             (snapshot) => snapshot.docs.map((doc) {
               final data = doc.data();

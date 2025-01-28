@@ -102,29 +102,33 @@ class AuthService {
       } else {
         final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
         final GoogleSignInAuthentication? googleAuth = await googleUser?.authentication;
-        final credential = GoogleAuthProvider.credential(
-          accessToken: googleAuth?.accessToken,
-          idToken: googleAuth?.idToken,
-        );
-        await FirebaseAuth.instance.signInWithCredential(credential);
+
+        if (googleAuth != null) {
+          final credential = GoogleAuthProvider.credential(
+            accessToken: googleAuth.accessToken,
+            idToken: googleAuth.idToken,
+          );
+          await FirebaseAuth.instance.signInWithCredential(credential);
+        }
       }
     } on FirebaseAuthException catch (e) {
       print('googleLogin exception: $e');
     }
   }
 
-  // Future<void> appleLogin() async {
-  //   try {
-  //     final appleProvider = AppleAuthProvider();
-  //     if (kIsWeb) {
-  //       await FirebaseAuth.instance.signInWithPopup(appleProvider);
-  //     } else {
-  //       await FirebaseAuth.instance.signInWithProvider(appleProvider);
-  //     }
-  //   } catch (e) {
-  //     print('Apple Login Error');
-  //   }
-  // }
+  Future<void> appleLogin() async {
+    try {
+      final appleProvider = AppleAuthProvider();
+      appleProvider.addScope('email');
+      if (kIsWeb) {
+        await FirebaseAuth.instance.signInWithPopup(appleProvider);
+      } else {
+        await FirebaseAuth.instance.signInWithProvider(appleProvider);
+      }
+    } catch (e) {
+      print('Apple Login Error');
+    }
+  }
 
   Future<Response> emailLogin(String email, String password) async {
     try {

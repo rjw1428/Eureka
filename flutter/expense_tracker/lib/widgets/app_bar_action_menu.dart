@@ -1,7 +1,6 @@
 import 'package:expense_tracker/constants/help_text.dart';
 import 'package:expense_tracker/constants/strings.dart';
 import 'package:expense_tracker/screens/budget_config.dart';
-import 'package:expense_tracker/screens/report.dart';
 import 'package:expense_tracker/screens/settings.dart';
 import 'package:expense_tracker/services/auth.service.dart';
 import 'package:flutter/material.dart';
@@ -29,10 +28,6 @@ class AppBarActionMenu extends StatelessWidget {
               if (value == "BUDGET") {
                 Navigator.push(
                     context, MaterialPageRoute(builder: (ctx) => const BudgetConfigScreen()));
-                return;
-              }
-              if (value == "REPORT") {
-                Navigator.push(context, MaterialPageRoute(builder: (ctx) => const ReportScreen()));
                 return;
               }
               if (value == "HELP") {

@@ -5,20 +5,25 @@ import 'package:expense_tracker/services/expense.service.dart';
 import 'package:expense_tracker/widgets/report_chart.dart';
 import 'package:expense_tracker/widgets/loading.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:rxdart/rxdart.dart';
 
+final formatter = DateFormat('MM/yy');
+
 class ReportScreen extends StatelessWidget {
-  const ReportScreen({super.key});
+  const ReportScreen({super.key, required this.categoryId});
+
+  final String categoryId;
 
   @override
   Widget build(BuildContext context) {
     return StreamBuilder(
         stream: CombineLatestStream.combine2(
-            ExpenseService().getSummary(DateTime(2024), null), CategoriesService().categoryStream$,
-            (summary, budgetConfig) {
+            ExpenseService().getSummary(DateTime(2024), null, categoryId),
+            CategoriesService().categoryStream$, (summary, budgetConfig) {
           return {
             'summary': summary,
-            'budgetConfig': budgetConfig,
+            'budgetConfig': budgetConfig.firstWhere((config) => config.id == categoryId),
           };
         }),
         builder: (context, snapshot) {
@@ -26,37 +31,118 @@ class ReportScreen extends StatelessWidget {
             return const Loading();
           }
 
-          final _budgetConfig = snapshot.data!['budgetConfig'] as List<CategoryDataWithId>;
-          final _summaryData = snapshot.data!['summary'] as List<SummaryEntry>;
-
+          final budgetConfig = snapshot.data!['budgetConfig'] as CategoryDataWithId;
+          final summaryData = snapshot.data!['summary'] as List<SummaryEntry>;
+          final totalSpend = summaryData.fold(0.0, (sum, data) => sum + data.total);
+          final totalDelta =
+              summaryData.fold(0.0, (sum, data) => sum + (budgetConfig.budget - data.total));
           return SafeArea(
             child: Scaffold(
               body: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Stack(
                     children: [
-                      Text(
-                        'Spending Report',
-                        style: Theme.of(context).textTheme.titleLarge,
+                      Center(
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: Text(
+                            '${budgetConfig.label} Spending Report',
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                        ),
                       ),
-                      IconButton(
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(Icons.close),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          IconButton(
+                            onPressed: () => Navigator.pop(context),
+                            icon: const Icon(Icons.close),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text('Total ${totalDelta >= 0 ? 'Saved' : 'Over'}'),
+                      const SizedBox(
+                        width: 8,
+                      ),
+                      Text(
+                        '\$${totalDelta.abs().toStringAsFixed(2)}',
+                        style: TextStyle(
+                          color: totalDelta >= 0 ? Colors.green : Colors.red,
+                        ),
                       ),
                     ],
                   ),
                   Center(
                     child: SizedBox(
-                      width: MediaQuery.of(context).size.width * 0.8,
-                      height: 500,
+                      width: MediaQuery.of(context).size.width * 0.9,
+                      height: MediaQuery.of(context).size.height *
+                          (MediaQuery.of(context).size.width > 800 ? 0.5 : .3),
                       child: ReportChart(
-                        data: _summaryData,
-                        budgetData: _budgetConfig,
+                        data: summaryData,
+                        budgetData: budgetConfig,
                       ),
                     ),
-                  )
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        Row(
+                          children: [
+                            const Text('Budget:'),
+                            const SizedBox(
+                              width: 8,
+                            ),
+                            Text('\$${budgetConfig.budget.toStringAsFixed(2)} per month'),
+                          ],
+                        ),
+                        Row(
+                          children: [
+                            const Text('Total Spend:'),
+                            const SizedBox(
+                              width: 8,
+                            ),
+                            Text(totalSpend.toStringAsFixed(2)),
+                          ],
+                        )
+                      ],
+                    ),
+                  ),
+                  SingleChildScrollView(
+                      child: Column(
+                          children: summaryData.map((data) {
+                    final delta = budgetConfig.budget - data.total;
+                    return Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(formatter.format(data.startDate)),
+                            Row(
+                              children: [
+                                Text(
+                                  '${delta >= 0 ? "+" : "-"}\$${delta.toStringAsFixed(2)}',
+                                  style: TextStyle(color: delta >= 0 ? Colors.green : Colors.red),
+                                ),
+                                const SizedBox(
+                                  width: 16,
+                                ),
+                                Text('\$${data.total.toStringAsFixed(2)}')
+                              ],
+                            )
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList()))
                 ],
               ),
             ),
