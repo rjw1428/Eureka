@@ -1,3 +1,4 @@
+import 'package:expense_tracker/constants/strings.dart';
 import 'package:expense_tracker/models/category.dart';
 import 'package:expense_tracker/models/summary_entry.dart';
 import 'package:expense_tracker/services/categories.service.dart';
@@ -33,6 +34,8 @@ class ReportScreen extends StatelessWidget {
 
           final budgetConfig = snapshot.data!['budgetConfig'] as CategoryDataWithId;
           final summaryData = snapshot.data!['summary'] as List<SummaryEntry>;
+          summaryData.sort((a, b) => b.startDate.compareTo(a.startDate));
+
           final totalSpend = summaryData.fold(0.0, (sum, data) => sum + data.total);
           final totalDelta =
               summaryData.fold(0.0, (sum, data) => sum + (budgetConfig.budget - data.total));
@@ -71,7 +74,7 @@ class ReportScreen extends StatelessWidget {
                         width: 8,
                       ),
                       Text(
-                        '\$${totalDelta.abs().toStringAsFixed(2)}',
+                        currency.format(totalDelta.abs()),
                         style: TextStyle(
                           color: totalDelta >= 0 ? Colors.green : Colors.red,
                         ),
@@ -100,7 +103,7 @@ class ReportScreen extends StatelessWidget {
                             const SizedBox(
                               width: 8,
                             ),
-                            Text('\$${budgetConfig.budget.toStringAsFixed(2)} per month'),
+                            Text('${currency.format(budgetConfig.budget)} per month'),
                           ],
                         ),
                         Row(
@@ -129,13 +132,13 @@ class ReportScreen extends StatelessWidget {
                             Row(
                               children: [
                                 Text(
-                                  '${delta >= 0 ? "+" : "-"}\$${delta.toStringAsFixed(2)}',
+                                  '${delta >= 0 ? "+" : "-"}${currency.format(delta)}',
                                   style: TextStyle(color: delta >= 0 ? Colors.green : Colors.red),
                                 ),
                                 const SizedBox(
                                   width: 16,
                                 ),
-                                Text('\$${data.total.toStringAsFixed(2)}')
+                                Text(currency.format(data.total))
                               ],
                             )
                           ],

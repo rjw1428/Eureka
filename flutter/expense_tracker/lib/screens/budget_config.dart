@@ -1,3 +1,4 @@
+import 'package:expense_tracker/constants/strings.dart';
 import 'package:expense_tracker/models/category.dart';
 import 'package:expense_tracker/models/expense_user.dart';
 import 'package:expense_tracker/models/pending_request.dart';
@@ -71,7 +72,7 @@ class _BudgetConfigScreenState extends State<BudgetConfigScreen> {
                             textAlign: TextAlign.start,
                           ),
                           SelectableText(
-                            'Total: \$${totalBudget.toStringAsFixed(2)}',
+                            'Total: ${currency.format(totalBudget)}',
                             style: Theme.of(context).textTheme.titleMedium,
                           )
                         ],
@@ -135,7 +136,7 @@ class CategoryList extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          'Budget: \$${category.budget.toStringAsFixed(2)}',
+                          'Budget: ${currency.format(category.budget)}',
                           textAlign: TextAlign.end,
                         ),
                         if (editable)
