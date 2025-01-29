@@ -1,0 +1,146 @@
+name: Expense Tracker Build Pipeline
+
+on:
+    push:
+        branches:
+            - main
+    # pull_request:
+    #     types: [closed]
+    #     branches: [main]
+    #     paths:
+    #         - "flutter/expense_tracker/**"
+    #     # # Alternatively, you can use the PR title pattern
+    #     # if: contains(github.event.pull_request.title, '[ExpenseTracker]')
+
+env:
+    FLUTTER_VERSION: "3.24.3" # Adjust to your Flutter version
+
+jobs:
+    build_ios:
+        name: Build iOS App
+        runs-on: macos-latest
+        # if: github.event.pull_request.merged == true
+
+        steps:
+            - uses: actions/checkout@v3
+
+            - name: Setup Flutter
+              uses: subosito/flutter-action@v2
+              with:
+                  flutter-version: ${{ env.FLUTTER_VERSION }}
+                  channel: "stable"
+                  cache: true
+
+            # - name: Install Apple Certificate
+            #   uses: apple-actions/import-codesign-certs@v1
+            #   with:
+            #       p12-file-base64: ${{ secrets.IOS_P12_CERTIFICATE }}
+            #       p12-password: ${{ secrets.IOS_P12_PASSWORD }}
+
+            # - name: Install Provisioning Profile
+            #   env:
+            #       PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE }}
+            #   run: |
+            #       PP_PATH=$RUNNER_TEMP/profile.mobileprovision
+            #       echo -n "$PROVISIONING_PROFILE_BASE64" | base64 --decode > $PP_PATH
+            #       mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+            #       cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles
+
+            - name: Flutter Pub Get
+              working-directory: ./flutter/expense_tracker # Adjust this path
+              run: flutter pub get
+
+            - name: Install the Apple certificate and provisioning profile
+              env:
+                BUILD_CERTIFICATE_BASE64: ${{ secrets.IOS_P12_CERTIFICATE }}
+                P12_PASSWORD: ${{ secrets.IOS_P12_PASSWORD }}
+                BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE }}
+                KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+              run: |
+                # create variables
+                CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
+                PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
+                KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+                # import certificate and provisioning profile from secrets
+                echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode --output $CERTIFICATE_PATH
+                echo -n "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode --output $PP_PATH
+                
+                # create temporary keychain
+                security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+                security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+                security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+                
+                # import certificate to keychain
+                security import $CERTIFICATE_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+                security list-keychain -d user -s $KEYCHAIN_PATH
+                # apply provisioning profile
+                mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+                cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles
+
+            - name: Build iOS
+              working-directory: ./flutter/expense_tracker # Adjust this path
+              run: flutter build ipa --release --export-options-plist=ios/CloudExportOptions.plist
+
+            - name: Clean up keychain and provisioning profile
+              if: ${{ always() }}
+              run: |
+                security delete-keychain $RUNNER_TEMP/app-signing.keychain-db
+                rm ~/Library/MobileDevice/Provisioning\ Profiles/build_pp.mobileprovision
+
+            - name: Upload iOS Build
+              uses: actions/upload-artifact@v4
+              with:
+                  name: expense_tracker_ios
+                  path: ${{ runner.temp }}/ios_build
+
+    build_android:
+        name: Build Android App
+        runs-on: ubuntu-latest
+        # if: github.event.pull_request.merged == true
+
+        steps:
+            - uses: actions/checkout@v3
+
+            - name: Setup Flutter
+              uses: subosito/flutter-action@v2
+              with:
+                flutter-version: ${{ env.FLUTTER_VERSION }}
+                channel: "stable"
+
+            - name: Flutter Pub Get
+              working-directory: ./flutter/expense_tracker # Adjust this path
+              run: flutter pub get
+
+            - name: Decode Keystore File
+              working-directory: ./flutter/expense_tracker # Adjust this path
+              env:
+                KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+              run: |
+                echo $KEYSTORE_BASE64 | base64 -d > android/app/keystore.jks
+
+            - name: Update key.properties
+              working-directory: ./flutter/expense_tracker # Adjust this path
+              run: |
+                echo "storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" > android/key.properties
+                echo "keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}" >> android/key.properties
+                echo "keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}" >> android/key.properties
+                echo "storeFile=keystore.jks" >> android/key.properties
+            
+            - name: Add google-services File
+              working-directory: ./flutter/expense_tracker # Adjust this path
+              run: |
+                echo "${{ secrets.EXPENSE_TRACKER_GOOGLE_SERVICES_JSON }}" | base64 -di > android/app/google-services.json
+
+            - name: Build Android
+              working-directory: ./flutter/expense_tracker # Adjust this path
+              env:
+                  KEY_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+                  KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+                  KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+              run: flutter build appbundle
+
+            - name: Upload Android Build
+              uses: actions/upload-artifact@v4
+              with:
+                  name: expense_tracker_android
+                  path: ./flutter/expense_tracker/build/app/outputs/bundle/release/app-release.aab # Adjust this path

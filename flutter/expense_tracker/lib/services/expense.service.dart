@@ -108,8 +108,12 @@ class ExpenseService {
       }
       await Future.wait(actions);
     }
-    await remove(previousExpense);
-    await addExpense(expense);
+    
+    // If the date has changed, remove the previous expense and add the new one
+    await Future.wait([
+      remove(previousExpense),
+      addExpense(expense),
+    ]);
     return;
   }
 
