@@ -83,22 +83,25 @@ jobs:
                 flutter-version: ${{ env.FLUTTER_VERSION }}
                 channel: "stable"
 
+            - name: Flutter Pub Get
+              working-directory: ./flutter/expense_tracker # Adjust this path
+              run: flutter pub get
+
             - name: Decode Keystore File
               env:
                 KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
               run: |
-                echo $KEYSTORE_BASE64 | base64 -d > android/app/upload-keystore.jks
+                echo $KEYSTORE_BASE64 | base64 -d > android/app/keystore.jks
 
             - name: Update key.properties
+              working-directory: ./flutter/expense_tracker # Adjust this path
               run: |
                 echo "storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" > android/key.properties
                 echo "keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}" >> android/key.properties
                 echo "keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}" >> android/key.properties
-                echo "storeFile=keystore/upload-keystore.jks" >> android/key.properties
+                echo "storeFile=keystore.jks" >> android/key.properties
       
-            - name: Flutter Pub Get
-              working-directory: ./flutter/expense_tracker # Adjust this path
-              run: flutter pub get
+
 
             - name: Build Android
               working-directory: ./flutter/expense_tracker # Adjust this path
