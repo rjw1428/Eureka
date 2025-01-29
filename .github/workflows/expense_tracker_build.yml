@@ -1,4 +1,4 @@
-name: Flutter Build Pipeline
+name: Expense Tracker Build Pipeline
 
 on:
     pull_request:
