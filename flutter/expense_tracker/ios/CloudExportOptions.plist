@@ -20,8 +20,6 @@
     <true/>
     <key>signingStyle</key>
     <string>manual</string>
-    <key>signingCertificate</key>
-    <string>Apple Distribution</string>
     <key>provisioningProfiles</key>
     <dict>
         <key>com.rwss.spendwatch</key>
