@@ -112,7 +112,7 @@ class ReportScreen extends StatelessWidget {
                             const SizedBox(
                               width: 8,
                             ),
-                            Text(totalSpend.toStringAsFixed(2)),
+                            Text(currency.format(totalSpend)),
                           ],
                         )
                       ],

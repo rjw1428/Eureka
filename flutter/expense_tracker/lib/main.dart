@@ -1,4 +1,5 @@
 import 'package:expense_tracker/routing.dart';
+import 'package:expense_tracker/services/local_storage.service.dart';
 import 'package:expense_tracker/services/theme_color.service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -13,6 +14,7 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  LocalStorageService().initialize();
   final initialSeedColor = await ThemeColorService().init();
   WidgetsFlutterBinding.ensureInitialized();
 

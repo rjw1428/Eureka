@@ -35,6 +35,7 @@ class _FilterState extends State<FilterRow> {
           ),
         )
         .toList();
+
     Widget filterWidget = Column(
       children: [
         MultiDropdown<String>(

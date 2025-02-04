@@ -63,7 +63,6 @@ jobs:
                 echo $PROVISIONING_PROFILE_BASE64 | base64 --decode > pp.mobileprovision
                 cp pp.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
 
-     
             - name: Build iOS
               working-directory: ./flutter/expense_tracker
               run: |

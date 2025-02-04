@@ -16,12 +16,7 @@ class ReportChart extends StatelessWidget {
     chartData.sort((a, b) => a.startDate.compareTo(b.startDate));
     final offset = chartData.first.startDate.month;
 
-    final filteredData = chartData
-        .asMap()
-        .entries
-        .where((entry) => entry.value.categoryId == 'COFFEE')
-        .map((entry) => entry.value)
-        .toList();
+    final filteredData = chartData.asMap().entries.map((entry) => entry.value).toList();
 
     final coffeeData = filteredData
         .asMap()

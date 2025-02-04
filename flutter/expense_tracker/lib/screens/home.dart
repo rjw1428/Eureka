@@ -224,15 +224,13 @@ class _TransactionScreenState extends State<TransactionScreen> {
       ),
       body: StreamBuilder<Map<String, List<dynamic>>>(
         stream:
-            AuthService().expenseUser$.takeUntil(AuthService().userLoggedOut$).switchMap((user) {
+            AuthService().expenseUser$.takeUntil(AuthService().userLoggedOut$).exhaustMap((user) {
           print("LEDGER ID: ${user.ledgerId}");
           return CombineLatestStream.combine3(
               ExpenseService().getExpenseStream(user.ledgerId, _selectedDate),
               CategoriesService().categoryStream$,
               _selectedFilters.stream.startWith(null), (expenses, categories, selection) {
-            final List distinctCategoryIds = Set.from(
-              expenses.map((el) => el.categoryId),
-            ).toList();
+            final List distinctCategoryIds = Set.from(expenses.map((el) => el.categoryId)).toList();
             return Map.from({
               'expenses': expenses,
               'categories': categories,

@@ -1,10 +1,10 @@
 import 'package:expense_tracker/constants/strings.dart';
 import 'package:expense_tracker/models/category.dart';
 import 'package:expense_tracker/models/expense_user.dart';
-import 'package:expense_tracker/models/pending_request.dart';
 import 'package:expense_tracker/services/auth.service.dart';
 import 'package:expense_tracker/services/categories.service.dart';
 import 'package:expense_tracker/services/category_form.provider.dart';
+import 'package:expense_tracker/widgets/loading.dart';
 import 'package:flutter/material.dart';
 import 'package:rxdart/rxdart.dart';
 
@@ -36,6 +36,10 @@ class _BudgetConfigScreenState extends State<BudgetConfigScreen> {
             return Text(snapshot.error.toString());
           }
 
+          if (!snapshot.hasData) {
+            return const Loading();
+          }
+
           final List<CategoryDataWithId> configs =
               !snapshot.hasData ? [] : snapshot.data!['configs'];
           final ExpenseUser? user = !snapshot.hasData ? null : snapshot.data!['user'];
@@ -44,56 +48,57 @@ class _BudgetConfigScreenState extends State<BudgetConfigScreen> {
           return Scaffold(
             resizeToAvoidBottomInset: true,
             body: SafeArea(
-              child: SingleChildScrollView(
-                child: Padding(
-                  padding: EdgeInsets.fromLTRB(16, 16, 16, keyboardSpace + 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Budget Config',
-                            style: Theme.of(context).textTheme.titleLarge,
-                          ),
-                          IconButton(
-                            onPressed: () => Navigator.pop(context),
-                            icon: const Icon(Icons.close),
-                          ),
-                        ],
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Spending Categories:',
-                            style: Theme.of(context).textTheme.titleMedium,
-                            textAlign: TextAlign.start,
-                          ),
-                          SelectableText(
-                            'Total: ${currency.format(totalBudget)}',
-                            style: Theme.of(context).textTheme.titleMedium,
-                          )
-                        ],
-                      ),
-                      CategoryList(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(16, 16, 16, keyboardSpace + 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Budget Config',
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(Icons.close),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Spending Categories:',
+                          style: Theme.of(context).textTheme.titleMedium,
+                          textAlign: TextAlign.start,
+                        ),
+                        SelectableText(
+                          'Total: ${currency.format(totalBudget)}',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        )
+                      ],
+                    ),
+                    Expanded(
+                      child: CategoryList(
                         categoryList: configs,
                         editable: user?.role == 'primary',
                         onEdit: (id) => openAddCategoryOverlay(context, id),
                       ),
-                      Center(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8.0),
-                          child: OutlinedButton.icon(
-                            onPressed: () => openAddCategoryOverlay(context),
-                            label: const Text('Add a spending category'),
-                            icon: const Icon(Icons.playlist_add),
-                          ),
+                    ),
+                    Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8.0),
+                        child: OutlinedButton.icon(
+                          onPressed: () => openAddCategoryOverlay(context),
+                          label: const Text('Add a spending category'),
+                          icon: const Icon(Icons.playlist_add),
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: 20)
+                  ],
                 ),
               ),
             ),
@@ -116,80 +121,43 @@ class CategoryList extends StatelessWidget {
 
   @override
   Widget build(Object context) {
-    return Column(
-        children: categoryList
-            .map((category) => Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Row(
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.only(right: 8.0),
-                                child: Icon(category.iconData),
-                              ),
-                              Text(category.label),
-                            ],
+    return SingleChildScrollView(
+      child: Column(
+          children: categoryList
+              .map((category) => Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Row(
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.only(right: 8.0),
+                                  child: Icon(category.iconData),
+                                ),
+                                Text(category.label),
+                              ],
+                            ),
                           ),
-                        ),
-                        Text(
-                          'Budget: ${currency.format(category.budget)}',
-                          textAlign: TextAlign.end,
-                        ),
-                        if (editable)
-                          Row(
-                            children: [
-                              TextButton(
-                                  onPressed: () => onEdit(category), child: const Icon(Icons.edit)),
-                            ],
-                          )
-                      ],
+                          Text(
+                            'Budget: ${currency.format(category.budget)}',
+                            textAlign: TextAlign.end,
+                          ),
+                          if (editable)
+                            Row(
+                              children: [
+                                TextButton(
+                                    onPressed: () => onEdit(category),
+                                    child: const Icon(Icons.edit)),
+                              ],
+                            )
+                        ],
+                      ),
                     ),
-                  ),
-                ))
-            .toList());
-  }
-}
-
-class RequestList extends StatelessWidget {
-  const RequestList({super.key, required this.requestList, required this.onRemove});
-
-  final List<PendingRequest> requestList;
-  final void Function(PendingRequest) onRemove;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        if (requestList.isNotEmpty)
-          Text(
-            'Pending Requests',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-        ...requestList.map((request) => Card(
-              child: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(request.targetEmail),
-                    ),
-                    Row(
-                      children: [
-                        TextButton(
-                            onPressed: () => onRemove(request),
-                            child: const Icon(Icons.delete_outline)),
-                      ],
-                    )
-                  ],
-                ),
-              ),
-            )),
-      ],
+                  ))
+              .toList()),
     );
   }
 }

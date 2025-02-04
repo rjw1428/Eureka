@@ -17,13 +17,18 @@ class ExpenseService {
     return _instance;
   }
 
-  Stream<List<Expense>> getExpenseStream(String ledgerId, DateTime date) {
+  Stream<List<Expense>> getExpenseStream(
+    String ledgerId,
+    DateTime date,
+  ) {
     final month = formatMonth(date);
 
     return _db
         .collection('ledger')
         .doc(ledgerId)
         .collection(month)
+        // .startAfter(lastVisible)
+        // .limit(10)
         .orderBy('date', descending: true)
         .snapshots()
         .map((snapshot) =>
@@ -107,8 +112,9 @@ class ExpenseService {
         );
       }
       await Future.wait(actions);
+      return;
     }
-    
+
     // If the date has changed, remove the previous expense and add the new one
     await Future.wait([
       remove(previousExpense),

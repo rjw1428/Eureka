@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:expense_tracker/models/expense.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:lazy_load_scrollview/lazy_load_scrollview.dart';
 
 class ExpenseList extends StatelessWidget {
   const ExpenseList({
@@ -17,39 +18,48 @@ class ExpenseList extends StatelessWidget {
   final void Function(ExpenseWithCategoryData) onEdit;
   final List<String> filters;
 
+  _loadMoreVertical() {
+    print("LOAING MORE");
+  }
+
   @override
   Widget build(BuildContext context) {
     final List<ExpenseWithCategoryData> filteredList =
         list.where((expense) => filters.contains(expense.category.id)).toList();
 
-    return filteredList.isEmpty
-        ? const Center(child: Text('No expenses found 💩'))
-        : ListView.builder(
-            itemCount: filteredList.length,
-            itemBuilder: (ctx, i) {
-              return kIsWeb
-                  ? ExpenseItem(
-                      expense: filteredList[i],
-                      onEdit: onEdit,
-                    )
-                  : GestureDetector(
-                      key: ValueKey(list[i].id),
-                      onLongPress: () {
-                        HapticFeedback.lightImpact();
-                        onEdit(filteredList[i]);
-                      },
-                      child: ExpenseItem(
-                        expense: filteredList[i],
-                        onEdit: (e) => {},
-                      ),
-                    );
-              // return Dismissible(
-              //   key: ValueKey(list[i].id),
-              //   onDismissed: (direction) => onRemove(list[i]),
-              //   child: ExpenseItem(expense: list[i]),
-              // );
-            },
-          );
+    if (filteredList.isEmpty) {
+      return const Center(child: Text('No expenses found 💩'));
+    }
+
+    return LazyLoadScrollView(
+      onEndOfPage: () => _loadMoreVertical(),
+      child: ListView.builder(
+        itemCount: filteredList.length,
+        itemBuilder: (ctx, i) {
+          return kIsWeb
+              ? ExpenseItem(
+                  expense: filteredList[i],
+                  onEdit: onEdit,
+                )
+              : GestureDetector(
+                  key: ValueKey(list[i].id),
+                  onLongPress: () {
+                    HapticFeedback.lightImpact();
+                    onEdit(filteredList[i]);
+                  },
+                  child: ExpenseItem(
+                    expense: filteredList[i],
+                    onEdit: (e) => {},
+                  ),
+                );
+          // return Dismissible(
+          //   key: ValueKey(list[i].id),
+          //   onDismissed: (direction) => onRemove(list[i]),
+          //   child: ExpenseItem(expense: list[i]),
+          // );
+        },
+      ),
+    );
   }
 }
 
@@ -70,8 +80,8 @@ class ExpenseItem extends StatelessWidget {
       builder: (ctx, constraints) => Card(
         child: Padding(
           padding: const EdgeInsets.symmetric(
-            horizontal: 20,
-            vertical: 16,
+            horizontal: 16,
+            vertical: 8,
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
