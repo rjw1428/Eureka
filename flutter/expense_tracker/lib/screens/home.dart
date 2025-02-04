@@ -323,12 +323,14 @@ class _TransactionScreenState extends State<TransactionScreen> {
                 ),
                 SizedBox(
                   height: 200,
-                  child: BarChart(
-                    screenWidth: MediaQuery.of(context).size.width,
-                    expenses: expenses,
-                    selectedFilters: _filterList,
-                    budgetConfigs: _categoryConfigs,
-                  ),
+                  child: snapshot.connectionState == ConnectionState.waiting
+                      ? const Loading()
+                      : BarChart(
+                          screenWidth: MediaQuery.of(context).size.width,
+                          expenses: expenses,
+                          selectedFilters: _filterList,
+                          budgetConfigs: _categoryConfigs,
+                        ),
                 ),
                 Expanded(child: listContent(expenses))
               ],
@@ -346,12 +348,14 @@ class _TransactionScreenState extends State<TransactionScreen> {
                         totalBudget: totalBudget,
                       ),
                       Expanded(
-                        child: BarChart(
-                          screenWidth: MediaQuery.of(context).size.width / 2,
-                          expenses: expenses,
-                          selectedFilters: _filterList,
-                          budgetConfigs: _categoryConfigs,
-                        ),
+                        child: snapshot.connectionState == ConnectionState.waiting
+                            ? const Loading()
+                            : BarChart(
+                                screenWidth: MediaQuery.of(context).size.width / 2,
+                                expenses: expenses,
+                                selectedFilters: _filterList,
+                                budgetConfigs: _categoryConfigs,
+                              ),
                       ),
                     ],
                   ),
