@@ -8,22 +8,27 @@ const { onDocumentCreated } = require("firebase-functions/firestore");
 initializeApp();
 
 exports.initializeExpenseTrackerAccount = onCall(async (request) => {
+    const now = new Date().toISOString()
     try {
-    const ledgerSnapshot = await getFirestore()
-        .collection("ledger")
-        .add({ budgetConfig: {} });
+        const ledgerSnapshot = await getFirestore()
+            .collection("ledger")
+            .add({
+                budgetConfig: {}, 
+                initialized: now 
+            });
 
-    await getFirestore()
-        .collection("expenseUsers")
-        .doc(request.data["userId"])
-        .set({
-            role: "primary",
-            email: request.data["email"],
-            firstName: request.data["firstName"],
-            lastName: request.data["lastName"],
-            ledgerId: ledgerSnapshot.id,
-            userSettings: {},
-        });
+        await getFirestore()
+            .collection("expenseUsers")
+            .doc(request.data["userId"])
+            .set({
+                role: "primary",
+                email: request.data["email"],
+                firstName: request.data["firstName"],
+                lastName: request.data["lastName"],
+                ledgerId: ledgerSnapshot.id,
+                initialized: now,
+                userSettings: {},
+            });
     } catch (e) {
         logger.error(e);
         return false;

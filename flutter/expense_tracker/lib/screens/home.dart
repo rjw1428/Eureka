@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:expense_tracker/constants/strings.dart';
 import 'package:expense_tracker/models/category.dart';
 import 'package:expense_tracker/models/expense.dart';
+import 'package:expense_tracker/models/expense_user.dart';
 import 'package:expense_tracker/screens/login.dart';
 import 'package:expense_tracker/services/account_link.service.dart';
 import 'package:expense_tracker/services/auth.service.dart';
@@ -251,7 +252,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
             return el as CategoryDataWithId;
           }).toList();
 
-          // final ExpenseUser _user = snapshot.data!['user']![0];
+          final ExpenseUser _user = snapshot.data!['user']![0];
           _expenses = snapshot.data!['expenses']!.map((exp) {
             final e = exp as Expense;
             final CategoryDataWithId category = _categoryConfigs.firstWhere((cat) {
@@ -305,7 +306,10 @@ class _TransactionScreenState extends State<TransactionScreen> {
 
           Widget timeFilter = Padding(
             padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
-            child: TimeRow(onTimeSelect: _setTimeRange),
+            child: TimeRow(
+              onTimeSelect: _setTimeRange,
+              initialTime: _user.initialized,
+            ),
           );
 
           Widget columnOrientationLayout(List<ExpenseWithCategoryData> expenses) {

@@ -2,13 +2,27 @@ import 'package:expense_tracker/models/time_filter_option.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+int monthsBetween(DateTime startDate, DateTime endDate) {
+  int years = endDate.year - startDate.year;
+  int months = endDate.month - startDate.month;
+
+  if (years > 0 && months < 0) {
+    years--;
+    months += 12;
+  }
+
+  return years * 12 + months;
+}
+
 class TimeRow extends StatefulWidget {
   const TimeRow({
     super.key,
     required this.onTimeSelect,
+    required this.initialTime,
   });
 
   final void Function(DateTime) onTimeSelect;
+  final DateTime initialTime;
 
   @override
   State<StatefulWidget> createState() {
@@ -23,10 +37,20 @@ class _TimeRowState extends State<TimeRow> {
 
   @override
   void initState() {
-    timeFilterOptions = List<TimeFilterOption>.generate(13, (i) {
-      final d = DateTime(now.year, now.month - i, 1);
-      return TimeFilterOption(id: d, label: '${d.year} ${DateFormat('MMMM').format(d)}');
-    });
+    final lastYear = DateTime(now.year - 1, now.month);
+    if (widget.initialTime.isBefore(lastYear)) {
+      timeFilterOptions = List<TimeFilterOption>.generate(13, (i) {
+        final d = DateTime(now.year, now.month - i, 1);
+        return TimeFilterOption(id: d, label: '${d.year} ${DateFormat('MMMM').format(d)}');
+      });
+    } else {
+      final count = monthsBetween(widget.initialTime, now) + 1;
+      timeFilterOptions = List<TimeFilterOption>.generate(count, (i) {
+        final d = DateTime(now.year, now.month - i, 1);
+        return TimeFilterOption(id: d, label: '${d.year} ${DateFormat('MMMM').format(d)}');
+      });
+    }
+
     super.initState();
   }
 

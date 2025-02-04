@@ -13,6 +13,7 @@ ExpenseUser _$ExpenseUserFromJson(Map<String, dynamic> json) => ExpenseUser(
       email: json['email'] as String,
       ledgerId: json['ledgerId'] as String,
       role: json['role'] as String,
+      initialized: DateTime.parse(json['initialized'] as String),
       linkedAccounts: (json['linkedAccounts'] as List<dynamic>?)
           ?.map((e) => Map<String, String>.from(e as Map))
           .toList(),
@@ -28,8 +29,7 @@ ExpenseUser _$ExpenseUserFromJson(Map<String, dynamic> json) => ExpenseUser(
       backupLedgerId: json['backupLedgerId'] as String?,
     );
 
-Map<String, dynamic> _$ExpenseUserToJson(ExpenseUser instance) =>
-    <String, dynamic>{
+Map<String, dynamic> _$ExpenseUserToJson(ExpenseUser instance) => <String, dynamic>{
       'id': instance.id,
       'firstName': instance.firstName,
       'lastName': instance.lastName,
@@ -41,4 +41,5 @@ Map<String, dynamic> _$ExpenseUserToJson(ExpenseUser instance) =>
       'userSettings': instance.userSettings,
       'notification': instance.notification,
       'backupLedgerId': instance.backupLedgerId,
+      'initialized': instance.initialized.toIso8601String(),
     };

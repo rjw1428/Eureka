@@ -15,6 +15,7 @@ class ExpenseUser {
   final Map<String, String>? userSettings;
   final Notification? notification;
   final String? backupLedgerId;
+  final DateTime initialized;
 
   ExpenseUser({
     required this.id,
@@ -23,6 +24,7 @@ class ExpenseUser {
     required this.email,
     required this.ledgerId,
     required this.role,
+    required this.initialized,
     this.linkedAccounts,
     this.archivedLinkedAccounts,
     this.userSettings,
@@ -30,5 +32,7 @@ class ExpenseUser {
     this.backupLedgerId,
   });
 
-  factory ExpenseUser.fromJson(Map<String, dynamic> json) => _$ExpenseUserFromJson(json);
+  factory ExpenseUser.fromJson(Map<String, dynamic> json) {
+    return _$ExpenseUserFromJson(json);
+  }
 }
