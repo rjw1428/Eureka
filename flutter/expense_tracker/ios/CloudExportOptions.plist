@@ -22,8 +22,8 @@
     <string>manual</string>
     <key>provisioningProfiles</key>
     <dict>
-        <key>com.rwss.spendwatch.dev</key>
-        <string>spendWatchDist</string>
+        <key>com.rwss.spendwatch</key>
+        <string>AppStoreDistribution</string>
     </dict>
 </dict>
 </plist>

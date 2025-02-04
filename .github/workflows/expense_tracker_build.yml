@@ -22,55 +22,73 @@ jobs:
         # if: github.event.pull_request.merged == true
 
         steps:
-            - uses: actions/checkout@v3
+            - uses: actions/checkout@v4
 
             - name: Setup Flutter
               uses: subosito/flutter-action@v2
               with:
                   flutter-version: ${{ env.FLUTTER_VERSION }}
                   channel: "stable"
+                  cache: true
+
+            - name: Flutter Pub Get
+              working-directory: ./flutter/expense_tracker
+              run: flutter pub get
 
             - name: Install Apple Certificate
-              uses: apple-actions/import-codesign-certs@v1
-              with:
-                  p12-file-base64: ${{ secrets.IOS_P12_CERTIFICATE }}
-                  p12-password: ${{ secrets.IOS_P12_PASSWORD }}
+              env:
+                BUILD_CERTIFICATE_BASE64: ${{ secrets.IOS_P12_CERTIFICATE }}
+                P12_PASSWORD: ${{ secrets.IOS_P12_PASSWORD }}
+                KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+              run: |
+                # Create temporary keychain
+                security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+                security default-keychain -s build.keychain
+                security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+                security set-keychain-settings -t 3600 -l ~/Library/Keychains/build.keychain
+
+                # Import certificate to keychain
+                echo $BUILD_CERTIFICATE_BASE64 | base64 --decode > certificate.p12
+                security import certificate.p12 -k build.keychain -P "$P12_PASSWORD" -T /usr/bin/codesign
+                security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" build.keychain
 
             - name: Install Provisioning Profile
               env:
-                  PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE }}
+                PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE }}
               run: |
-                  PP_PATH=$RUNNER_TEMP/profile.mobileprovision
-                  echo -n "$PROVISIONING_PROFILE_BASE64" | base64 --decode > $PP_PATH
-                  mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-                  cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles
+                # Create directory for provisioning profiles if it doesn't exist
+                mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+                
+                # Decode and copy provisioning profile
+                echo $PROVISIONING_PROFILE_BASE64 | base64 --decode > pp.mobileprovision
+                cp pp.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
 
-            - name: Flutter Pub Get
-              working-directory: ./flutter/expense_tracker # Adjust this path
-              run: flutter pub get
-
+     
             - name: Build iOS
-              working-directory: ./flutter/expense_tracker # Adjust this path
-              run: flutter build ipa --export-options-plist=ios/CloudExportOptions.plist
-
-            - name: Build IPA
-              working-directory: ./flutter/expense_tracker/ios # Adjust this path
+              working-directory: ./flutter/expense_tracker
               run: |
-                  xcodebuild -workspace Runner.xcworkspace \
-                    -scheme Runner \
-                    -configuration Release \
-                    -archivePath $RUNNER_TEMP/Runner.xcarchive \
-                    clean archive
-                  xcodebuild -exportArchive \
-                    -archivePath $RUNNER_TEMP/Runner.xcarchive \
-                    -exportOptionsPlist exportOptions.plist \
-                    -exportPath $RUNNER_TEMP/ios_build
+                # Build IPA
+                flutter build ipa --release --export-options-plist=ios/CloudExportOptions.plist
 
             - name: Upload iOS Build
               uses: actions/upload-artifact@v4
               with:
                   name: expense_tracker_ios
-                  path: ${{ runner.temp }}/ios_build
+                  path: ./flutter/expense_tracker/build/ios/ipa/expense_tracker.ipa
+
+            - name: 'Upload app to TestFlight'
+              uses: apple-actions/upload-testflight-build@v1
+              with: 
+                app-path: ./flutter/expense_tracker/build/ios/ipa/expense_tracker.ipa
+                issuer-id: ${{ secrets.APPSTORE_ISSUER_ID }}
+                api-key-id: ${{ secrets.APPSTORE_API_KEY_ID }}
+                api-private-key: ${{ secrets.APPSTORE_API_PRIVATE_KEY }}
+
+            - name: Clean up keychain and provisioning profile
+              if: ${{ always() }}
+              run: |
+                security delete-keychain build.keychain
+                rm -r ~/Library/MobileDevice/Provisioning\ Profiles/
 
     build_android:
         name: Build Android App
