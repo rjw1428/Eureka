@@ -133,9 +133,9 @@ class _BarChartState extends State<BarChart> with SingleTickerProviderStateMixin
                                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
                                         Text(
-                                          bucket.totalExpenses > 0
-                                              ? currency.format(bucket.totalExpenses)
-                                              : '',
+                                          currency.format(bucket.totalExpenses).length > 7
+                                              ? thousandsCurrency.format(bucket.totalExpenses)
+                                              : currency.format(bucket.totalExpenses),
                                           textAlign: TextAlign.center,
                                         ),
                                         Text(
@@ -183,16 +183,17 @@ class ChartBar extends StatelessWidget {
     required this.max,
     required this.amount,
     required this.limit,
-  });
+  }) : limitedAmount = amount < 0 ? 0 : amount;
 
   final double max;
   final double amount;
   final double limit;
+  final double limitedAmount;
 
   @override
   Widget build(BuildContext context) {
     final isDarkMode = MediaQuery.of(context).platformBrightness == Brightness.dark;
-    final size = max == 0 ? 0 : amount / max;
+    final size = max == 0 ? 0 : limitedAmount / max;
     final threshold = limit > 0 && limit <= max ? limit / max : null;
     final remaining = limit - amount;
     return Expanded(
@@ -223,7 +224,9 @@ class ChartBar extends StatelessWidget {
                     left: -0.1 * constraints.maxWidth,
                     width: constraints.maxWidth,
                     child: Text(
-                      currency.format(remaining.abs()),
+                      currency.format(remaining.abs()).length > 7
+                          ? thousandsCurrency.format(remaining.abs())
+                          : currency.format(remaining.abs()),
                       textAlign: TextAlign.center,
                       style: TextStyle(
                           color: remaining >= 0 ? Colors.green : Colors.red,
