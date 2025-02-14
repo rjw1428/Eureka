@@ -35,7 +35,19 @@ class _ExpenseFormState extends State<ExpenseForm> {
     final now = DateTime.now();
     final firstDate = now.subtract(const Duration(days: 365));
     final date = await showDatePicker(context: context, firstDate: firstDate, lastDate: now);
-    setState(() => _selectedDate = date ?? _selectedDate);
+
+    if (date == null) {
+      return;
+    }
+    // If user selects current date, then make sure the time part of the date is no
+    if (date.year == now.year && date.month == now.month && date.day == now.day) {
+      setState(() => _selectedDate = now);
+      return;
+    }
+
+    final endOfDayDate = DateTime(date.year, date.month, date.day, 23, 59, 59);
+    // Otherwise, set the time part to the ned of the day
+    setState(() => _selectedDate = endOfDayDate);
   }
 
   void _submit() {
