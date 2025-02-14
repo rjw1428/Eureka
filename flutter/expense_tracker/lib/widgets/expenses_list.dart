@@ -80,33 +80,28 @@ class ExpenseItem extends StatelessWidget {
       builder: (ctx, constraints) => Card(
         child: Padding(
           padding: const EdgeInsets.symmetric(
-            horizontal: 16,
+            horizontal: 8,
             vertical: 8,
           ),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  if (kIsWeb)
-                    IconButton(onPressed: () => onEdit(expense), icon: const Icon(Icons.edit)),
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: Icon(expense.icon),
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    children: [
-                      Text(expense.formattedDate, style: Theme.of(context).textTheme.titleSmall),
-                      SizedBox(
-                        width: constraints.maxWidth - 200,
-                        child: Text(expense.title),
-                      ),
-                    ],
-                  ),
-                ],
+              if (kIsWeb)
+                IconButton(onPressed: () => onEdit(expense), icon: const Icon(Icons.edit)),
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Icon(expense.icon),
               ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    Text(expense.formattedDate, style: Theme.of(context).textTheme.titleSmall),
+                    Text(expense.title),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
               Text(
                 '\$${expense.amount.toStringAsFixed(2)}',
               ),
