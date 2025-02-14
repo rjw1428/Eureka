@@ -37,19 +37,45 @@ class ReportChart extends StatelessWidget {
     ];
   }
 
+  int getChartInterval(int delta) {
+    const totalSteps = 8;
+    const intervals = [
+      5,
+      10,
+      25,
+      50,
+      100,
+      200,
+      250,
+      300,
+      500,
+      1000,
+      1250,
+      1500,
+      1750,
+      2000,
+      2250,
+      2500,
+      2750,
+      3000
+    ];
+    final baseStep = (delta / totalSteps).floor();
+    for (final interval in intervals) {
+      if (baseStep < interval) {
+        return interval;
+      }
+    }
+    return intervals.last;
+  }
+
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
     final int dataMax = data.fold(0, (max, entry) => max > entry.total ? max : entry.total.toInt());
     final int dataMin = data.fold(0, (min, entry) => min < entry.total ? min : entry.total.toInt());
     final int yMax = dataMax > budgetData.budget ? dataMax : budgetData.budget.toInt();
-    final int yInterval = yMax < 100
-        ? 10
-        : yMax < 500
-            ? 50
-            : yMax < 1000
-                ? 100
-                : 300;
+    final int yInterval = getChartInterval(dataMax - dataMin);
+
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 8, vertical: width < 600 ? 16 : 0),
       padding: const EdgeInsets.symmetric(
