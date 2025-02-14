@@ -41,6 +41,7 @@ class ReportChart extends StatelessWidget {
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
     final int dataMax = data.fold(0, (max, entry) => max > entry.total ? max : entry.total.toInt());
+    final int dataMin = data.fold(0, (min, entry) => min < entry.total ? min : entry.total.toInt());
     final int yMax = dataMax > budgetData.budget ? dataMax : budgetData.budget.toInt();
     final int yInterval = yMax < 100
         ? 10
@@ -79,7 +80,7 @@ class ReportChart extends StatelessWidget {
               getTooltipItems: (data) => data.map((spot) {
                 // print(spot.toString());
                 return LineTooltipItem(
-                  '\$${spot.y.toString()}',
+                  '\$${spot.y.toStringAsFixed(2)}',
                   const TextStyle(color: Colors.black),
                 );
               }).toList(),
@@ -117,7 +118,8 @@ class ReportChart extends StatelessWidget {
           borderData: FlBorderData(
             show: true,
             border: const Border(
-              bottom: BorderSide(color: Colors.black, width: 2),
+              // bottom: BorderSide(color: Colors.black, width: 2),
+              bottom: BorderSide(color: Colors.transparent),
               left: BorderSide(color: Colors.transparent),
               right: BorderSide(color: Colors.transparent),
               top: BorderSide(color: Colors.transparent),
@@ -131,11 +133,16 @@ class ReportChart extends StatelessWidget {
                 strokeWidth: 2,
                 dashArray: [20, 10],
               ),
+              HorizontalLine(
+                y: 0,
+                color: Colors.black,
+                strokeWidth: 2,
+              ),
             ],
           ),
           lineBarsData: lineChartBarData1(data),
           maxY: yMax.toDouble(),
-          minY: 0,
+          minY: dataMin.toDouble(),
         ),
       ),
     );
