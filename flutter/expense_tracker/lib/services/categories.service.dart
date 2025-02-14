@@ -8,34 +8,6 @@ import 'package:rxdart/rxdart.dart';
 
 typedef CategoryConfig = List<CategoryDataWithId>;
 
-final Map<String, CategoryData> defaultCategories = {
-  'EATING_OUT': CategoryData(
-    label: 'Eating Out',
-    icon: 'lunch_dining_outlined',
-    budget: 500.0,
-  ),
-  'SNACKS': CategoryData(
-    label: 'Snacks',
-    icon: 'icecream_outlined',
-    budget: 100.0,
-  ),
-  'GAS': CategoryData(
-    label: 'Gas',
-    icon: 'local_gas_station_outlined',
-    budget: 200.0,
-  ),
-  'SHOPPING': CategoryData(
-    label: 'Shopping',
-    icon: 'shopping_basket_outlined',
-    budget: 100.0,
-  ),
-  'HOME_RENO': CategoryData(
-    label: 'Home Reno',
-    icon: 'construction_outlined',
-    budget: 100.0,
-  ),
-};
-
 class CategoriesService {
   CategoriesService._internal();
 
@@ -47,9 +19,10 @@ class CategoriesService {
 
   Stream<List<CategoryDataWithId>> get categoryStream$ => AuthService()
       .expenseUser$
+      .takeUntil(AuthService().userLoggedOut$)
       .whereNotNull()
       .map((user) => user as ExpenseUser)
-      .switchMap((user) => _db.collection('ledger').doc(user.ledgerId).snapshots().map(
+      .exhaustMap((user) => _db.collection('ledger').doc(user.ledgerId).snapshots().map(
             (snapshot) {
               final data = snapshot.get('budgetConfig') as LinkedHashMap<String, dynamic>;
               List<CategoryDataWithId> configs = data.entries.map((element) {
@@ -74,9 +47,6 @@ class CategoriesService {
   }
 
   Future<void> remove(CategoryDataWithId category) async {
-    category.deleted = true;
-    defaultCategories[category.id] = category;
-
     final doc = await _budgetCategoryCollection();
     doc.update({"budgetConfig.${category.id}.deleted": true});
   }
