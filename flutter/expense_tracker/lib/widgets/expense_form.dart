@@ -89,7 +89,7 @@ class _ExpenseFormState extends State<ExpenseForm> {
   void initState() {
     if (widget.initialExpense != null) {
       _selectedCategory = widget.initialExpense!.categoryId;
-      _amount.text = widget.initialExpense!.amount.toString();
+      _amount.text = widget.initialExpense!.amount.toStringAsFixed(2);
       _note.text = widget.initialExpense!.note ?? '';
       _selectedDate = widget.initialExpense!.date;
       formTitle = 'Edit Expense';
