@@ -132,7 +132,7 @@ class ReportScreen extends StatelessWidget {
                             Row(
                               children: [
                                 Text(
-                                  '${delta >= 0 ? "+" : "-"}${currency.format(delta)}',
+                                  '${delta >= 0 ? "+" : ""}${currency.format(delta)}',
                                   style: TextStyle(color: delta >= 0 ? Colors.green : Colors.red),
                                 ),
                                 const SizedBox(
