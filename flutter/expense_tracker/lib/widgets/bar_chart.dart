@@ -137,10 +137,6 @@ class _BarChartState extends State<BarChart> with SingleTickerProviderStateMixin
                                               ? currency.format(bucket.totalExpenses)
                                               : '',
                                           textAlign: TextAlign.center,
-                                          style: isDarkMode
-                                              ? ThemeData.dark().textTheme.labelMedium
-                                              : ThemeData().textTheme.labelMedium,
-                                          softWrap: false,
                                         ),
                                         Text(
                                             widget.budgetConfigs
