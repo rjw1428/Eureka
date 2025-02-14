@@ -88,7 +88,7 @@ void main() async {
             ),
             routes: appRoutes,
             initialRoute: '/',
-            themeMode: ThemeMode.dark,
+            themeMode: ThemeMode.system,
           );
         }),
   );
