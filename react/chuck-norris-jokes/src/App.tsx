@@ -10,10 +10,7 @@ type JokeResponse = {
 
 export default function App() {
     const [isLoading, setLoading] = useState(true);
-    const { error, data, refetch } = useQuery("jokeData", async () => {
-        const resp = await getJoke();
-        return resp;
-    });
+    const { error, data, refetch } = useQuery("jokeData", getJoke);
 
     async function getJoke(): Promise<JokeResponse> {
         setLoading(true);
