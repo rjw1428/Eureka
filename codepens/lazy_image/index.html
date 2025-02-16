@@ -1,0 +1,49 @@
+<html>
+
+<head>
+    <title>Lazy Load Large Image</title>
+    <link href="style.css" rel="stylesheet">
+    </link>
+</head>
+
+<body>
+    <div class="container">
+        <div class="blurred-img" style="background-image: url(assets/dome_small.jpg);">
+            <img src="./assets/dome.jpg" loading="lazy" />
+        </div>
+        <div class="blurred-img" style="background-image: url(assets/garden_small.jpg);">
+            <img src="./assets/garden.jpg" loading="lazy" />
+        </div>
+        <div class="blurred-img" style="background-image: url(assets/seashell_small.jpg);">
+            <img src="./assets/seashell.jpg" loading="lazy" />
+        </div>
+        <div class="blurred-img" style="background-image: url(assets/scifi_small.jpg);">
+            <img src="./assets/scifi.jpg" loading="lazy" />
+        </div>
+        <div class="blurred-img" style="background-image: url(assets/cloud_small.jpg);">
+            <img src="./assets/cloud.jpg" loading="lazy" />
+        </div>
+    </div>
+
+    <script type="text/javascript">
+        const blurredDivs = document.querySelectorAll(".blurred-img")
+        blurredDivs.forEach(div => {
+        const img = div.querySelector("img")
+        
+        function loaded() {
+            div.classList.add("loaded")
+        }
+    
+        if (img.complete) {
+            loaded()
+        } else {
+            console.log(img.src)
+            img.addEventListener("load", loaded)
+        }         
+    }) 
+
+
+    </script>
+</body>
+
+</html>
