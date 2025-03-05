@@ -1,23 +1,20 @@
 function test() {
-    console.log('here')
+    console.log("here");
 }
-
 
 function getAuthenticationMessage(isAuthenticated) {
     return isAuthenticated
-    ?   'User is authenticated'
-    :   'User is not authenticated';
+        ? "User is authenticated"
+        : "User is not authenticated";
 }
 
-
 function oldMethodName() {
-    return "doesn't do anything"
+    return "doesn't do anything";
 }
 
 function newMethodName() {
-    return "replaced method"
+    return "replaced method";
 }
-
 
 function test2() {
     newMethodName();
