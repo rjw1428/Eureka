@@ -33,7 +33,9 @@ export default {
                                 .replace(/\s*,\s*/g, ", ") // Normalize spaces around commas
                                 .replace(/\s*{\s*/g, "{ ") // Normalize spaces around opening brace
                                 .replace(/\s*}\s*/g, " }") // Normalize spaces around closing brace
-                                .replace(/\s+/g, " "); // Remove extra spaces
+                                .replace(/\s+/g, " ") // Remove extra spaces
+                                .replace(/,(?=[^,]*$)/, ""); // Remove last comma
+
 
                             return fixer.replaceText(node, singleLineImport);
                         },

@@ -1,3 +1,6 @@
+
+// Just a simple test rule to rename methods
+
 export default {
     meta: {
         type: "problem",
