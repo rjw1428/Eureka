@@ -1,0 +1,68 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "dice_roll",
+            "cwd": "flutter\\dice_roll",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "dice_roll (profile mode)",
+            "cwd": "flutter\\dice_roll",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "dice_roll (release mode)",
+            "cwd": "flutter\\dice_roll",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        },
+        {
+            "name": "expense_tracker",
+            "cwd": "flutter\\expense_tracker",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "expense_tracker (profile mode)",
+            "cwd": "flutter\\expense_tracker",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "expense_tracker (release mode)",
+            "cwd": "flutter\\expense_tracker",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        },
+        {
+            "name": "trivia_app",
+            "cwd": "flutter\\trivia_app",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "trivia_app (profile mode)",
+            "cwd": "flutter\\trivia_app",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "trivia_app (release mode)",
+            "cwd": "flutter\\trivia_app",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        }
+    ]
+}

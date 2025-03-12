@@ -28,3 +28,4 @@ https://astexplorer.net/
    },
    rules: { ... }
 - Add rules with the name `custom/<rule name>`
+- To test, call `NODE_OPTIONS="$NOTE_OPTIONS --experimental-vm-modules" npx jest single-line-imports --verbose `
