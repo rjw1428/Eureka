@@ -7,6 +7,7 @@ const { onDocumentCreated } = require("firebase-functions/firestore");
 
 initializeApp();
 
+// Create a ledger for new users and add to account
 exports.initializeExpenseTrackerAccount = onCall(async (request) => {
     const now = new Date().toISOString()
     try {
@@ -37,6 +38,38 @@ exports.initializeExpenseTrackerAccount = onCall(async (request) => {
     return true;
 });
 
+// Create a summary entry on writing an expense (currently only used in migration and will be removed)
+// exports.updateSummaryOnCreate = onDocumentCreated('/ledger/{ledgerId}/{timeframe}/{documentId}', async (event) => {
+//     const doc = event.data.data();
+//     try {
+//         const ledgerId = event.params.ledgerId
+//         const summaryId = `${event.params.timeframe}_${doc.categoryId}`
+//         const summaryRef = getFirestore().doc(`/ledger/${ledgerId}/summaries/${summaryId}`)
+//         const summarySnapshot = await summaryRef.get()
+
+//         if (summarySnapshot.exists) {
+//             return summaryRef.update({
+//                 count: FieldValue.increment(1),
+//                 total: FieldValue.increment(doc.amount),
+//                 lastUpdate: new Date(doc.date)
+//             })
+//         }
+
+//         return summaryRef.set({
+//             startDate: new Date(doc.date),
+//             categoryId: doc.categoryId,
+//             count: FieldValue.increment(1),
+//             total: FieldValue.increment(doc.amount),
+//             lastUpdate: new Date(doc.date)
+//         })
+//     } catch (e) {
+//         logger.error(e);
+//         logger.log(JSON.stringify(doc))
+//         return null
+//     }
+// })
+
+// On a share request, find the user an create a notification on their account
 exports.triggerShareExpenseNotification = onDocumentCreated('/pendingShareRequests/{documentId}', async (event) =>  {
     try {
         const requestData = event.data.data();
@@ -80,6 +113,7 @@ exports.triggerShareExpenseNotification = onDocumentCreated('/pendingShareReques
     }
 });
 
+
 exports.triggerLinkedAccount = onCall(async (request) => {
     try {
         const acceptedRequestSnapshot = await getFirestore()
@@ -112,6 +146,7 @@ exports.triggerLinkedAccount = onCall(async (request) => {
     return true;
 });
 
+// On cancelling a pending request, remove the target users notification
 exports.clearLinkRequest = onCall(async (request) => {
     try {
         await getFirestore()
@@ -128,6 +163,7 @@ exports.clearLinkRequest = onCall(async (request) => {
     return true;
 });
 
+// On unlink, restore the secondary user's ledger
 exports.unlinkRequest = onCall(async (request) => {
     try {
 
