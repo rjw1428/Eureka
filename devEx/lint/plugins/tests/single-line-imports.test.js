@@ -1,6 +1,5 @@
-// plugin/tests/single-line-import.test.js
-const { RuleTester } = require("eslint");
-const rule = require("../rules/single-line-import");
+import { RuleTester } from "eslint";
+import rule from "../custom/single-line-imports.js";
 
 const ruleTester = new RuleTester({
     parserOptions: {
@@ -48,10 +47,12 @@ ruleTester.run("single-line-import", rule, {
                         reallyLongImportName1,
                         reallyLongImportName2,
                         reallyLongImportName3,
-                        reallyLongImportName4
+                        reallyLongImportName4,
                     } from 'really-long-module-name';`,
             output: "import { reallyLongImportName1, reallyLongImportName2, reallyLongImportName3, reallyLongImportName4 } from 'really-long-module-name';",
             errors: [{ message: "Import statements must be on a single line" }],
         },
     ],
 });
+
+export default ruleTester
