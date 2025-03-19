@@ -118,38 +118,55 @@ class ReportScreen extends StatelessWidget {
                       ],
                     ),
                   ),
-                  SingleChildScrollView(
+                  Expanded(
+                    child: SingleChildScrollView(
                       child: Column(
-                          children: summaryData.map((data) {
-                    final delta = budgetConfig.budget - data.total;
-                    return Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(formatter.format(data.startDate)),
-                            Row(
-                              children: [
-                                Text(
-                                  '${delta >= 0 ? "+" : ""}${currency.format(delta)}',
-                                  style: TextStyle(color: delta >= 0 ? Colors.green : Colors.red),
-                                ),
-                                const SizedBox(
-                                  width: 16,
-                                ),
-                                Text(currency.format(data.total))
-                              ],
-                            )
-                          ],
-                        ),
+                        children: summaryData.map((data) {
+                          return ReportRow(reportData: data, budgetAmount: budgetConfig.budget);
+                        }).toList(),
                       ),
-                    );
-                  }).toList()))
+                    ),
+                  )
                 ],
               ),
             ),
           );
         });
+  }
+}
+
+class ReportRow extends StatelessWidget {
+  ReportRow({super.key, required this.reportData, required this.budgetAmount})
+      : delta = budgetAmount - reportData.total;
+
+  final SummaryEntry reportData;
+  final double budgetAmount;
+  final double delta;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(formatter.format(reportData.startDate)),
+            Row(
+              children: [
+                Text(
+                  '${delta >= 0 ? "+" : ""}${currency.format(delta)}',
+                  style: TextStyle(color: delta >= 0 ? Colors.green : Colors.red),
+                ),
+                const SizedBox(
+                  width: 16,
+                ),
+                Text(currency.format(reportData.total))
+              ],
+            )
+          ],
+        ),
+      ),
+    );
   }
 }
