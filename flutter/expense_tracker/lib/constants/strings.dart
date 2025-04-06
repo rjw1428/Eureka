@@ -2,6 +2,7 @@
 import 'package:intl/intl.dart';
 
 const APP_TITLE = 'SpendWatch';
+const reactionsOptions = ['👍', '❤️', '😂', '😮', '😢', '🍻', '🎉', '💩'];
 
 // Formatters
 final currency = NumberFormat.currency(locale: "en_US", symbol: "\$", decimalDigits: 2);

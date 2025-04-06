@@ -16,6 +16,7 @@ class Expense {
     this.submittedBy,
     this.note,
     this.id,
+    this.reactions = const [],
   });
 
   String categoryId;
@@ -24,6 +25,7 @@ class Expense {
   String? submittedBy;
   double amount;
   DateTime date;
+  List<String> reactions;
 
   factory Expense.fromJson(Map<String, dynamic> json) => _$ExpenseFromJson(json);
   Map<String, dynamic> toJson() => _$ExpenseToJson(this);
@@ -59,6 +61,20 @@ class ExpenseWithCategoryData extends Expense {
 
   IconData get icon {
     return categoryIcons[category.icon]!;
+  }
+
+  Map<String, int>? get reactionData {
+    if (reactions.isEmpty) {
+      return null;
+    }
+    return reactions.fold({}, (prev, cur) {
+      if (prev!.containsKey(cur)) {
+        prev[cur] = prev[cur]! + 1;
+      } else {
+        prev[cur] = 1;
+      }
+      return prev;
+    });
   }
 }
 

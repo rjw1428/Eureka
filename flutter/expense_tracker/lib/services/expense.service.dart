@@ -159,6 +159,12 @@ class ExpenseService {
     }
   }
 
+  Future react(Expense expense, String reaction) {
+    return expenseCollection(expense.date).then((ref) => ref.doc(expense.id).update({
+          'reactions': [...expense.reactions, reaction],
+        }));
+  }
+
   String formatMonth(DateTime date) {
     return "${date.year}_${formatter.format(date).toUpperCase()}";
   }

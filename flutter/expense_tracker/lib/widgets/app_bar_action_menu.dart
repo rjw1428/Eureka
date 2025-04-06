@@ -1,6 +1,6 @@
 import 'package:expense_tracker/constants/help_text.dart';
 import 'package:expense_tracker/constants/strings.dart';
-import 'package:expense_tracker/screens/budget_config.dart';
+import 'package:expense_tracker/screens/budgetConfig/budget_config.dart';
 import 'package:expense_tracker/screens/settings.dart';
 import 'package:expense_tracker/services/auth.service.dart';
 import 'package:flutter/material.dart';
