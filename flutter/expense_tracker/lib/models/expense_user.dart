@@ -1,3 +1,4 @@
+import 'package:expense_tracker/models/linked_user.dart';
 import 'package:expense_tracker/models/notification.dart';
 import 'package:json_annotation/json_annotation.dart';
 part 'expense_user.g.dart';
@@ -10,10 +11,10 @@ class ExpenseUser {
   final String email;
   final String ledgerId;
   final String role;
-  final List<Map<String, String>>? linkedAccounts;
-  final List<Map<String, String>>? archivedLinkedAccounts;
-  final Map<String, String>? userSettings;
-  final Notification? notification;
+  final List<LinkedUser> linkedAccounts;
+  final List<LinkedUser> archivedLinkedAccounts;
+  final Map<String, String> userSettings;
+  final AccountNotification? notification;
   final String? backupLedgerId;
   final DateTime initialized;
 
@@ -25,9 +26,9 @@ class ExpenseUser {
     required this.ledgerId,
     required this.role,
     required this.initialized,
-    this.linkedAccounts,
-    this.archivedLinkedAccounts,
-    this.userSettings,
+    required this.userSettings,
+    this.linkedAccounts = const [],
+    this.archivedLinkedAccounts = const [],
     this.notification,
     this.backupLedgerId,
   });

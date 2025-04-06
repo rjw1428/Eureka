@@ -1,4 +1,5 @@
 import 'package:expense_tracker/models/expense.dart';
+import 'package:expense_tracker/widgets/user_icon.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -18,10 +19,6 @@ class ExpenseItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    expense.submittedBy;
-    if (expense.reactionData != null) {
-      print(expense.reactionData);
-    }
     return LayoutBuilder(
       builder: (ctx, constraints) => Stack(
         clipBehavior: Clip.none,
@@ -54,6 +51,14 @@ class ExpenseItem extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
+                  if (expense.user != null)
+                    Opacity(
+                      opacity: 0.7,
+                      child: UserIcon(
+                        user: expense.user!,
+                        size: 40,
+                      ),
+                    ),
                   Text(
                     '\$${expense.amount.toStringAsFixed(2)}',
                   ),
@@ -62,37 +67,40 @@ class ExpenseItem extends StatelessWidget {
               ),
             ),
           ),
-          if (expense.reactionData != null)
-            Positioned(
-              right: 50,
-              bottom: -5,
-              child: Row(
-                  children: expense.reactionData!.entries
-                      .map(
-                        (entry) => entry.value > 1
-                            ? Stack(clipBehavior: Clip.none, children: [
-                                Padding(
-                                  padding: const EdgeInsets.only(left: 4),
-                                  child: Text(entry.key),
-                                ),
-                                Positioned(
-                                  right: -2,
-                                  top: -2,
-                                  child: Text(
-                                    entry.value.toString(),
-                                    style: Theme.of(context).textTheme.labelMedium,
-                                  ),
-                                )
-                              ])
-                            : Padding(
-                                padding: const EdgeInsets.only(left: 4.0),
-                                child: Text(entry.key),
-                              ),
-                      )
-                      .toList()),
-            ),
+          if (expense.reactionData != null) reactionMenu(context),
         ],
       ),
+    );
+  }
+
+  Widget reactionMenu(BuildContext context) {
+    return Positioned(
+      right: 50,
+      bottom: -5,
+      child: Row(
+          children: expense.reactionData!.entries
+              .map(
+                (entry) => entry.value > 1
+                    ? Stack(clipBehavior: Clip.none, children: [
+                        Padding(
+                          padding: const EdgeInsets.only(left: 4),
+                          child: Text(entry.key),
+                        ),
+                        Positioned(
+                          right: -2,
+                          top: -2,
+                          child: Text(
+                            entry.value.toString(),
+                            style: Theme.of(context).textTheme.labelMedium,
+                          ),
+                        )
+                      ])
+                    : Padding(
+                        padding: const EdgeInsets.only(left: 4.0),
+                        child: Text(entry.key),
+                      ),
+              )
+              .toList()),
     );
   }
 

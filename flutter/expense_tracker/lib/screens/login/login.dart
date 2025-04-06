@@ -48,7 +48,13 @@ class _LoginScreenState extends State<LoginScreen> {
                     FontAwesomeIcons.google,
                     size: 20,
                   ),
-                  onPressed: () async => await AuthService().googleLogin(),
+                  onPressed: () async {
+                    setState(() {
+                      _showCreateAccountForm = false;
+                      _showLoginForm = false;
+                    });
+                    await AuthService().googleLogin();
+                  },
                   label: const Text("Login with Google", textAlign: TextAlign.center),
                 ),
                 // const SizedBox(height: 16),

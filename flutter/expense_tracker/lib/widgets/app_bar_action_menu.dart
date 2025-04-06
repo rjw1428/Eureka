@@ -1,16 +1,19 @@
 import 'package:expense_tracker/constants/help_text.dart';
 import 'package:expense_tracker/constants/strings.dart';
+import 'package:expense_tracker/providers/user_provider.dart';
 import 'package:expense_tracker/screens/budgetConfig/budget_config.dart';
 import 'package:expense_tracker/screens/settings.dart';
 import 'package:expense_tracker/services/auth.service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
-class AppBarActionMenu extends StatelessWidget {
+class AppBarActionMenu extends ConsumerWidget {
   const AppBarActionMenu({super.key});
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.read(userProvider).value!;
     return FutureBuilder(
         future: PackageInfo.fromPlatform(),
         builder: (context, snapshot) {
@@ -76,6 +79,15 @@ class AppBarActionMenu extends StatelessWidget {
               }
             },
             itemBuilder: (context) => [
+              PopupMenuItem(
+                enabled: false,
+                child: Center(
+                  child: Text(
+                    user.firstName,
+                    style: const TextStyle(fontStyle: FontStyle.italic),
+                  ),
+                ),
+              ),
               // PopupMenuItem(
               //   value: "REPORT",
               //   child: Row(

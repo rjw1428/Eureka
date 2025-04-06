@@ -7,7 +7,7 @@ const kCacheSize = 10485760; // 10MB
 final backendProvider = Provider((ref) {
   FirebaseFirestore.instance.settings =
       const Settings(persistenceEnabled: true, cacheSizeBytes: kCacheSize);
-  print('Setting firestore settings');
+
   return FirebaseFirestore.instance;
 });
 

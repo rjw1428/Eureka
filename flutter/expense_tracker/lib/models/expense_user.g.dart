@@ -14,18 +14,16 @@ ExpenseUser _$ExpenseUserFromJson(Map<String, dynamic> json) => ExpenseUser(
       ledgerId: json['ledgerId'] as String,
       role: json['role'] as String,
       initialized: DateTime.parse(json['initialized'] as String),
-      linkedAccounts: (json['linkedAccounts'] as List<dynamic>?)
-          ?.map((e) => Map<String, String>.from(e as Map))
+      userSettings: Map<String, String>.from(json['userSettings'] as Map),
+      linkedAccounts: (json['linkedAccounts'] as List<dynamic>? ?? [])
+          .map((e) => LinkedUser.fromJson(e as Map<String, dynamic>))
           .toList(),
-      archivedLinkedAccounts: (json['archivedLinkedAccounts'] as List<dynamic>?)
-          ?.map((e) => Map<String, String>.from(e as Map))
+      archivedLinkedAccounts: (json['archivedLinkedAccounts'] as List<dynamic>? ?? [])
+          .map((e) => LinkedUser.fromJson(e as Map<String, dynamic>))
           .toList(),
-      userSettings: (json['userSettings'] as Map<String, dynamic>?)?.map(
-        (k, e) => MapEntry(k, e as String),
-      ),
       notification: json['notification'] == null
           ? null
-          : Notification.fromJson(json['notification'] as Map<String, dynamic>),
+          : AccountNotification.fromJson(json['notification'] as Map<String, dynamic>),
       backupLedgerId: json['backupLedgerId'] as String?,
     );
 

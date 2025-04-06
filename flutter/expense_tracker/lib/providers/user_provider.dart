@@ -1,3 +1,4 @@
+import 'package:expense_tracker/constants/utils.dart';
 import 'package:expense_tracker/models/expense_user.dart';
 import 'package:expense_tracker/providers/backend_provider.dart';
 import 'package:expense_tracker/services/account_link.service.dart';
@@ -12,15 +13,15 @@ final userIdProvider = StreamProvider<String?>((ref) {
       .authStateChanges()
       .map((user) => user?.uid)
       .distinct((prev, cur) => prev == cur)
-      .doOnData((id) => print(id))
       .shareReplay(maxSize: 1);
 });
 
 final userProvider = StreamProvider<ExpenseUser?>((ref) {
-  final uid = ref.watch(userIdProvider).valueOrNull;
   final firestore = ref.read(backendProvider);
-
+  final uid = ref.watch(userIdProvider).valueOrNull;
+  print("UID: ${uid}");
   if (uid == null) {
+    // ref.invalidateSelf();
     return Stream.value(null);
   }
 
@@ -28,7 +29,6 @@ final userProvider = StreamProvider<ExpenseUser?>((ref) {
       .collection('expenseUsers')
       .doc(uid)
       .snapshots()
-      .where((event) => event.data() != null)
       .map(
         (event) => ExpenseUser.fromJson({
           'id': event.id,
@@ -40,10 +40,9 @@ final userProvider = StreamProvider<ExpenseUser?>((ref) {
 });
 
 final userSettingsProvider = StreamProvider<Map<String, dynamic>>((ref) {
-  final user = ref.read(userProvider).valueOrNull;
-  return CombineLatestStream.combine2(
-      AccountLinkService().pendingLinkRequestList(user!.id),
-      ThemeColorService().colorStream$,
-      (pendingRequestList, color) =>
-          {'pendingRequestList': pendingRequestList, 'user': user, 'color': color});
+  final user = ref.watch(userProvider).valueOrNull;
+  return AccountLinkService().pendingLinkRequestList(user!.id).map((pendingRequestList) => {
+        'pendingRequestList': pendingRequestList,
+        'user': user,
+      });
 });

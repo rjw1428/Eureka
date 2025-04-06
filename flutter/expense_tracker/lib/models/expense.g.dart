@@ -17,13 +17,16 @@ Expense _$ExpenseFromJson(Map<String, dynamic> json) => Expense(
               ?.map((e) => e as String)
               .toList() ??
           const [],
-    );
+    )..user = json['user'] == null
+        ? null
+        : LinkedUser.fromJson(json['user'] as Map<String, dynamic>);
 
 Map<String, dynamic> _$ExpenseToJson(Expense instance) => <String, dynamic>{
       'categoryId': instance.categoryId,
       'id': instance.id,
       'note': instance.note,
       'submittedBy': instance.submittedBy,
+      'user': instance.user,
       'amount': instance.amount,
       'date': instance.date.toIso8601String(),
       'reactions': instance.reactions,
@@ -41,6 +44,9 @@ ExpenseWithCategoryData _$ExpenseWithCategoryDataFromJson(
     )
       ..id = json['id'] as String?
       ..note = json['note'] as String?
+      ..user = json['user'] == null
+          ? null
+          : LinkedUser.fromJson(json['user'] as Map<String, dynamic>)
       ..reactions =
           (json['reactions'] as List<dynamic>).map((e) => e as String).toList();
 
@@ -51,6 +57,7 @@ Map<String, dynamic> _$ExpenseWithCategoryDataToJson(
       'id': instance.id,
       'note': instance.note,
       'submittedBy': instance.submittedBy,
+      'user': instance.user,
       'amount': instance.amount,
       'date': instance.date.toIso8601String(),
       'reactions': instance.reactions,

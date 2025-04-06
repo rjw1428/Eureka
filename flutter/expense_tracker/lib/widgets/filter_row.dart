@@ -51,7 +51,7 @@ class _FilterState extends State<FilterRow> {
           ),
           fieldDecoration: FieldDecoration(
             hintText: 'Categories',
-            hintStyle: TextStyle(color: Theme.of(context).textTheme.labelMedium?.color),
+            hintStyle: TextStyle(color: Theme.of(context).textTheme.labelSmall?.color),
             prefixIcon: const Icon(Icons.filter_list_alt),
             showClearIcon: false,
             border: OutlineInputBorder(

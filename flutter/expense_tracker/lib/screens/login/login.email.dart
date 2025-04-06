@@ -72,8 +72,6 @@ class _LoginWithEmailState extends State<LoginWithEmailForm> {
             ),
           ),
           const SizedBox(height: 16),
-          ForgotPassword(emailAddress: _emailControl),
-          const SizedBox(height: 16),
           ElevatedButton.icon(
             icon: const Icon(
               FontAwesomeIcons.envelope,
@@ -89,6 +87,8 @@ class _LoginWithEmailState extends State<LoginWithEmailForm> {
               textAlign: TextAlign.center,
             ),
           ),
+          const SizedBox(height: 16),
+          ForgotPassword(emailAddress: _emailControl),
         ],
       ),
     );

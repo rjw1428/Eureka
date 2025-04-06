@@ -2,8 +2,8 @@ import 'package:json_annotation/json_annotation.dart';
 part 'notification.g.dart';
 
 @JsonSerializable()
-class Notification {
-  const Notification({
+class AccountNotification {
+  const AccountNotification({
     required this.type,
     this.data,
   });
@@ -11,5 +11,6 @@ class Notification {
   final String type; //pendingRequest, primaryUnlink, secondaryUnlink
   final Map<String, dynamic>? data;
 
-  factory Notification.fromJson(Map<String, dynamic> json) => _$NotificationFromJson(json);
+  factory AccountNotification.fromJson(Map<String, dynamic> json) =>
+      _$AccountNotificationFromJson(json);
 }

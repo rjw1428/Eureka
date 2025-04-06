@@ -24,7 +24,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rxdart/rxdart.dart';
 
 class ExpenseScreen extends ConsumerStatefulWidget {
-  const ExpenseScreen({super.key});
+  const ExpenseScreen({super.key, required this.user});
+  final ExpenseUser user;
 
   @override
   ConsumerState<ExpenseScreen> createState() {
@@ -33,7 +34,6 @@ class ExpenseScreen extends ConsumerStatefulWidget {
 }
 
 class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
-  List<ExpenseWithCategoryData> _expenses = [];
   List<CategoryDataWithId> _categoryConfigs = []; // All configs
   List<CategoryDataWithId> _categoryOptions = []; // filtered list of configs by what's being using
   List<String> _filterList = []; // All available category ids for given expense list
@@ -58,7 +58,7 @@ class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
   }
 
   void _addExpense(Expense expense) async {
-    final resp = await ExpenseService().addExpense(expense);
+    final resp = await ref.read(expenseModifierProvider.notifier).addExpense(expense);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -69,10 +69,11 @@ class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
     }
   }
 
-  void _updateExpense(Expense expense) {
-    final previousExpense = _expenses.firstWhere((e) => e.id == expense.id);
+  void _updateExpense(Expense expense) async {
+    final currentExpenses = ref.read(expenseProvider).value ?? [];
+    final previousExpense = currentExpenses.firstWhere((e) => e.id == expense.id);
 
-    ExpenseService().updateExpense(expense, previousExpense);
+    await ref.read(expenseModifierProvider.notifier).updateExpense(expense, previousExpense);
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -85,7 +86,7 @@ class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
   void _removeExpense(ExpenseWithCategoryData expense) async {
     ScaffoldMessenger.of(context).clearSnackBars();
 
-    ExpenseService().remove(expense);
+    await ref.read(expenseModifierProvider.notifier).removeExpense(expense);
 
     final title = expense.title;
     if (mounted) {
@@ -170,20 +171,20 @@ class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
     return;
   }
 
-  void linkRequestNotificationListener(ExpenseUser user) {
-    final notification = user.notification;
+  void linkRequestNotificationListener() {
+    final notification = widget.user.notification;
     if (notification != null) {
       if (notification.type == 'pendingRequest') {
-        _handlePendingRequest(user.id, notification);
+        _handlePendingRequest(widget.user.id, notification);
       }
       // If a secondary user unlinks from a primary user
       if (notification.type == 'primaryUnlink') {
-        _handlePrimaryUnlinkRequest(user.id, notification);
+        _handlePrimaryUnlinkRequest(widget.user.id, notification);
       }
 
       // If a secondary user unlinks from a primary user
       if (notification.type == 'secondaryUnlink') {
-        _handleSecondaryUnlinkRequest(user.id, notification);
+        _handleSecondaryUnlinkRequest(widget.user.id, notification);
       }
     }
   }
@@ -198,33 +199,14 @@ class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    Future.delayed(const Duration(seconds: 3), linkRequestNotificationListener);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // final AsyncValue<ExpenseUser?> user$ = ref.watch(userProvider);
-    final expenses$ = ref.watch(expenseProvider);
-    final Set<String> distinctCategoryIds = Set.from(
-      _expenses.map((el) => el.categoryId),
-    );
-
-    _categoryOptions =
-        _categoryConfigs.where((config) => distinctCategoryIds.contains(config.id)).toList();
-
-    final selectedIds = null; //snapshot.data!['selection'];
-
-    _filterList = selectedIds == null
-        ? distinctCategoryIds.toList()
-        : distinctCategoryIds.toList().where((id) => selectedIds.contains(id)).toList();
-
-    final isAllSelected = (selectedIds?.length ?? 0) == distinctCategoryIds.length;
-
-    final double totalExpenses = _expenses
-        .where((expense) => _filterList.contains(expense.categoryId))
-        .fold(0, (sum, exp) => exp.amount + sum);
-
-    final double? totalBudget = isAllSelected
-        ? _categoryConfigs
-            .where((config) => !config.deleted)
-            .fold(0, (sum, config) => sum! + config.budget)
-        : null;
+    // final ExpenseUser? user = ref.watch(userProvider).valueOrNull;
     return Scaffold(
       resizeToAvoidBottomInset: false,
       appBar: AppBar(
@@ -233,96 +215,37 @@ class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
           AppBarActionMenu(),
         ],
       ),
-      body: expenses$.when(
-        data: (expenses) {
-          print("COMPONENT: ${expenses.length}");
-          return listContent(expenses);
-        },
-        loading: () => const Loading(),
-        error: (error, stackTrace) => Text('ERROR: ${error.toString()}'),
-      ),
+      body: ref.watch(expenseProvider).when(
+          error: (error, stack) => Text('Oh Shit: ${error.toString()}'),
+          loading: () => const Loading(),
+          data: (expenses) {
+            final Set<String> distinctCategoryIds = Set.from(
+              expenses.map((el) => el.categoryId),
+            );
+            final _categoryOptions = _categoryConfigs
+                .where((config) => distinctCategoryIds.contains(config.id))
+                .toList();
 
-      // linkRequestNotificationListener(user);
+            final selectedIds = null; //snapshot.data!['selection'];
 
-      // Widget categoryFilter = FilterRow(
-      //   options: _categoryOptions,
-      //   onFilter: _filterExpenses,
-      //   selectedFilters: _filterList,
-      // );
+            _filterList = selectedIds == null
+                ? distinctCategoryIds.toList()
+                : distinctCategoryIds.toList().where((id) => selectedIds.contains(id)).toList();
 
-      // Widget timeFilter = Padding(
-      //   padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
-      //   child: TimeRow(
-      //     onTimeSelect: _setTimeRange,
-      //     initialTime: user.initialized,
-      //   ),
-      // );
+            final isAllSelected = (selectedIds?.length ?? 0) == distinctCategoryIds.length;
 
-      // Widget columnOrientationLayout(List<ExpenseWithCategoryData> expenses) {
-      //   return Column(
-      //     children: [
-      //       timeFilter,
-      //       categoryFilter,
-      //       TotalRow(
-      //         sum: totalExpenses,
-      //         totalBudget: totalBudget,
-      //       ),
-      //       SizedBox(
-      //         height: 200,
-      //         child: BarChart(
-      //           screenWidth: MediaQuery.of(context).size.width,
-      //           expenses: expenses,
-      //           selectedFilters: _filterList,
-      //           budgetConfigs: _categoryConfigs,
-      //         ),
-      //       ),
-      //       Expanded(child: listContent(expenses))
-      //     ],
-      //   );
-      // }
+            final double totalExpenses = expenses
+                .where((expense) => _filterList.contains(expense.categoryId))
+                .fold(0, (sum, exp) => exp.amount + sum);
 
-      // Widget rowOrientationLayout(List<ExpenseWithCategoryData> expenses) {
-      //   return Row(
-      //     children: [
-      //       Expanded(
-      //         child: Column(
-      //           children: [
-      //             TotalRow(
-      //               sum: totalExpenses,
-      //               totalBudget: totalBudget,
-      //             ),
-      //             Expanded(
-      //               child: BarChart(
-      //                 screenWidth: MediaQuery.of(context).size.width / 2,
-      //                 expenses: expenses,
-      //                 selectedFilters: _filterList,
-      //                 budgetConfigs: _categoryConfigs,
-      //               ),
-      //             ),
-      //           ],
-      //         ),
-      //       ),
-      //       Expanded(
-      //         child: Column(
-      //           children: [
-      //             timeFilter,
-      //             categoryFilter,
-      //             Expanded(child: listContent(expenses)),
-      //           ],
-      //         ),
-      //       )
-      //     ],
-      //   );
-      // }
+            final double? totalBudget = isAllSelected
+                ? _categoryConfigs
+                    .where((config) => !config.deleted)
+                    .fold(0, (sum, config) => sum! + config.budget)
+                : null;
 
-      // return LayoutBuilder(
-      //   builder: (ctx, constraints) {
-      //     return constraints.maxWidth < 600
-      //         ? columnOrientationLayout(_expenses)
-      //         : rowOrientationLayout(_expenses);
-      //   },
-      // );
-
+            return listContent(expenses);
+          }),
       floatingActionButton: IconButton.filled(
         color: Theme.of(context).cardTheme.color,
         onPressed: _openAddExpenseOverlay,
@@ -332,47 +255,127 @@ class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
         ),
       ),
     );
-    // StreamBuilder<Map<String, List<dynamic>>>(
-    //   stream:
-    //       AuthService().expenseUser$.takeUntil(AuthService().userLoggedOut$).exhaustMap((user) {
-    //     print("LEDGER ID: ${user!.ledgerId}");
-    //     return CombineLatestStream.combine3(
-    //         ExpenseService().getExpenseStream(user.ledgerId, _selectedDate),
-    //         CategoriesService().categoryStream$,
-    //         _selectedFilters.stream.startWith(null), (expenses, categories, selection) {
-    //       final List distinctCategoryIds = Set.from(expenses.map((el) => el.categoryId)).toList();
-    //       return Map.from({
-    //         'expenses': expenses,
-    //         'categories': categories,
-    //         'selection': selection ?? distinctCategoryIds,
-    //         'user': [user],
-    //       });
-    //     });
-    //   }),
-    //   builder: (context, snapshot) {
-    //     if (snapshot.hasError) {
-    //       return Text(snapshot.error.toString());
-    //     }
-    //     if (!snapshot.hasData) {
-    //       return const Loading();
-    //     }
-
-    //     _categoryConfigs = snapshot.data!['categories']!.map((el) {
-    //       return el as CategoryDataWithId;
-    //     }).toList();
-
-    //     final ExpenseUser _user = snapshot.data!['user']![0];
-    //     _expenses = snapshot.data!['expenses']!.map((exp) {
-    //       final e = exp as Expense;
-    //       final CategoryDataWithId category = _categoryConfigs.firstWhere((cat) {
-    //         return cat.id == e.categoryId;
-    //       });
-    //       // print(_user.id);
-    //       // print(_user.linkedAccounts);
-    //       // print(_user.archivedLinkedAccounts);
-    //       return ExpenseWithCategoryData.fromJson({...e.toJson(), 'category': category.toJson()});
-    //     }).toList();
-
-    // ),
   }
+
+  // Widget categoryFilter = FilterRow(
+  //   options: _categoryOptions,
+  //   onFilter: _filterExpenses,
+  //   selectedFilters: _filterList,
+  // );
+
+  // Widget timeFilter = Padding(
+  //   padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
+  //   child: TimeRow(
+  //     onTimeSelect: _setTimeRange,
+  //     initialTime: user.initialized,
+  //   ),
+  // );
+
+  // Widget columnOrientationLayout(List<ExpenseWithCategoryData> expenses) {
+  //   return Column(
+  //     children: [
+  //       timeFilter,
+  //       categoryFilter,
+  //       TotalRow(
+  //         sum: totalExpenses,
+  //         totalBudget: totalBudget,
+  //       ),
+  //       SizedBox(
+  //         height: 200,
+  //         child: BarChart(
+  //           screenWidth: MediaQuery.of(context).size.width,
+  //           expenses: expenses,
+  //           selectedFilters: _filterList,
+  //           budgetConfigs: _categoryConfigs,
+  //         ),
+  //       ),
+  //       Expanded(child: listContent(expenses))
+  //     ],
+  //   );
+  // }
+
+  // Widget rowOrientationLayout(List<ExpenseWithCategoryData> expenses) {
+  //   return Row(
+  //     children: [
+  //       Expanded(
+  //         child: Column(
+  //           children: [
+  //             TotalRow(
+  //               sum: totalExpenses,
+  //               totalBudget: totalBudget,
+  //             ),
+  //             Expanded(
+  //               child: BarChart(
+  //                 screenWidth: MediaQuery.of(context).size.width / 2,
+  //                 expenses: expenses,
+  //                 selectedFilters: _filterList,
+  //                 budgetConfigs: _categoryConfigs,
+  //               ),
+  //             ),
+  //           ],
+  //         ),
+  //       ),
+  //       Expanded(
+  //         child: Column(
+  //           children: [
+  //             timeFilter,
+  //             categoryFilter,
+  //             Expanded(child: listContent(expenses)),
+  //           ],
+  //         ),
+  //       )
+  //     ],
+  //   );
+  // }
+
+  // return LayoutBuilder(
+  //   builder: (ctx, constraints) {
+  //     return constraints.maxWidth < 600
+  //         ? columnOrientationLayout(_expenses)
+  //         : rowOrientationLayout(_expenses);
+  //   },
+  // );
+
+  // StreamBuilder<Map<String, List<dynamic>>>(
+  //   stream:
+  //       AuthService().expenseUser$.takeUntil(AuthService().userLoggedOut$).exhaustMap((user) {
+  //     print("LEDGER ID: ${user!.ledgerId}");
+  //     return CombineLatestStream.combine3(
+  //         ExpenseService().getExpenseStream(user.ledgerId, _selectedDate),
+  //         CategoriesService().categoryStream$,
+  //         _selectedFilters.stream.startWith(null), (expenses, categories, selection) {
+  //       final List distinctCategoryIds = Set.from(expenses.map((el) => el.categoryId)).toList();
+  //       return Map.from({
+  //         'expenses': expenses,
+  //         'categories': categories,
+  //         'selection': selection ?? distinctCategoryIds,
+  //         'user': [user],
+  //       });
+  //     });
+  //   }),
+  //   builder: (context, snapshot) {
+  //     if (snapshot.hasError) {
+  //       return Text(snapshot.error.toString());
+  //     }
+  //     if (!snapshot.hasData) {
+  //       return const Loading();
+  //     }
+
+  //     _categoryConfigs = snapshot.data!['categories']!.map((el) {
+  //       return el as CategoryDataWithId;
+  //     }).toList();
+
+  //     final ExpenseUser _user = snapshot.data!['user']![0];
+  //     _expenses = snapshot.data!['expenses']!.map((exp) {
+  //       final e = exp as Expense;
+  //       final CategoryDataWithId category = _categoryConfigs.firstWhere((cat) {
+  //         return cat.id == e.categoryId;
+  //       });
+  //       // print(_user.id);
+  //       // print(_user.linkedAccounts);
+  //       // print(_user.archivedLinkedAccounts);
+  //       return ExpenseWithCategoryData.fromJson({...e.toJson(), 'category': category.toJson()});
+  //     }).toList();
+
+  // ),
 }

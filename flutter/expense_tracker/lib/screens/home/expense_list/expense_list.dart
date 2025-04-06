@@ -1,4 +1,5 @@
 import 'package:expense_tracker/constants/strings.dart';
+import 'package:expense_tracker/providers/expense_stream_provider.dart';
 import 'package:expense_tracker/screens/home/expense_list/expense_item.dart';
 import 'package:expense_tracker/services/expense.service.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -8,7 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lazy_load_scrollview/lazy_load_scrollview.dart';
 
-class ExpenseList extends StatefulWidget {
+class ExpenseList extends ConsumerStatefulWidget {
   const ExpenseList({
     super.key,
     required this.list,
@@ -25,10 +26,10 @@ class ExpenseList extends StatefulWidget {
   final List<String> reactions;
 
   @override
-  State<ExpenseList> createState() => _ExpenseListState();
+  ConsumerState<ExpenseList> createState() => _ExpenseListState();
 }
 
-class _ExpenseListState extends State<ExpenseList> {
+class _ExpenseListState extends ConsumerState<ExpenseList> {
   final List<OverlayEntry> _overlayEntry = [];
 
   void _showReactionMenu(ExpenseWithCategoryData expense, double dy, int index) {
@@ -72,7 +73,7 @@ class _ExpenseListState extends State<ExpenseList> {
               children: widget.reactions.map((reaction) {
                 return InkWell(
                   onTap: () {
-                    ExpenseService().react(expense, reaction);
+                    ref.read(expenseModifierProvider.notifier).react(expense, reaction);
                     _removeOverlay();
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
@@ -109,8 +110,8 @@ class _ExpenseListState extends State<ExpenseList> {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final List<ExpenseWithCategoryData> filteredList = list;
+  Widget build(BuildContext context) {
+    final List<ExpenseWithCategoryData> filteredList = widget.list;
     // list.where((expense) => filters.contains(expense.category.id)).toList();
 
     if (filteredList.isEmpty) {

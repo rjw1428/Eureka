@@ -1,3 +1,4 @@
+import 'package:expense_tracker/models/expense_user.dart';
 import 'package:expense_tracker/providers/user_provider.dart';
 import 'package:expense_tracker/screens/home/expenses_screen.dart';
 import 'package:expense_tracker/screens/login/login.dart';
@@ -10,9 +11,11 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<String?> userId$ = ref.watch(userIdProvider);
-    return userId$.when(
-      data: (id) => id == null ? const LoginScreen() : const ExpenseScreen(),
+    final AsyncValue<ExpenseUser?> user$ = ref.watch(userProvider);
+    return user$.when(
+      data: (user) {
+        return user == null ? const LoginScreen() : ExpenseScreen(user: user);
+      },
       error: (error, stackTrace) => Column(children: [
         const Text('ERROR'),
         Text(
