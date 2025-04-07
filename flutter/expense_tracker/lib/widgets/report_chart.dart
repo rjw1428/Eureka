@@ -1,18 +1,19 @@
 import 'package:expense_tracker/models/category.dart';
 import 'package:expense_tracker/models/summary_entry.dart';
-import 'package:expense_tracker/services/theme_color.service.dart';
+import 'package:expense_tracker/providers/settings_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 final formatter = DateFormat('MMM');
 
-class ReportChart extends StatelessWidget {
+class ReportChart extends ConsumerWidget {
   const ReportChart({super.key, required this.data, required this.budgetData});
   final List<SummaryEntry> data;
   final CategoryDataWithId budgetData;
 
-  List<LineChartBarData> lineChartBarData1(List<SummaryEntry> chartData) {
+  List<LineChartBarData> lineChartBarData1(List<SummaryEntry> chartData, Color themeColor) {
     chartData.sort((a, b) => a.startDate.compareTo(b.startDate));
     final offset = chartData.first.startDate.month;
 
@@ -27,7 +28,7 @@ class ReportChart extends StatelessWidget {
       LineChartBarData(
         isCurved: true,
         show: true,
-        color: ThemeColorService().currentColor,
+        color: themeColor,
         barWidth: 2,
         isStrokeCapRound: true,
         dotData: const FlDotData(show: true),
@@ -69,7 +70,8 @@ class ReportChart extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeColor = ref.watch(settingsProvider.select((settings) => settings.color));
     final width = MediaQuery.of(context).size.width;
     final int dataMax = data.fold(0, (max, entry) => max > entry.total ? max : entry.total.toInt());
     final int dataMin = data.fold(0, (min, entry) => min < entry.total ? min : entry.total.toInt());
@@ -155,7 +157,7 @@ class ReportChart extends StatelessWidget {
             horizontalLines: [
               HorizontalLine(
                 y: budgetData.budget,
-                color: ThemeColorService().currentColor.withAlpha(150),
+                color: themeColor.withAlpha(150),
                 strokeWidth: 2,
                 dashArray: [20, 10],
               ),
@@ -166,7 +168,7 @@ class ReportChart extends StatelessWidget {
               ),
             ],
           ),
-          lineBarsData: lineChartBarData1(data),
+          lineBarsData: lineChartBarData1(data, themeColor),
           maxY: yMax.toDouble(),
           minY: dataMin.toDouble(),
         ),

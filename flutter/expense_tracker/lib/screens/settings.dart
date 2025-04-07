@@ -1,10 +1,9 @@
 import 'package:expense_tracker/models/expense_user.dart';
 import 'package:expense_tracker/models/linked_user.dart';
 import 'package:expense_tracker/models/pending_request.dart';
+import 'package:expense_tracker/providers/settings_provider.dart';
 import 'package:expense_tracker/providers/user_provider.dart';
 import 'package:expense_tracker/services/account_link.service.dart';
-import 'package:expense_tracker/services/theme_color.service.dart';
-import 'package:expense_tracker/widgets/loading.dart';
 import 'package:expense_tracker/widgets/show_dialog.dart';
 import 'package:expense_tracker/widgets/user_icon.dart';
 import 'package:flutter/material.dart';
@@ -27,7 +26,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   final _lastNameField = TextEditingController();
 
   void _showColorSelector(BuildContext context, ExpenseUser user) {
-    Color selectedColor = ThemeColorService().currentColor;
+    Color selectedColor = ref.read(settingsProvider.select((settings) => settings.color));
     showDialogNotification(
       'Select a color',
       HueRingPicker(
@@ -39,7 +38,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       context,
       TextButton(
         onPressed: () async {
-          ThemeColorService().updateColor(selectedColor, user);
+          ref.read(settingsProvider.notifier).setColor(selectedColor);
           Navigator.pop(context);
         },
         child: const Text('Save'),
@@ -75,17 +74,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    ref.read(settingsProvider);
+  }
+
+  @override
   Widget build(BuildContext context) {
     final keyboardSpace = MediaQuery.of(context).viewInsets.bottom;
-    final userSettings = ref.watch(userSettingsProvider).valueOrNull;
+    final userSettings = ref.watch(settingsProvider);
+    final user = ref.watch(userProvider).valueOrNull;
 
-    if (userSettings == null) {
-      return const Loading();
+    if (user == null) {
+      return const Text("Oh Shit");
     }
 
-    final List<PendingRequest> requestList =
-        userSettings['pendingRequestList'] as List<PendingRequest>;
-    final ExpenseUser user = userSettings['user'] as ExpenseUser;
+    final List<PendingRequest> requestList = userSettings.pendingRequestList;
     _firstNameField.text = user.firstName;
     _lastNameField.text = user.lastName;
 

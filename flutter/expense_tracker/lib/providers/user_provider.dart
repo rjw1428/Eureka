@@ -1,8 +1,5 @@
-import 'package:expense_tracker/constants/utils.dart';
 import 'package:expense_tracker/models/expense_user.dart';
 import 'package:expense_tracker/providers/backend_provider.dart';
-import 'package:expense_tracker/services/account_link.service.dart';
-import 'package:expense_tracker/services/theme_color.service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rxdart/rxdart.dart';
 
@@ -37,12 +34,4 @@ final userProvider = StreamProvider<ExpenseUser?>((ref) {
       )
       .doOnDone(() => print('CLOSED: expenseUserFetch stream'))
       .handleError((err) => print('WARN: expenseUserFetch stream errored ${err.toString()}'));
-});
-
-final userSettingsProvider = StreamProvider<Map<String, dynamic>>((ref) {
-  final user = ref.watch(userProvider).valueOrNull;
-  return AccountLinkService().pendingLinkRequestList(user!.id).map((pendingRequestList) => {
-        'pendingRequestList': pendingRequestList,
-        'user': user,
-      });
 });

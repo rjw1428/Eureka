@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -13,4 +14,8 @@ final backendProvider = Provider((ref) {
 
 final authProvider = Provider((ref) {
   return FirebaseAuth.instance;
+});
+
+final functionsProvider = Provider((ref) {
+  return FirebaseFunctions.instance;
 });
