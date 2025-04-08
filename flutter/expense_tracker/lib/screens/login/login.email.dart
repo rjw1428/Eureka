@@ -70,6 +70,12 @@ class _LoginWithEmailState extends State<LoginWithEmailForm> {
             decoration: const InputDecoration(
               label: Text('Password'),
             ),
+            textInputAction: TextInputAction.go,
+            onSubmitted: (value) {
+              if (validateInput()) {
+                login();
+              }
+            },
           ),
           const SizedBox(height: 16),
           ElevatedButton.icon(
@@ -77,7 +83,7 @@ class _LoginWithEmailState extends State<LoginWithEmailForm> {
               FontAwesomeIcons.envelope,
               size: 18,
             ),
-            onPressed: () async {
+            onPressed: () {
               if (validateInput()) {
                 login();
               }

@@ -1,9 +1,12 @@
+import 'package:collection/collection.dart';
 import 'package:expense_tracker/models/expense.dart';
+import 'package:expense_tracker/providers/linked_accounts_provider.dart';
 import 'package:expense_tracker/widgets/user_icon.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class ExpenseItem extends StatelessWidget {
+class ExpenseItem extends ConsumerWidget {
   const ExpenseItem({
     super.key,
     required this.expense,
@@ -18,7 +21,14 @@ class ExpenseItem extends StatelessWidget {
   final void Function(ExpenseWithCategoryData, BuildContext)? onReact;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.read(linkedUserProvider.select((linkedUsers) {
+      if (expense.submittedBy == null) {
+        return null;
+      }
+      return linkedUsers.firstWhereOrNull((linkedUser) => linkedUser.id == expense.submittedBy);
+    }));
+
     return LayoutBuilder(
       builder: (ctx, constraints) => Stack(
         clipBehavior: Clip.none,
@@ -51,17 +61,20 @@ class ExpenseItem extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  if (expense.user != null)
-                    Opacity(
-                      opacity: 0.7,
-                      child: UserIcon(
-                        user: expense.user!,
-                        size: 40,
-                      ),
-                    ),
                   Text(
                     '\$${expense.amount.toStringAsFixed(2)}',
                   ),
+                  if (user != null)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 8),
+                      child: Opacity(
+                        opacity: 0.7,
+                        child: UserIcon(
+                          user: user,
+                          size: 36,
+                        ),
+                      ),
+                    ),
                   actionButtons(expense, onEdit, onRemove, onReact, context),
                 ],
               ),

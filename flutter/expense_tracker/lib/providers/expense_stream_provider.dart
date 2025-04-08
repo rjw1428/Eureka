@@ -5,11 +5,9 @@ import 'package:expense_tracker/models/expense_user.dart';
 import 'package:expense_tracker/providers/backend_provider.dart';
 import 'package:expense_tracker/providers/budget_provider.dart';
 import 'package:expense_tracker/providers/expense_provider.dart';
-import 'package:expense_tracker/providers/linked_accounts_provider.dart';
 import 'package:expense_tracker/providers/user_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rxdart/rxdart.dart';
-import 'package:collection/collection.dart';
 
 class ExpenseNotifier extends StateNotifier<List<ExpenseWithCategoryData>> {
   ExpenseNotifier({required this.user, required this.firestore}) : super(const []);
@@ -61,7 +59,7 @@ class ExpenseNotifier extends StateNotifier<List<ExpenseWithCategoryData>> {
         ),
         _expenseCollection(expense.date).then((collectionRef) {
           expense.submittedBy = user.id;
-          var newExpenseData = expense.toJson();
+          final newExpenseData = expense.toJson();
           newExpenseData.remove('id');
           // Not sure why this property is here when undoing a delete
           // probably fine, but not looking into it now.
@@ -88,6 +86,7 @@ class ExpenseNotifier extends StateNotifier<List<ExpenseWithCategoryData>> {
   Future<void> updateExpense(Expense expense, Expense previousExpense) async {
     final isSameMonthBucket = expense.date.month == previousExpense.date.month &&
         expense.date.year == previousExpense.date.year;
+    expense.submittedBy = user.id;
 
     if (isSameMonthBucket) {
       List<Future> actions = [
@@ -148,7 +147,7 @@ class ExpenseNotifier extends StateNotifier<List<ExpenseWithCategoryData>> {
 
 final expenseModifierProvider =
     StateNotifierProvider<ExpenseNotifier, List<ExpenseWithCategoryData>>((ref) {
-  final user = ref.watch(userProvider).value;
+  final user = ref.read(userProvider).value;
   final firestore = ref.read(backendProvider);
   // HOW TO HANDLE WHEN THERE'S NO USER
   return ExpenseNotifier(user: user!, firestore: firestore);
@@ -158,7 +157,6 @@ final expenseProvider = StreamProvider<List<ExpenseWithCategoryData>>((ref) {
   final firestore = ref.read(backendProvider);
   final user = ref.watch(userProvider).valueOrNull;
   final budgetCategories = ref.watch(budgetProvider).value ?? [];
-  final expenseUsers = ref.read(linkedUserProvider);
   // final lastDoc = ref.watch(paginationProvider.select((state) => state.lastDoc));
 
   if (user == null) {
@@ -181,11 +179,7 @@ final expenseProvider = StreamProvider<List<ExpenseWithCategoryData>>((ref) {
       .map((expenses) => expenses.map((expense) {
             final CategoryDataWithId category =
                 budgetCategories.firstWhere((cat) => cat.id == expense.categoryId);
-            final matchingUser = expenseUsers.firstWhereOrNull((u) => u.id == expense.submittedBy);
-            return ExpenseWithCategoryData.fromJson({
-              ...expense.toJson(),
-              'user': matchingUser?.toJson(),
-              'category': category.toJson()
-            });
+            return ExpenseWithCategoryData.fromJson(
+                {...expense.toJson(), 'category': category.toJson()});
           }).toList());
 });

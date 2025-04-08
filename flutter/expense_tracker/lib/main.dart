@@ -92,7 +92,7 @@ void main() async {
           ),
           routes: appRoutes,
           initialRoute: '/',
-          themeMode: ThemeMode.light,
+          themeMode: ThemeMode.dark,
         );
       }),
     ),

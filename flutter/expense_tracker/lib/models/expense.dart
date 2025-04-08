@@ -1,6 +1,5 @@
 import 'package:expense_tracker/constants/icons.dart';
 import 'package:expense_tracker/models/category.dart';
-import 'package:expense_tracker/models/linked_user.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:json_annotation/json_annotation.dart';
@@ -24,7 +23,6 @@ class Expense {
   String? id;
   String? note;
   String? submittedBy;
-  LinkedUser? user;
   double amount;
   DateTime date;
   List<String> reactions;

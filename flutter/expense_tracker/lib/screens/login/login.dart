@@ -4,7 +4,6 @@ import 'package:expense_tracker/screens/login/login.email.dart';
 import 'package:expense_tracker/screens/login/login.header.dart';
 import 'package:expense_tracker/screens/login/login.logo.dart';
 import 'package:expense_tracker/services/auth.service.dart';
-import 'package:expense_tracker/services/theme_color.service.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
@@ -21,7 +20,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   void initState() {
-    ThemeColorService().reset();
     super.initState();
   }
 

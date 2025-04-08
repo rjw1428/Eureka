@@ -1,7 +1,6 @@
 import 'package:expense_tracker/constants/strings.dart';
 import 'package:expense_tracker/providers/expense_stream_provider.dart';
 import 'package:expense_tracker/screens/home/expense_list/expense_item.dart';
-import 'package:expense_tracker/services/expense.service.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:expense_tracker/models/expense.dart';
 import 'package:flutter/material.dart';

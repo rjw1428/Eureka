@@ -2,7 +2,6 @@ import 'package:expense_tracker/constants/strings.dart';
 import 'package:expense_tracker/models/category.dart';
 import 'package:expense_tracker/models/summary_entry.dart';
 import 'package:expense_tracker/services/categories.service.dart';
-import 'package:expense_tracker/services/expense.service.dart';
 import 'package:expense_tracker/widgets/report_chart.dart';
 import 'package:expense_tracker/widgets/loading.dart';
 import 'package:flutter/material.dart';

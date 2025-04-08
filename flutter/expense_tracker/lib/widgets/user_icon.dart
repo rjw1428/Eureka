@@ -16,10 +16,7 @@ class UserIcon extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: stringToColor(user.color),
-        border: Border.all(
-          color: ThemeData().cardColor,
-          width: 4.0,
-        ),
+        border: Border.all(color: ThemeData().cardColor, width: size * 0.05),
       ),
       child: Center(
         child: Text(
