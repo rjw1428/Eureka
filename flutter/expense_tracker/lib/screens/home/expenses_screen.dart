@@ -36,7 +36,6 @@ class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
   List<String> _filterList = []; // All available category ids for given expense list
   final _selectedFilters =
       StreamController<List<String>?>.broadcast(); // Only selected category ids
-  DateTime _selectedDate = DateTime.now();
 
   void _openAddExpenseOverlay([ExpenseWithCategoryData? expense]) {
     HapticFeedback.selectionClick();
@@ -106,10 +105,6 @@ class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
     _selectedFilters.sink.add(selection);
   }
 
-  void _setTimeRange(DateTime date) {
-    setState(() => _selectedDate = date);
-  }
-
   void _handlePendingRequest(String userId, AccountNotification notification) async {
     final request = await AccountLinkService().getPendingRequest(notification.data!['requestId']);
     if (mounted) {
@@ -128,9 +123,7 @@ class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
             // but permissions are not valid yet,
             // Call this and to reload the data
 
-            // UPDATE: now that this is async and we await
-            // the acceptLinkRequest change, maybe this isn't needed
-            _setTimeRange(_selectedDate);
+            // NOTE: THERE WAS AN OPERATION HERE TO REFRESH THE SCREEN
           },
           child: const Text('Accept'),
         ),
@@ -252,7 +245,6 @@ class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
             Widget timeFilter = Padding(
               padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
               child: TimeRow(
-                onTimeSelect: _setTimeRange,
                 initialTime: user!.initialized,
               ),
             );

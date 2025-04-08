@@ -5,6 +5,7 @@ import 'package:expense_tracker/models/expense_user.dart';
 import 'package:expense_tracker/providers/backend_provider.dart';
 import 'package:expense_tracker/providers/budget_provider.dart';
 import 'package:expense_tracker/providers/expense_provider.dart';
+import 'package:expense_tracker/providers/filter_provider.dart';
 import 'package:expense_tracker/providers/user_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rxdart/rxdart.dart';
@@ -157,13 +158,13 @@ final expenseProvider = StreamProvider<List<ExpenseWithCategoryData>>((ref) {
   final firestore = ref.read(backendProvider);
   final user = ref.watch(userProvider).valueOrNull;
   final budgetCategories = ref.watch(budgetProvider).value ?? [];
-  // final lastDoc = ref.watch(paginationProvider.select((state) => state.lastDoc));
+  final selectedDate = ref.watch(selectedTimeProvider);
 
   if (user == null) {
     return Stream.value([]);
   }
 
-  final month = formatMonth(DateTime.now());
+  final month = formatMonth(selectedDate);
 
   return firestore
       .collection('ledger')
