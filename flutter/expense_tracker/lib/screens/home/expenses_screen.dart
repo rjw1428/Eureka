@@ -7,6 +7,7 @@ import 'package:expense_tracker/models/expense_user.dart';
 import 'package:expense_tracker/models/notification.dart';
 import 'package:expense_tracker/providers/budget_provider.dart';
 import 'package:expense_tracker/providers/expense_stream_provider.dart';
+import 'package:expense_tracker/providers/filter_provider.dart';
 import 'package:expense_tracker/providers/user_provider.dart';
 import 'package:expense_tracker/screens/home/expense_list/expense_list.dart';
 import 'package:expense_tracker/services/account_link.service.dart';
@@ -33,10 +34,6 @@ class ExpenseScreen extends ConsumerStatefulWidget {
 }
 
 class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
-  List<String> _filterList = []; // All available category ids for given expense list
-  final _selectedFilters =
-      StreamController<List<String>?>.broadcast(); // Only selected category ids
-
   void _openAddExpenseOverlay([ExpenseWithCategoryData? expense]) {
     HapticFeedback.selectionClick();
     showModalBottomSheet(
@@ -99,10 +96,6 @@ class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
         ),
       );
     }
-  }
-
-  void _filterExpenses(List<String> selection) {
-    _selectedFilters.sink.add(selection);
   }
 
   void _handlePendingRequest(String userId, AccountNotification notification) async {
@@ -186,7 +179,6 @@ class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
       list: expenses,
       onRemove: _removeExpense,
       onEdit: _openAddExpenseOverlay,
-      filters: _filterList,
     );
   }
 
@@ -200,6 +192,8 @@ class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
   Widget build(BuildContext context) {
     final ExpenseUser? user = ref.watch(userProvider).valueOrNull;
     List<CategoryDataWithId> categoryConfigs = ref.watch(budgetProvider).value ?? [];
+    final selectedCategoryIds = ref.watch(selectedFiltersProvider);
+
     return Scaffold(
       resizeToAvoidBottomInset: false,
       appBar: AppBar(
@@ -218,16 +212,10 @@ class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
             final _categoryOptions =
                 categoryConfigs.where((config) => distinctCategoryIds.contains(config.id)).toList();
 
-            final selectedIds = null; //snapshot.data!['selection'];
-
-            _filterList = selectedIds == null
-                ? distinctCategoryIds.toList()
-                : distinctCategoryIds.toList().where((id) => selectedIds.contains(id)).toList();
-
-            final isAllSelected = (selectedIds?.length ?? 0) == distinctCategoryIds.length;
+            final isAllSelected = selectedCategoryIds.length == distinctCategoryIds.length;
 
             final double totalExpenses = expenses
-                .where((expense) => _filterList.contains(expense.categoryId))
+                .where((expense) => selectedCategoryIds.contains(expense.categoryId))
                 .fold(0, (sum, exp) => exp.amount + sum);
 
             final double? totalBudget = isAllSelected
@@ -238,8 +226,6 @@ class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
 
             Widget categoryFilter = FilterRow(
               options: _categoryOptions,
-              onFilter: _filterExpenses,
-              selectedFilters: _filterList,
             );
 
             Widget timeFilter = Padding(
@@ -263,7 +249,6 @@ class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
                     child: BarChart(
                       screenWidth: MediaQuery.of(context).size.width,
                       expenses: expenses,
-                      selectedFilters: _filterList,
                       budgetConfigs: categoryConfigs,
                     ),
                   ),
@@ -286,7 +271,6 @@ class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
                           child: BarChart(
                             screenWidth: MediaQuery.of(context).size.width / 2,
                             expenses: expenses,
-                            selectedFilters: _filterList,
                             budgetConfigs: categoryConfigs,
                           ),
                         ),

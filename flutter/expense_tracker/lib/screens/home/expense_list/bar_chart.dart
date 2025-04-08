@@ -3,36 +3,36 @@ import 'dart:ui';
 import 'package:dotted_border/dotted_border.dart';
 import 'package:expense_tracker/constants/strings.dart';
 import 'package:expense_tracker/models/category.dart';
+import 'package:expense_tracker/providers/filter_provider.dart';
 import 'package:expense_tracker/screens/report.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:expense_tracker/models/expense.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class BarChart extends StatefulWidget {
+class BarChart extends ConsumerStatefulWidget {
   const BarChart({
     super.key,
     required this.expenses,
-    required this.selectedFilters,
     required this.budgetConfigs,
     required this.screenWidth,
   });
 
   final List<Expense> expenses;
-  final List<String> selectedFilters;
   final List<CategoryDataWithId> budgetConfigs;
   final double screenWidth;
 
   @override
-  State<BarChart> createState() => _BarChartState();
+  ConsumerState<BarChart> createState() => _BarChartState();
 }
 
-class _BarChartState extends State<BarChart> with SingleTickerProviderStateMixin {
+class _BarChartState extends ConsumerState<BarChart> with SingleTickerProviderStateMixin {
   final double _barColumnWidth = 64.0;
   final ScrollController _scrollController = ScrollController();
 
-  List<ExpenseBucket> getBuckets(List<CategoryDataWithId> data) {
+  List<ExpenseBucket> getBuckets(List<CategoryDataWithId> data, filters) {
     return data
-        .where((config) => widget.selectedFilters.contains(config.id))
+        .where((config) => filters.contains(config.id))
         .map((config) => ExpenseBucket.forCategory(widget.expenses, data, config.id))
         .toList();
   }
@@ -62,8 +62,9 @@ class _BarChartState extends State<BarChart> with SingleTickerProviderStateMixin
   @override
   Widget build(BuildContext context) {
     final isDarkMode = MediaQuery.of(context).platformBrightness == Brightness.dark;
+    final selectedFilters = ref.watch(selectedFiltersProvider);
 
-    final buckets = getBuckets(widget.budgetConfigs);
+    final buckets = getBuckets(widget.budgetConfigs, selectedFilters);
     final maxTotalExpense = getMaxTotalExpense(buckets);
     final chartWidth = buckets.length * _barColumnWidth;
 

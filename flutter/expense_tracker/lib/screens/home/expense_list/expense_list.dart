@@ -1,5 +1,6 @@
 import 'package:expense_tracker/constants/strings.dart';
 import 'package:expense_tracker/providers/expense_stream_provider.dart';
+import 'package:expense_tracker/providers/filter_provider.dart';
 import 'package:expense_tracker/screens/home/expense_list/expense_item.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:expense_tracker/models/expense.dart';
@@ -14,14 +15,12 @@ class ExpenseList extends ConsumerStatefulWidget {
     required this.list,
     required this.onRemove,
     required this.onEdit,
-    required this.filters,
     this.reactions = reactionsOptions,
   });
 
   final List<ExpenseWithCategoryData> list;
   final void Function(ExpenseWithCategoryData) onRemove;
   final void Function(ExpenseWithCategoryData) onEdit;
-  final List<String> filters;
   final List<String> reactions;
 
   @override
@@ -110,8 +109,12 @@ class _ExpenseListState extends ConsumerState<ExpenseList> {
 
   @override
   Widget build(BuildContext context) {
-    final List<ExpenseWithCategoryData> filteredList = widget.list;
-    // list.where((expense) => filters.contains(expense.category.id)).toList();
+    final filters = ref.watch(selectedFiltersProvider);
+    final List<ExpenseWithCategoryData> filteredList = widget.list
+        .where(
+          (expense) => filters.contains(expense.category.id),
+        )
+        .toList();
 
     if (filteredList.isEmpty) {
       return const Center(child: Text('No expenses found 💩'));
