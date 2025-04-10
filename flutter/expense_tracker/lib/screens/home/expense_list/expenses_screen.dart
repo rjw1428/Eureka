@@ -237,6 +237,7 @@ class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
               return Column(
                 children: [
                   timeFilter,
+                  categoryFilter,
                   TotalRow(
                     sum: totalExpenses,
                     totalBudget: totalBudget,
@@ -249,7 +250,6 @@ class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
                       budgetConfigs: categoryConfigs,
                     ),
                   ),
-                  categoryFilter,
                   Expanded(child: listContent(expenses))
                 ],
               );
