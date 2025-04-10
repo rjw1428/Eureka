@@ -36,11 +36,10 @@ class _SuggestionRowState extends ConsumerState<SuggestionsRow> {
           return const SizedBox(height: 1);
         }
         return Column(
+          mainAxisAlignment: MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Align(
-              alignment: Alignment.topLeft,
-              child: Text('Suggestions:', style: Theme.of(context).textTheme.titleSmall),
-            ),
+            Text('Suggestions:', style: Theme.of(context).textTheme.titleSmall),
             ScrollConfiguration(
               behavior: ScrollConfiguration.of(context).copyWith(
                 dragDevices: {

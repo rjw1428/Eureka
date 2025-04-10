@@ -218,9 +218,7 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
                 ],
               ),
             ),
-            SuggestionsRow(
-              textField: _note,
-            ),
+            SuggestionsRow(textField: _note),
             const SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
