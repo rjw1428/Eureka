@@ -47,3 +47,16 @@ class CategoryDataWithId extends CategoryData {
     id = oldId;
   }
 }
+
+class CategoryDataWithIdAndDelta extends CategoryDataWithId {
+  CategoryDataWithIdAndDelta({
+    required this.delta,
+    required super.id,
+    required super.label,
+    required super.icon,
+    required super.budget,
+    super.deleted = false,
+  });
+
+  final double delta;
+}

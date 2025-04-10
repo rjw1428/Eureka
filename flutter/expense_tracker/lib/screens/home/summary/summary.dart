@@ -1,44 +1,33 @@
 import 'package:expense_tracker/constants/strings.dart';
-import 'package:expense_tracker/models/category.dart';
-import 'package:expense_tracker/models/summary_entry.dart';
-import 'package:expense_tracker/services/categories.service.dart';
-import 'package:expense_tracker/services/expense.service.dart';
-import 'package:expense_tracker/widgets/report_chart.dart';
+import 'package:expense_tracker/providers/budget_provider.dart';
+import 'package:expense_tracker/providers/expense_stream_provider.dart';
+import 'package:expense_tracker/providers/user_provider.dart';
+import 'package:expense_tracker/screens/home/summary/summary_item.dart';
+import 'package:expense_tracker/screens/home/summary/summary_chart.dart';
 import 'package:expense_tracker/widgets/loading.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-import 'package:rxdart/rxdart.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-final formatter = DateFormat('MM/yy');
-
-class ReportScreen extends StatelessWidget {
+class ReportScreen extends ConsumerWidget {
   const ReportScreen({super.key, required this.categoryId});
 
   final String categoryId;
 
   @override
-  Widget build(BuildContext context) {
-    return StreamBuilder(
-        stream: CombineLatestStream.combine2(
-            ExpenseService().getSummary(DateTime(2024), null, categoryId),
-            CategoriesService().categoryStream$, (summary, budgetConfig) {
-          return {
-            'summary': summary,
-            'budgetConfig': budgetConfig.firstWhere((config) => config.id == categoryId),
-          };
-        }),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData || snapshot.connectionState == ConnectionState.waiting) {
-            return const Loading();
-          }
-
-          final budgetConfig = snapshot.data!['budgetConfig'] as CategoryDataWithId;
-          final summaryData = snapshot.data!['summary'] as List<SummaryEntry>;
-          summaryData.sort((a, b) => b.startDate.compareTo(a.startDate));
-
-          final totalSpend = summaryData.fold(0.0, (sum, data) => sum + data.total);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(userProvider).value!;
+    final summary$ = ref.watch(
+        expenseSummaryProvider((categoryId: categoryId, start: user.initialized, end: null)));
+    final budgetConfig = ref.watch(budgetProvider
+        .select((configs) => configs.value!.firstWhere((config) => config.id == categoryId)));
+    return summary$.when(
+        error: (error, stack) => Text(error.toString()),
+        loading: () => const Loading(),
+        data: (summary) {
           final totalDelta =
-              summaryData.fold(0.0, (sum, data) => sum + (budgetConfig.budget - data.total));
+              summary.fold(0.0, (sum, data) => sum + (budgetConfig.budget - data.total));
+          final totalSpend = summary.fold(0.0, (sum, data) => sum + data.total);
+
           return SafeArea(
             child: Scaffold(
               body: Column(
@@ -87,7 +76,7 @@ class ReportScreen extends StatelessWidget {
                       height: MediaQuery.of(context).size.height *
                           (MediaQuery.of(context).size.width > 800 ? 0.5 : .3),
                       child: ReportChart(
-                        data: summaryData,
+                        data: summary,
                         budgetData: budgetConfig,
                       ),
                     ),
@@ -118,34 +107,15 @@ class ReportScreen extends StatelessWidget {
                       ],
                     ),
                   ),
-                  SingleChildScrollView(
+                  Expanded(
+                    child: SingleChildScrollView(
                       child: Column(
-                          children: summaryData.map((data) {
-                    final delta = budgetConfig.budget - data.total;
-                    return Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(formatter.format(data.startDate)),
-                            Row(
-                              children: [
-                                Text(
-                                  '${delta >= 0 ? "+" : "-"}${currency.format(delta)}',
-                                  style: TextStyle(color: delta >= 0 ? Colors.green : Colors.red),
-                                ),
-                                const SizedBox(
-                                  width: 16,
-                                ),
-                                Text(currency.format(data.total))
-                              ],
-                            )
-                          ],
-                        ),
+                        children: summary.map((data) {
+                          return SummaryItem(reportData: data, budgetAmount: budgetConfig.budget);
+                        }).toList(),
                       ),
-                    );
-                  }).toList()))
+                    ),
+                  )
                 ],
               ),
             ),

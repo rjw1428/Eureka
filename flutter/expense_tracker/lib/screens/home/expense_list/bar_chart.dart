@@ -3,36 +3,35 @@ import 'dart:ui';
 import 'package:dotted_border/dotted_border.dart';
 import 'package:expense_tracker/constants/strings.dart';
 import 'package:expense_tracker/models/category.dart';
-import 'package:expense_tracker/screens/report.dart';
+import 'package:expense_tracker/screens/home/summary/summary.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:expense_tracker/models/expense.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class BarChart extends StatefulWidget {
+class BarChart extends ConsumerStatefulWidget {
   const BarChart({
     super.key,
     required this.expenses,
-    required this.selectedFilters,
     required this.budgetConfigs,
     required this.screenWidth,
   });
 
   final List<Expense> expenses;
-  final List<String> selectedFilters;
   final List<CategoryDataWithId> budgetConfigs;
   final double screenWidth;
 
   @override
-  State<BarChart> createState() => _BarChartState();
+  ConsumerState<BarChart> createState() => _BarChartState();
 }
 
-class _BarChartState extends State<BarChart> with SingleTickerProviderStateMixin {
+class _BarChartState extends ConsumerState<BarChart> with SingleTickerProviderStateMixin {
   final double _barColumnWidth = 64.0;
   final ScrollController _scrollController = ScrollController();
 
   List<ExpenseBucket> getBuckets(List<CategoryDataWithId> data) {
     return data
-        .where((config) => widget.selectedFilters.contains(config.id))
+        .where((config) => config.deleted == false)
         .map((config) => ExpenseBucket.forCategory(widget.expenses, data, config.id))
         .toList();
   }
@@ -62,7 +61,6 @@ class _BarChartState extends State<BarChart> with SingleTickerProviderStateMixin
   @override
   Widget build(BuildContext context) {
     final isDarkMode = MediaQuery.of(context).platformBrightness == Brightness.dark;
-
     final buckets = getBuckets(widget.budgetConfigs);
     final maxTotalExpense = getMaxTotalExpense(buckets);
     final chartWidth = buckets.length * _barColumnWidth;
@@ -133,14 +131,10 @@ class _BarChartState extends State<BarChart> with SingleTickerProviderStateMixin
                                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
                                         Text(
-                                          bucket.totalExpenses > 0
-                                              ? currency.format(bucket.totalExpenses)
-                                              : '',
+                                          currency.format(bucket.totalExpenses).length > 7
+                                              ? thousandsCurrency.format(bucket.totalExpenses)
+                                              : currency.format(bucket.totalExpenses),
                                           textAlign: TextAlign.center,
-                                          style: isDarkMode
-                                              ? ThemeData.dark().textTheme.labelMedium
-                                              : ThemeData().textTheme.labelMedium,
-                                          softWrap: false,
                                         ),
                                         Text(
                                             widget.budgetConfigs
@@ -187,16 +181,17 @@ class ChartBar extends StatelessWidget {
     required this.max,
     required this.amount,
     required this.limit,
-  });
+  }) : limitedAmount = amount < 0 ? 0 : amount;
 
   final double max;
   final double amount;
   final double limit;
+  final double limitedAmount;
 
   @override
   Widget build(BuildContext context) {
     final isDarkMode = MediaQuery.of(context).platformBrightness == Brightness.dark;
-    final size = max == 0 ? 0 : amount / max;
+    final size = max == 0 ? 0 : limitedAmount / max;
     final threshold = limit > 0 && limit <= max ? limit / max : null;
     final remaining = limit - amount;
     return Expanded(
@@ -227,10 +222,14 @@ class ChartBar extends StatelessWidget {
                     left: -0.1 * constraints.maxWidth,
                     width: constraints.maxWidth,
                     child: Text(
-                      currency.format(remaining.abs()),
+                      currency.format(remaining.abs()).length > 7
+                          ? thousandsCurrency.format(remaining.abs())
+                          : currency.format(remaining.abs()),
                       textAlign: TextAlign.center,
                       style: TextStyle(
                           color: remaining >= 0 ? Colors.green : Colors.red,
+                          fontSize: 12,
+                          fontStyle: FontStyle.italic,
                           shadows: const [
                             Shadow(
                               offset: Offset(1.0, 1.0),

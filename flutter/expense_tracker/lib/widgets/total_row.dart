@@ -3,6 +3,8 @@ import 'package:expense_tracker/services/local_storage.service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+const maskCharacter = '-';
+
 class TotalRow extends StatefulWidget {
   const TotalRow({super.key, required this.sum, this.totalBudget})
       : delta = totalBudget == null ? null : totalBudget - sum;
@@ -16,10 +18,6 @@ class TotalRow extends StatefulWidget {
 
 class _TotalRowState extends State<TotalRow> {
   bool showValues = LocalStorageService().showTotal;
-  @override
-  void initState() {
-    super.initState();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,13 +33,13 @@ class _TotalRowState extends State<TotalRow> {
           Text(
             showValues
                 ? currency.format(widget.sum)
-                : currency.format(widget.sum).replaceAll(RegExp(r'[0-9]'), '-'),
+                : currency.format(widget.sum).replaceAll(RegExp(r'[0-9]'), maskCharacter),
             style: TextStyle(fontSize: 24, color: Theme.of(context).textTheme.titleLarge?.color),
             textAlign: TextAlign.center,
           ),
           if (widget.delta != null)
             Text(
-              '${widget.delta! >= 0 ? '+' : '-'} ${showValues ? currency.format(widget.delta!) : currency.format(widget.delta!).replaceAll(RegExp(r'[0-9]'), '-')}',
+              '${widget.delta! >= 0 ? '+' : ''} ${showValues ? currency.format(widget.delta!) : currency.format(widget.delta!).replaceAll(RegExp(r'[0-9]'), maskCharacter)}',
               style: TextStyle(fontSize: 16, color: widget.delta! >= 0 ? Colors.green : Colors.red),
               textAlign: TextAlign.center,
             ),

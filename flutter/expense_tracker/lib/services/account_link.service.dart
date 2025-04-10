@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:expense_tracker/models/expense_user.dart';
+import 'package:expense_tracker/models/linked_user.dart';
 import 'package:expense_tracker/models/pending_request.dart';
 import 'package:expense_tracker/models/response.dart';
 import 'package:rxdart/transformers.dart';
@@ -46,12 +47,6 @@ class AccountLinkService {
       'role': 'secondary',
       'ledgerId': request.requestingUserLedgerId,
       'backupLedgerId': request.targetCurrentLedgerId,
-      'linkedAccounts': FieldValue.arrayUnion([
-        {
-          'id': request.requestingUser,
-          'email': request.requestingUserEmail,
-        },
-      ])
     });
 
     return functions.httpsCallable("triggerLinkedAccount").call({
@@ -81,17 +76,17 @@ class AccountLinkService {
     ]);
   }
 
-  Future onUnlink(Map<String, String> linkedAccount, ExpenseUser user) async {
+  Future onUnlink(LinkedUser linkedAccount, ExpenseUser user) async {
     // Linked account {id, email }
 
     final initiatorUpdate = user.role == 'primary'
         ? {
-            'linkedAccounts': FieldValue.arrayRemove([linkedAccount]),
-            'archivedLinkedAccounts': FieldValue.arrayUnion([linkedAccount])
+            'linkedAccounts': FieldValue.arrayRemove([linkedAccount.toJson()]),
+            'archivedLinkedAccounts': FieldValue.arrayUnion([linkedAccount.toJson()])
           }
         : {
-            'linkedAccounts': FieldValue.arrayRemove([linkedAccount]),
-            'archivedLinkedAccounts': FieldValue.arrayUnion([linkedAccount]),
+            'linkedAccounts': FieldValue.arrayRemove([linkedAccount.toJson()]),
+            'archivedLinkedAccounts': FieldValue.arrayUnion([linkedAccount.toJson()]),
             'role': 'primary',
             'backupLedgerId': null,
             'ledgerId': user.backupLedgerId,
@@ -101,7 +96,7 @@ class AccountLinkService {
 
     // Update to target's account
     return functions.httpsCallable("unlinkRequest").call({
-      'targetId': linkedAccount['id'],
+      'targetId': linkedAccount.id,
       'initiatorId': user.id,
     });
   }

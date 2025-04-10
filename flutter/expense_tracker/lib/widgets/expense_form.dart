@@ -1,11 +1,15 @@
+import 'package:expense_tracker/constants/strings.dart';
 import 'package:expense_tracker/models/expense.dart';
-import 'package:expense_tracker/services/categories.service.dart';
+import 'package:expense_tracker/providers/budget_provider.dart';
+import 'package:expense_tracker/providers/user_provider.dart';
 import 'package:expense_tracker/services/category_form.provider.dart';
 import 'package:expense_tracker/widgets/show_dialog.dart';
+import 'package:expense_tracker/widgets/suggestions_row.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class ExpenseForm extends StatefulWidget {
+class ExpenseForm extends ConsumerStatefulWidget {
   const ExpenseForm({
     super.key,
     required this.onSubmit,
@@ -18,12 +22,12 @@ class ExpenseForm extends StatefulWidget {
   final ExpenseWithCategoryData? initialExpense;
 
   @override
-  State<StatefulWidget> createState() {
+  ConsumerState<ExpenseForm> createState() {
     return _ExpenseFormState();
   }
 }
 
-class _ExpenseFormState extends State<ExpenseForm> {
+class _ExpenseFormState extends ConsumerState<ExpenseForm> {
   String formTitle = 'Add Expense';
   String actionButtonLabel = 'Save';
   final _note = TextEditingController();
@@ -35,7 +39,19 @@ class _ExpenseFormState extends State<ExpenseForm> {
     final now = DateTime.now();
     final firstDate = now.subtract(const Duration(days: 365));
     final date = await showDatePicker(context: context, firstDate: firstDate, lastDate: now);
-    setState(() => _selectedDate = date ?? _selectedDate);
+
+    if (date == null) {
+      return;
+    }
+    // If user selects current date, then make sure the time part of the date is no
+    if (date.year == now.year && date.month == now.month && date.day == now.day) {
+      setState(() => _selectedDate = now);
+      return;
+    }
+
+    final endOfDayDate = DateTime(date.year, date.month, date.day, 23, 59, 59);
+    // Otherwise, set the time part to the ned of the day
+    setState(() => _selectedDate = endOfDayDate);
   }
 
   void _submit() {
@@ -89,7 +105,7 @@ class _ExpenseFormState extends State<ExpenseForm> {
   void initState() {
     if (widget.initialExpense != null) {
       _selectedCategory = widget.initialExpense!.categoryId;
-      _amount.text = widget.initialExpense!.amount.toString();
+      _amount.text = widget.initialExpense!.amount.toStringAsFixed(2);
       _note.text = widget.initialExpense!.note ?? '';
       _selectedDate = widget.initialExpense!.date;
       formTitle = 'Edit Expense';
@@ -101,132 +117,129 @@ class _ExpenseFormState extends State<ExpenseForm> {
   @override
   Widget build(BuildContext context) {
     final keyboardSpace = MediaQuery.of(context).viewInsets.bottom;
-
-    return StreamBuilder(
-        stream: CategoriesService().categoryStream$,
-        builder: (context, snapshot) {
-          final categoryConfig = snapshot.data ?? [];
-          return SingleChildScrollView(
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(16, 16, 16, keyboardSpace + 16),
-              child: Column(
+    final categoryConfig = ref.watch(activeBudgetCategoriesWithSpend).valueOrNull ?? [];
+    final user = ref.read(userProvider).valueOrNull!;
+    return SingleChildScrollView(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(16, 16, 16, keyboardSpace + 16),
+        child: Column(
+          children: [
+            Text(
+              formTitle,
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            // Need to improve, as initial load would be empty and this shouldn't show unless there are actually no categories
+            // if (categoryConfig.isEmpty)
+            //   const Text(
+            //     'No budget categories found. Navigate to the Settings menu in the upper right corner and configure your budget categories.',
+            //   ),
+            Row(children: [
+              Expanded(
+                child: DropdownButton(
+                  hint: const Text('Category'),
+                  isExpanded: true,
+                  value: _selectedCategory,
+                  items: categoryConfig
+                      .map((category) => DropdownMenuItem(
+                          value: category.id,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.only(right: 8.0),
+                                    child: Icon(category.iconData),
+                                  ),
+                                  Text(category.label),
+                                ],
+                              ),
+                              Text(
+                                "${category.delta >= 0 ? 'Remaining' : 'Over'} ${currency.format(category.delta)}",
+                                style: Theme.of(context).textTheme.titleSmall,
+                              ),
+                            ],
+                          )))
+                      .toList(),
+                  onChanged: (value) => setState(() => _selectedCategory = value),
+                ),
+              ),
+              IconButton(
+                onPressed: () => openAddCategoryOverlay(context, user.ledgerId),
+                icon: const Icon(
+                  Icons.playlist_add,
+                ),
+              )
+            ]),
+            Row(
+              children: [
+                Expanded(
+                  flex: 1,
+                  child: TextField(
+                    controller: _amount,
+                    decoration: const InputDecoration(
+                      prefixText: '\$',
+                      label: Text('Amount'),
+                    ),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(signed: true, decimal: true),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  flex: 2,
+                  child: TextButton.icon(
+                    onPressed: _showDatePicker,
+                    icon: const Icon(Icons.calendar_month),
+                    iconAlignment: IconAlignment.start,
+                    label: Text(
+                      'Date Occurred: ${dateFormatter.format(_selectedDate)}',
+                    ),
+                  ),
+                )
+              ],
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    formTitle,
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  if (categoryConfig.isEmpty)
-                    const Text(
-                      'No budget categories found. Navigate to the Settings menu in the upper right corner and configure your budget categories.',
-                    ),
-                  Row(children: [
-                    Expanded(
-                      child: DropdownButton(
-                        hint: const Text('Category'),
-                        isExpanded: true,
-                        value: _selectedCategory,
-                        items: categoryConfig
-                            .where(
-                                (category) => !category.deleted || category.id == _selectedCategory)
-                            .map((category) => DropdownMenuItem(
-                                value: category.id,
-                                child: Row(
-                                  children: [
-                                    Padding(
-                                      padding: const EdgeInsets.only(right: 8.0),
-                                      child: Icon(category.iconData),
-                                    ),
-                                    Text(category.label),
-                                  ],
-                                )))
-                            .toList(),
-                        onChanged: (value) => setState(() => _selectedCategory = value),
+                  Expanded(
+                    child: TextField(
+                      textCapitalization: TextCapitalization.sentences,
+                      controller: _note,
+                      maxLength: 50,
+                      decoration: const InputDecoration(
+                        label: Text('Notes'),
+                        helperText: 'Optional',
                       ),
                     ),
-                    IconButton(
-                      onPressed: () => openAddCategoryOverlay(context),
-                      icon: const Icon(
-                        Icons.playlist_add,
-                      ),
-                    )
-                  ]),
-                  Row(
-                    children: [
-                      Expanded(
-                        flex: 1,
-                        child: TextField(
-                          controller: _amount,
-                          decoration: const InputDecoration(
-                            prefixText: '\$',
-                            label: Text('Amount'),
-                          ),
-                          keyboardType:
-                              const TextInputType.numberWithOptions(signed: true, decimal: true),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        flex: 2,
-                        child: TextButton.icon(
-                          onPressed: _showDatePicker,
-                          icon: const Icon(Icons.calendar_month),
-                          iconAlignment: IconAlignment.start,
-                          label: Text(
-                            'Date Occurred: ${dateFormatter.format(_selectedDate)}',
-                          ),
-                        ),
-                      )
-                    ],
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 16.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            textCapitalization: TextCapitalization.sentences,
-                            controller: _note,
-                            maxLength: 50,
-                            decoration: const InputDecoration(
-                              label: Text('Notes'),
-                              helperText: 'Optional',
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      if (categoryConfig.isNotEmpty)
-                        ElevatedButton(
-                          onPressed: _submit,
-                          child: Text(actionButtonLabel),
-                        ),
-                      if (widget.initialExpense != null)
-                        TextButton(
-                          onPressed: () {
-                            widget.onRemove(widget.initialExpense!);
-                            HapticFeedback.selectionClick();
-                            Navigator.pop(context);
-                          },
-                          child: const Text('Remove'),
-                        ),
-                      TextButton(
-                        onPressed: () {
-                          HapticFeedback.selectionClick();
-                          Navigator.pop(context);
-                        },
-                        child: const Text('Cancel'),
-                      ),
-                    ],
                   ),
                 ],
               ),
             ),
-          );
-        });
+            SuggestionsRow(textField: _note),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (categoryConfig.isNotEmpty)
+                  ElevatedButton(
+                    onPressed: _submit,
+                    child: Text(actionButtonLabel),
+                  ),
+                TextButton(
+                  onPressed: () {
+                    HapticFeedback.selectionClick();
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Cancel'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

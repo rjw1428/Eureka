@@ -13,6 +13,10 @@ Expense _$ExpenseFromJson(Map<String, dynamic> json) => Expense(
       submittedBy: json['submittedBy'] as String?,
       note: json['note'] as String?,
       id: json['id'] as String?,
+      reactions: (json['reactions'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
     );
 
 Map<String, dynamic> _$ExpenseToJson(Expense instance) => <String, dynamic>{
@@ -22,6 +26,7 @@ Map<String, dynamic> _$ExpenseToJson(Expense instance) => <String, dynamic>{
       'submittedBy': instance.submittedBy,
       'amount': instance.amount,
       'date': instance.date.toIso8601String(),
+      'reactions': instance.reactions,
     };
 
 ExpenseWithCategoryData _$ExpenseWithCategoryDataFromJson(
@@ -35,7 +40,9 @@ ExpenseWithCategoryData _$ExpenseWithCategoryDataFromJson(
           CategoryDataWithId.fromJson(json['category'] as Map<String, dynamic>),
     )
       ..id = json['id'] as String?
-      ..note = json['note'] as String?;
+      ..note = json['note'] as String?
+      ..reactions =
+          (json['reactions'] as List<dynamic>).map((e) => e as String).toList();
 
 Map<String, dynamic> _$ExpenseWithCategoryDataToJson(
         ExpenseWithCategoryData instance) =>
@@ -46,5 +53,6 @@ Map<String, dynamic> _$ExpenseWithCategoryDataToJson(
       'submittedBy': instance.submittedBy,
       'amount': instance.amount,
       'date': instance.date.toIso8601String(),
+      'reactions': instance.reactions,
       'category': instance.category,
     };

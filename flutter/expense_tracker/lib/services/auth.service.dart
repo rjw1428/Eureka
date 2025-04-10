@@ -1,13 +1,11 @@
 import 'dart:async';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
-import 'package:expense_tracker/models/expense_user.dart';
 import 'package:expense_tracker/models/response.dart';
+import 'package:expense_tracker/services/local_storage.service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:rxdart/rxdart.dart';
 
 // ignore: non_constant_identifier_names
 final WEB_CLIENT_ID = dotenv.env['WEB_CLIENT_ID'];
@@ -20,48 +18,7 @@ class AuthService {
     return _instance;
   }
 
-  final userId$ = FirebaseAuth.instance
-      .authStateChanges()
-      .map((user) => user?.uid)
-      .distinct((prev, cur) => prev == cur)
-      .shareReplay(maxSize: 1);
-
-  Stream get userLoggedOut$ => userId$
-      .where((user) => user == null)
-      .doOnData((d) => print("USER LOGGED OUT"))
-      .doOnDone(() => print('userLoggedOut stream closed'));
-
-  Stream<bool> get hasUser$ => userId$
-      .map((id) => id != null)
-      .doOnDone(() => print('CLOSED: hasUser stream'))
-      .doOnError((e, s) => print('ohShit: hasUser stream errored ${e.toString()}'));
-
-  Stream get expenseUser$ => userId$
-      .doOnData((id) => print('USER EVENT: hasUser $id'))
-      .switchMap((id) {
-        if (id == null) {
-          print('NULL USER');
-          return const Stream.empty().startWith(null);
-        }
-        return _getExpenseUser(id);
-      })
-      .shareReplay(maxSize: 1)
-      .doOnDone(() => print('CLOSED: expenseUser stream'))
-      .doOnError((e, s) => print('ohShit: expenseUser stream errored ${e.toString()}'));
-
-  Stream _getExpenseUser(String id) {
-    return FirebaseFirestore.instance
-        .collection('expenseUsers')
-        .doc(id)
-        .snapshots()
-        .where((event) => event.data() != null)
-        .map((event) => ExpenseUser.fromJson({
-              'id': event.id,
-              ...event.data()!,
-            }))
-        .doOnDone(() => print('CLOSED: expenseUserFetch stream'))
-        .handleError((err) => print('WARN: expenseUserFetch stream errored ${err.toString()}'));
-  }
+  String? get currentUserId => FirebaseAuth.instance.currentUser!.uid;
 
   Future<Response> createUser(
       String firstName, String lastName, String email, String password) async {
@@ -70,7 +27,7 @@ class AuthService {
         email: email,
         password: password,
       );
-      final id = await userId$.first;
+      final id = currentUserId;
       await initializeAccount(firstName, lastName, email, id!);
     } on FirebaseAuthException catch (e) {
       if (e.code == 'weak-password') {
@@ -186,5 +143,6 @@ class AuthService {
 
   Future<void> logOut() async {
     await FirebaseAuth.instance.signOut();
+    await LocalStorageService().onLogout();
   }
 }
