@@ -1,5 +1,6 @@
 import 'package:expense_tracker/models/category.dart';
 import 'package:expense_tracker/providers/budget_provider.dart';
+import 'package:expense_tracker/providers/expense_stream_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class SelectedTimeNotifier extends StateNotifier<DateTime> {
@@ -15,10 +16,7 @@ final selectedTimeProvider = StateNotifierProvider<SelectedTimeNotifier, DateTim
 );
 
 class SelectedFiltersNotifier extends StateNotifier<List<String>> {
-  SelectedFiltersNotifier(List<CategoryDataWithId> budgetCategories)
-      : super(
-          budgetCategories.map((category) => category.id).toList(),
-        );
+  SelectedFiltersNotifier(super.budgetCategories);
 
   void setSelectedFilters(List<String> selection) {
     state = selection;
@@ -26,14 +24,24 @@ class SelectedFiltersNotifier extends StateNotifier<List<String>> {
 }
 
 final selectedFiltersProvider = StateNotifierProvider<SelectedFiltersNotifier, List<String>>((ref) {
-  final budgetCategories = ref.watch(budgetProvider.select(
-      (configs) => (configs.value ?? []).where((config) => config.deleted == false).toList()));
-  return SelectedFiltersNotifier(budgetCategories);
+  final expenses = ref.watch(expenseProvider).valueOrNull ?? [];
+  final Set<String> usedCategoryIds = Set.from(
+    expenses.map((el) => el.categoryId),
+  );
+  return SelectedFiltersNotifier(usedCategoryIds.toList());
 });
 
-                // final _filterList = selectedCategoryIds.isEmpty
-                // ? distinctCategoryIds.toList()
-                // : distinctCategoryIds
-                //     .toList()
-                //     .where((id) => selectedCategoryIds.contains(id))
-                //     .toList();
+final defaultFilterOptions = Provider<List<CategoryDataWithId>>((ref) {
+  final budgetConfigs = ref.watch(budgetProvider).valueOrNull ?? [];
+  final expenses = ref.watch(expenseProvider).valueOrNull ?? [];
+
+  final Set<String> usedCategoryIds = Set.from(
+    expenses.map((el) => el.categoryId),
+  );
+  final filterList = usedCategoryIds
+      .toList()
+      .map((id) => budgetConfigs.firstWhere((config) => config.id == id))
+      .toList();
+
+  return filterList;
+});

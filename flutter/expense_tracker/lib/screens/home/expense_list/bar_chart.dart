@@ -228,6 +228,8 @@ class ChartBar extends StatelessWidget {
                       textAlign: TextAlign.center,
                       style: TextStyle(
                           color: remaining >= 0 ? Colors.green : Colors.red,
+                          fontSize: 12,
+                          fontStyle: FontStyle.italic,
                           shadows: const [
                             Shadow(
                               offset: Offset(1.0, 1.0),

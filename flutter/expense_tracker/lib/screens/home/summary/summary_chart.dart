@@ -78,7 +78,7 @@ class ReportChart extends ConsumerWidget {
     final int dataMax = data.fold(0, (max, entry) => max > entry.total ? max : entry.total.toInt());
     final int dataMin = data.fold(0, (min, entry) => min < entry.total ? min : entry.total.toInt());
     final int yMax = dataMax > budgetData.budget ? dataMax : budgetData.budget.toInt();
-    final int yInterval = getChartInterval(dataMax - dataMin);
+    final int yInterval = getChartInterval(yMax - dataMin);
 
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 8, vertical: width < 600 ? 16 : 0),

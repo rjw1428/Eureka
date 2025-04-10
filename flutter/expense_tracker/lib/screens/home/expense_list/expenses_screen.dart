@@ -191,7 +191,8 @@ class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
   Widget build(BuildContext context) {
     final ExpenseUser? user = ref.watch(userProvider).valueOrNull;
     List<CategoryDataWithId> categoryConfigs = ref.watch(budgetProvider).value ?? [];
-    final budgetCategories = ref.watch(selectedFiltersProvider);
+    final selectedCategories = ref.watch(selectedFiltersProvider);
+    final defaultCategories = ref.watch(defaultFilterOptions);
 
     return Scaffold(
       resizeToAvoidBottomInset: false,
@@ -205,11 +206,17 @@ class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
           error: (error, stack) => Text('Oh Shit: ${error.toString()}'),
           loading: () => const Loading(),
           data: (expenses) {
-            final defaultBudgetConfig = categoryConfigs.where((c) => !c.deleted);
-            final isAllSelected = budgetCategories.length == defaultBudgetConfig.length;
+            final Set<String> usedCategoryIds = Set.from(
+              expenses.map((el) => el.categoryId),
+            );
+
+            // final defaultBudgetConfig = categoryConfigs.where((c) => !c.deleted);
+            print(usedCategoryIds.length);
+            print(selectedCategories.length);
+            final isAllSelected = selectedCategories.length == usedCategoryIds.length;
 
             final double totalExpenses = expenses
-                .where((expense) => budgetCategories.contains(expense.categoryId))
+                .where((expense) => selectedCategories.contains(expense.categoryId))
                 .fold(0, (sum, exp) => exp.amount + sum);
 
             final double? totalBudget = isAllSelected
@@ -219,7 +226,7 @@ class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
                 : null;
 
             Widget categoryFilter = FilterRow(
-              options: categoryConfigs,
+              options: defaultCategories,
             );
 
             Widget timeFilter = Padding(
@@ -233,7 +240,6 @@ class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
               return Column(
                 children: [
                   timeFilter,
-                  categoryFilter,
                   TotalRow(
                     sum: totalExpenses,
                     totalBudget: totalBudget,
@@ -246,6 +252,7 @@ class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
                       budgetConfigs: categoryConfigs,
                     ),
                   ),
+                  categoryFilter,
                   Expanded(child: listContent(expenses))
                 ],
               );

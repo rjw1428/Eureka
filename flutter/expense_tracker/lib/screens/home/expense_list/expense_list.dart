@@ -123,7 +123,7 @@ class _ExpenseListState extends ConsumerState<ExpenseList> {
     return LazyLoadScrollView(
       onEndOfPage: () => {},
       child: ListView.builder(
-        clipBehavior: Clip.none,
+        clipBehavior: Clip.hardEdge,
         itemCount: filteredList.length,
         itemBuilder: (ctx, i) {
           return kIsWeb
