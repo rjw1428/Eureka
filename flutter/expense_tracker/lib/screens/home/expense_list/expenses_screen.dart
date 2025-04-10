@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:expense_tracker/constants/strings.dart';
 import 'package:expense_tracker/models/category.dart';
 import 'package:expense_tracker/models/expense.dart';
@@ -192,7 +191,7 @@ class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
   Widget build(BuildContext context) {
     final ExpenseUser? user = ref.watch(userProvider).valueOrNull;
     List<CategoryDataWithId> categoryConfigs = ref.watch(budgetProvider).value ?? [];
-    final selectedCategoryIds = ref.watch(selectedFiltersProvider);
+    final budgetCategories = ref.watch(selectedFiltersProvider);
 
     return Scaffold(
       resizeToAvoidBottomInset: false,
@@ -206,16 +205,11 @@ class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
           error: (error, stack) => Text('Oh Shit: ${error.toString()}'),
           loading: () => const Loading(),
           data: (expenses) {
-            final Set<String> distinctCategoryIds = Set.from(
-              expenses.map((el) => el.categoryId),
-            );
-            final _categoryOptions =
-                categoryConfigs.where((config) => distinctCategoryIds.contains(config.id)).toList();
-
-            final isAllSelected = selectedCategoryIds.length == distinctCategoryIds.length;
+            final defaultBudgetConfig = categoryConfigs.where((c) => !c.deleted);
+            final isAllSelected = budgetCategories.length == defaultBudgetConfig.length;
 
             final double totalExpenses = expenses
-                .where((expense) => selectedCategoryIds.contains(expense.categoryId))
+                .where((expense) => budgetCategories.contains(expense.categoryId))
                 .fold(0, (sum, exp) => exp.amount + sum);
 
             final double? totalBudget = isAllSelected
@@ -225,7 +219,7 @@ class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
                 : null;
 
             Widget categoryFilter = FilterRow(
-              options: _categoryOptions,
+              options: categoryConfigs,
             );
 
             Widget timeFilter = Padding(

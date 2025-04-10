@@ -26,7 +26,8 @@ class SelectedFiltersNotifier extends StateNotifier<List<String>> {
 }
 
 final selectedFiltersProvider = StateNotifierProvider<SelectedFiltersNotifier, List<String>>((ref) {
-  final budgetCategories = ref.watch(budgetProvider).value ?? [];
+  final budgetCategories = ref.watch(budgetProvider.select(
+      (configs) => (configs.value ?? []).where((config) => config.deleted == false).toList()));
   return SelectedFiltersNotifier(budgetCategories);
 });
 

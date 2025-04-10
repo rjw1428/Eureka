@@ -3,8 +3,7 @@ import 'dart:ui';
 import 'package:dotted_border/dotted_border.dart';
 import 'package:expense_tracker/constants/strings.dart';
 import 'package:expense_tracker/models/category.dart';
-import 'package:expense_tracker/providers/filter_provider.dart';
-import 'package:expense_tracker/screens/report.dart';
+import 'package:expense_tracker/screens/home/summary/summary.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:expense_tracker/models/expense.dart';
@@ -30,9 +29,9 @@ class _BarChartState extends ConsumerState<BarChart> with SingleTickerProviderSt
   final double _barColumnWidth = 64.0;
   final ScrollController _scrollController = ScrollController();
 
-  List<ExpenseBucket> getBuckets(List<CategoryDataWithId> data, filters) {
+  List<ExpenseBucket> getBuckets(List<CategoryDataWithId> data) {
     return data
-        .where((config) => filters.contains(config.id))
+        .where((config) => config.deleted == false)
         .map((config) => ExpenseBucket.forCategory(widget.expenses, data, config.id))
         .toList();
   }
@@ -62,9 +61,7 @@ class _BarChartState extends ConsumerState<BarChart> with SingleTickerProviderSt
   @override
   Widget build(BuildContext context) {
     final isDarkMode = MediaQuery.of(context).platformBrightness == Brightness.dark;
-    final selectedFilters = ref.watch(selectedFiltersProvider);
-
-    final buckets = getBuckets(widget.budgetConfigs, selectedFilters);
+    final buckets = getBuckets(widget.budgetConfigs);
     final maxTotalExpense = getMaxTotalExpense(buckets);
     final chartWidth = buckets.length * _barColumnWidth;
 

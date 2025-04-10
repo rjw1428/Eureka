@@ -1,14 +1,20 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:collection/collection.dart';
+import 'package:expense_tracker/constants/utils.dart';
 import 'package:expense_tracker/models/category.dart';
 import 'package:expense_tracker/models/expense.dart';
 import 'package:expense_tracker/models/expense_user.dart';
+import 'package:expense_tracker/models/summary_entry.dart';
 import 'package:expense_tracker/providers/backend_provider.dart';
 import 'package:expense_tracker/providers/budget_provider.dart';
 import 'package:expense_tracker/providers/expense_provider.dart';
 import 'package:expense_tracker/providers/filter_provider.dart';
 import 'package:expense_tracker/providers/user_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:rxdart/rxdart.dart';
+
+final format = DateFormat('MMM', 'en_US');
 
 class ExpenseNotifier extends StateNotifier<List<ExpenseWithCategoryData>> {
   ExpenseNotifier({required this.user, required this.firestore}) : super(const []);
@@ -183,4 +189,69 @@ final expenseProvider = StreamProvider<List<ExpenseWithCategoryData>>((ref) {
             return ExpenseWithCategoryData.fromJson(
                 {...expense.toJson(), 'category': category.toJson()});
           }).toList());
+});
+
+typedef SummaryQueryParams = ({String categoryId, DateTime start, DateTime? end});
+
+final expenseSummaryProvider =
+    StreamProvider.autoDispose.family<List<SummaryEntry>, SummaryQueryParams>((ref, query) {
+  final user = ref.watch(userProvider).valueOrNull;
+  final firestore = ref.read(backendProvider);
+  final DateTime queryEnd = query.end ?? DateTime.now();
+
+  if (user == null) {
+    return Stream.value([]);
+  }
+
+  return firestore
+      .collection('ledger')
+      .doc(user.ledgerId)
+      .collection('summaries')
+      .where('startDate', isGreaterThanOrEqualTo: query.start)
+      .where('startDate', isLessThanOrEqualTo: queryEnd)
+      .where('categoryId', isEqualTo: query.categoryId)
+      .snapshots()
+      .doOnError((e, s) => print(e))
+      .map((snapshot) => snapshot.docs.fold(
+            {},
+            (agg, doc) {
+              final data = doc.data();
+              final startDate = data['startDate'].toDate() as DateTime;
+              final lastUpdate = data['lastUpdate'].toDate() as DateTime;
+              final summaryPoint = SummaryEntry.fromJson({
+                'id': doc.id,
+                ...data,
+                'startDate': startDate.toIso8601String(),
+                'lastUpdate': lastUpdate.toIso8601String(),
+              });
+              // as Map<DateTime, SummaryEntry>
+              return {...agg, DateTime(startDate.year, startDate.month): summaryPoint};
+            },
+          ))
+      .map((points) {
+    // We need to fill any of the in between time with 0's
+    final DateTime? dataStartData = points.keys.reduce(
+      (minDate, date) => minDate.isBefore(date) ? minDate : date,
+    );
+
+    if (dataStartData == null) {
+      return [];
+    }
+
+    final slotSize = monthsBetween(dataStartData, queryEnd) + 1;
+    final now = DateTime.now();
+    final pointsWithZeroFills = List<SummaryEntry>.generate(slotSize, (i) {
+      final expectedTime = DateTime(dataStartData.year, dataStartData.month + i);
+      final SummaryEntry? dataPoint = points[expectedTime];
+      return dataPoint ??
+          SummaryEntry(
+              id: 'zeroPoint',
+              count: 0,
+              total: 0,
+              lastUpdate: now,
+              startDate: expectedTime,
+              categoryId: query.categoryId);
+    });
+    return pointsWithZeroFills.sorted((a, b) => b.startDate.compareTo(a.startDate));
+  });
 });

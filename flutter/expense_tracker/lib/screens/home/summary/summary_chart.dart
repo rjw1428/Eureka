@@ -19,7 +19,7 @@ class ReportChart extends ConsumerWidget {
 
     final filteredData = chartData.asMap().entries.map((entry) => entry.value).toList();
 
-    final coffeeData = filteredData
+    final selectedCategoryData = filteredData
         .asMap()
         .entries
         .map((entry) => FlSpot((offset + entry.key).toDouble(), entry.value.total))
@@ -32,8 +32,10 @@ class ReportChart extends ConsumerWidget {
         barWidth: 2,
         isStrokeCapRound: true,
         dotData: const FlDotData(show: true),
+        preventCurveOverShooting: true,
+        curveSmoothness: .50,
         // belowBarData: BarAreaData(show: true),
-        spots: coffeeData,
+        spots: selectedCategoryData,
       )
     ];
   }

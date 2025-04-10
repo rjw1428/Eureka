@@ -18,10 +18,6 @@ class TotalRow extends StatefulWidget {
 
 class _TotalRowState extends State<TotalRow> {
   bool showValues = LocalStorageService().showTotal;
-  @override
-  void initState() {
-    super.initState();
-  }
 
   @override
   Widget build(BuildContext context) {

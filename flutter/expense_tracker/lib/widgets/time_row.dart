@@ -1,20 +1,9 @@
+import 'package:expense_tracker/constants/utils.dart';
 import 'package:expense_tracker/models/time_filter_option.dart';
 import 'package:expense_tracker/providers/filter_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-
-int monthsBetween(DateTime startDate, DateTime endDate) {
-  int years = endDate.year - startDate.year;
-  int months = endDate.month - startDate.month;
-
-  if (years > 0 && months < 0) {
-    years--;
-    months += 12;
-  }
-
-  return years * 12 + months;
-}
 
 class TimeRow extends ConsumerStatefulWidget {
   const TimeRow({
