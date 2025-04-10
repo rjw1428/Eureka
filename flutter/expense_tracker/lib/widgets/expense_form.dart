@@ -1,8 +1,10 @@
+import 'package:expense_tracker/constants/strings.dart';
 import 'package:expense_tracker/models/expense.dart';
 import 'package:expense_tracker/providers/budget_provider.dart';
 import 'package:expense_tracker/providers/user_provider.dart';
 import 'package:expense_tracker/services/category_form.provider.dart';
 import 'package:expense_tracker/widgets/show_dialog.dart';
+import 'package:expense_tracker/widgets/suggestions_row.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -115,9 +117,8 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
   @override
   Widget build(BuildContext context) {
     final keyboardSpace = MediaQuery.of(context).viewInsets.bottom;
-    final categoryConfig = ref.watch(budgetProvider).valueOrNull;
+    final categoryConfig = ref.watch(activeBudgetCategoriesWithSpend).valueOrNull ?? [];
     final user = ref.read(userProvider).valueOrNull!;
-
     return SingleChildScrollView(
       child: Padding(
         padding: EdgeInsets.fromLTRB(16, 16, 16, keyboardSpace + 16),
@@ -127,27 +128,36 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
               formTitle,
               style: Theme.of(context).textTheme.titleLarge,
             ),
-            if (categoryConfig == null || categoryConfig.isEmpty)
-              const Text(
-                'No budget categories found. Navigate to the Settings menu in the upper right corner and configure your budget categories.',
-              ),
+            // Need to improve, as initial load would be empty and this shouldn't show unless there are actually no categories
+            // if (categoryConfig.isEmpty)
+            //   const Text(
+            //     'No budget categories found. Navigate to the Settings menu in the upper right corner and configure your budget categories.',
+            //   ),
             Row(children: [
               Expanded(
                 child: DropdownButton(
                   hint: const Text('Category'),
                   isExpanded: true,
                   value: _selectedCategory,
-                  items: categoryConfig!
-                      .where((category) => !category.deleted || category.id == _selectedCategory)
+                  items: categoryConfig
                       .map((category) => DropdownMenuItem(
                           value: category.id,
                           child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Padding(
-                                padding: const EdgeInsets.only(right: 8.0),
-                                child: Icon(category.iconData),
+                              Row(
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.only(right: 8.0),
+                                    child: Icon(category.iconData),
+                                  ),
+                                  Text(category.label),
+                                ],
                               ),
-                              Text(category.label),
+                              Text(
+                                "${category.delta >= 0 ? 'Remaining' : 'Over'} ${currency.format(category.delta)}",
+                                style: Theme.of(context).textTheme.titleSmall,
+                              ),
                             ],
                           )))
                       .toList(),
@@ -208,6 +218,10 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
                 ],
               ),
             ),
+            SuggestionsRow(
+              textField: _note,
+            ),
+            const SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [

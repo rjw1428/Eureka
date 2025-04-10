@@ -255,3 +255,33 @@ final expenseSummaryProvider =
     return pointsWithZeroFills.sorted((a, b) => b.startDate.compareTo(a.startDate));
   });
 });
+
+final currentSummaryProvider = StreamProvider<List<SummaryEntry>>((ref) {
+  final user = ref.watch(userProvider).valueOrNull;
+  final firestore = ref.read(backendProvider);
+  final now = DateTime.now();
+  final DateTime start = DateTime(now.year, now.month).subtract(const Duration(seconds: 1));
+
+  if (user == null) {
+    return Stream.value([]);
+  }
+
+  return firestore
+      .collection('ledger')
+      .doc(user.ledgerId)
+      .collection('summaries')
+      .where('startDate', isGreaterThanOrEqualTo: start)
+      .snapshots()
+      .doOnError((e, s) => print(e))
+      .map((snapshot) => snapshot.docs.map((doc) {
+            final data = doc.data();
+            final startDate = data['startDate'].toDate() as DateTime;
+            final lastUpdate = data['lastUpdate'].toDate() as DateTime;
+            return SummaryEntry.fromJson({
+              'id': doc.id,
+              ...data,
+              'startDate': startDate.toIso8601String(),
+              'lastUpdate': lastUpdate.toIso8601String(),
+            });
+          }).toList());
+});

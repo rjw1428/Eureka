@@ -21,7 +21,15 @@ class SummaryItem extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(formatter.format(reportData.startDate)),
+            Row(
+              children: [
+                Text(formatter.format(reportData.startDate)),
+                const SizedBox(
+                  width: 16,
+                ),
+                Text('Total transactions: ${reportData.count}')
+              ],
+            ),
             Row(
               children: [
                 Text(

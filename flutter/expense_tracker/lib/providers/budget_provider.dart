@@ -1,6 +1,8 @@
 import 'dart:collection';
 import 'package:expense_tracker/models/category.dart';
+import 'package:expense_tracker/models/summary_entry.dart';
 import 'package:expense_tracker/providers/backend_provider.dart';
+import 'package:expense_tracker/providers/expense_stream_provider.dart';
 import 'package:expense_tracker/providers/user_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rxdart/rxdart.dart';
@@ -39,4 +41,36 @@ final activeBudgetCategoryProvider = Provider<AsyncValue<List<CategoryDataWithId
           ),
       error: (err, stack) => AsyncError(err, stack),
       loading: () => const AsyncLoading());
+});
+
+final activeBudgetCategoriesWithSpend =
+    Provider<AsyncValue<List<CategoryDataWithIdAndDelta>>>((ref) {
+  final activeCategories = ref.watch(activeBudgetCategoryProvider);
+  final summaries = ref.watch(currentSummaryProvider);
+  return activeCategories.when(
+    error: (err, stack) => AsyncError(err, stack),
+    loading: () => const AsyncLoading(),
+    data: (categories) => AsyncData(summaries.when(
+        error: (err, stack) => [],
+        loading: () => [],
+        data: (summaries) {
+          print(summaries.length);
+          return categories.map((category) {
+            SummaryEntry? matchingSummary;
+            try {
+              matchingSummary =
+                  summaries.firstWhere((summary) => summary.categoryId == category.id);
+            } catch (e) {
+              print('no match for ${category.id}');
+            }
+            return CategoryDataWithIdAndDelta(
+              delta: category.budget - (matchingSummary?.total ?? 0),
+              id: category.id,
+              label: category.label,
+              icon: category.icon,
+              budget: category.budget,
+            );
+          }).toList();
+        })),
+  );
 });

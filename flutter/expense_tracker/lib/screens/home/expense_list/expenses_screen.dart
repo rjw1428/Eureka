@@ -210,9 +210,6 @@ class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
               expenses.map((el) => el.categoryId),
             );
 
-            // final defaultBudgetConfig = categoryConfigs.where((c) => !c.deleted);
-            print(usedCategoryIds.length);
-            print(selectedCategories.length);
             final isAllSelected = selectedCategories.length == usedCategoryIds.length;
 
             final double totalExpenses = expenses
