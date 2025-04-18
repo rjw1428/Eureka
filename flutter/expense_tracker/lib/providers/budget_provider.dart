@@ -1,4 +1,5 @@
 import 'dart:collection';
+import 'package:collection/collection.dart';
 import 'package:expense_tracker/models/category.dart';
 import 'package:expense_tracker/models/summary_entry.dart';
 import 'package:expense_tracker/providers/backend_provider.dart';
@@ -54,15 +55,11 @@ final activeBudgetCategoriesWithSpend =
         error: (err, stack) => [],
         loading: () => [],
         data: (summaries) {
-          print(summaries.length);
           return categories.map((category) {
             SummaryEntry? matchingSummary;
-            try {
-              matchingSummary =
-                  summaries.firstWhere((summary) => summary.categoryId == category.id);
-            } catch (e) {
-              print('no match for ${category.id}');
-            }
+            // May be null if the category hasn't been spent in yet (there won't be a summary for an unspent category)
+            matchingSummary =
+                summaries.firstWhereOrNull((summary) => summary.categoryId == category.id);
             return CategoryDataWithIdAndDelta(
               delta: category.budget - (matchingSummary?.total ?? 0),
               id: category.id,

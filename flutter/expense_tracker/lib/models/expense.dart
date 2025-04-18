@@ -80,21 +80,12 @@ class ExpenseWithCategoryData extends Expense {
 
 class ExpenseBucket {
   ExpenseBucket({
-    required this.category,
     required this.expenses,
-    required this.budgetLimit,
+    required this.category,
   });
 
-  ExpenseBucket.forCategory(
-    List<Expense> allExpenses,
-    List<CategoryDataWithId> categoryList,
-    this.category,
-  )   : expenses = allExpenses.where((expense) => expense.categoryId == category).toList(),
-        budgetLimit = categoryList.firstWhere((cat) => cat.id == category).budget;
-
-  final String category;
+  final CategoryDataWithId category;
   final List<Expense> expenses;
-  final double budgetLimit;
 
   double get totalExpenses {
     return expenses.fold(0, (sum, val) => sum + val.amount);

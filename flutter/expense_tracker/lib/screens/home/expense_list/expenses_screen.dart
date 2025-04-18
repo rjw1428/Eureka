@@ -1,10 +1,8 @@
 import 'dart:async';
 import 'package:expense_tracker/constants/strings.dart';
-import 'package:expense_tracker/models/category.dart';
 import 'package:expense_tracker/models/expense.dart';
 import 'package:expense_tracker/models/expense_user.dart';
 import 'package:expense_tracker/models/notification.dart';
-import 'package:expense_tracker/providers/budget_provider.dart';
 import 'package:expense_tracker/providers/expense_stream_provider.dart';
 import 'package:expense_tracker/providers/filter_provider.dart';
 import 'package:expense_tracker/providers/user_provider.dart';
@@ -14,7 +12,6 @@ import 'package:expense_tracker/widgets/app_bar_action_menu.dart';
 import 'package:expense_tracker/screens/home/expense_list/bar_chart.dart';
 import 'package:expense_tracker/widgets/expense_form.dart';
 import 'package:expense_tracker/widgets/filter_row.dart';
-import 'package:expense_tracker/widgets/loading.dart';
 import 'package:expense_tracker/widgets/show_dialog.dart';
 import 'package:expense_tracker/widgets/time_row.dart';
 import 'package:expense_tracker/widgets/total_row.dart';
@@ -173,9 +170,8 @@ class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
     }
   }
 
-  Widget listContent(List<ExpenseWithCategoryData> expenses) {
+  Widget listContent() {
     return ExpenseList(
-      list: expenses,
       onRemove: _removeExpense,
       onEdit: _openAddExpenseOverlay,
     );
@@ -190,9 +186,63 @@ class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
   @override
   Widget build(BuildContext context) {
     final ExpenseUser? user = ref.watch(userProvider).valueOrNull;
-    List<CategoryDataWithId> categoryConfigs = ref.watch(budgetProvider).value ?? [];
-    final selectedCategories = ref.watch(selectedFiltersProvider);
     final defaultCategories = ref.watch(defaultFilterOptions);
+
+    Widget categoryFilter = FilterRow(
+      options: defaultCategories,
+    );
+
+    Widget timeFilter = Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
+      child: TimeRow(
+        initialTime: user!.initialized,
+      ),
+    );
+
+    Widget columnOrientationLayout() {
+      return Column(
+        children: [
+          timeFilter,
+          categoryFilter,
+          const TotalRow(),
+          SizedBox(
+            height: 200,
+            child: BarChart(
+              screenWidth: MediaQuery.of(context).size.width,
+            ),
+          ),
+          Expanded(child: listContent())
+        ],
+      );
+    }
+
+    Widget rowOrientationLayout() {
+      return Row(
+        children: [
+          Expanded(
+            child: Column(
+              children: [
+                const TotalRow(),
+                Expanded(
+                  child: BarChart(
+                    screenWidth: MediaQuery.of(context).size.width / 2,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: Column(
+              children: [
+                timeFilter,
+                categoryFilter,
+                Expanded(child: listContent()),
+              ],
+            ),
+          )
+        ],
+      );
+    }
 
     return Scaffold(
       resizeToAvoidBottomInset: false,
@@ -202,100 +252,11 @@ class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
           AppBarActionMenu(),
         ],
       ),
-      body: ref.watch(expenseProvider).when(
-          error: (error, stack) => Text('Oh Shit: ${error.toString()}'),
-          loading: () => const Loading(),
-          data: (expenses) {
-            final Set<String> usedCategoryIds = Set.from(
-              expenses.map((el) => el.categoryId),
-            );
-
-            final isAllSelected = selectedCategories.length == usedCategoryIds.length;
-
-            final double totalExpenses = expenses
-                .where((expense) => selectedCategories.contains(expense.categoryId))
-                .fold(0, (sum, exp) => exp.amount + sum);
-
-            final double? totalBudget = isAllSelected
-                ? categoryConfigs
-                    .where((config) => !config.deleted)
-                    .fold(0, (sum, config) => sum! + config.budget)
-                : null;
-
-            Widget categoryFilter = FilterRow(
-              options: defaultCategories,
-            );
-
-            Widget timeFilter = Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
-              child: TimeRow(
-                initialTime: user!.initialized,
-              ),
-            );
-
-            Widget columnOrientationLayout(List<ExpenseWithCategoryData> expenses) {
-              return Column(
-                children: [
-                  timeFilter,
-                  categoryFilter,
-                  TotalRow(
-                    sum: totalExpenses,
-                    totalBudget: totalBudget,
-                  ),
-                  SizedBox(
-                    height: 200,
-                    child: BarChart(
-                      screenWidth: MediaQuery.of(context).size.width,
-                      expenses: expenses,
-                      budgetConfigs: categoryConfigs,
-                    ),
-                  ),
-                  Expanded(child: listContent(expenses))
-                ],
-              );
-            }
-
-            Widget rowOrientationLayout(List<ExpenseWithCategoryData> expenses) {
-              return Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      children: [
-                        TotalRow(
-                          sum: totalExpenses,
-                          totalBudget: totalBudget,
-                        ),
-                        Expanded(
-                          child: BarChart(
-                            screenWidth: MediaQuery.of(context).size.width / 2,
-                            expenses: expenses,
-                            budgetConfigs: categoryConfigs,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    child: Column(
-                      children: [
-                        timeFilter,
-                        categoryFilter,
-                        Expanded(child: listContent(expenses)),
-                      ],
-                    ),
-                  )
-                ],
-              );
-            }
-
-            return LayoutBuilder(
-              builder: (ctx, constraints) {
-                return constraints.maxWidth < 600
-                    ? columnOrientationLayout(expenses)
-                    : rowOrientationLayout(expenses);
-              },
-            );
-          }),
+      body: LayoutBuilder(
+        builder: (ctx, constraints) {
+          return constraints.maxWidth < 600 ? columnOrientationLayout() : rowOrientationLayout();
+        },
+      ),
       floatingActionButton: IconButton.filled(
         color: Theme.of(context).cardTheme.color,
         onPressed: _openAddExpenseOverlay,

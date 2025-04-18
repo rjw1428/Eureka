@@ -23,8 +23,11 @@ class _FilterState extends ConsumerState<FilterRow> {
 
   @override
   Widget build(BuildContext context) {
-    final selectedFilters = ref.watch(selectedFiltersProvider);
+    final selectedFilters =
+        ref.watch(selectedFiltersProvider) ?? widget.options.map((opt) => opt.id);
+    print("selectedFitler: ${selectedFilters.length}");
     final controller = MultiSelectController<String>();
+
     final defaultOptions = widget.options
         .map(
           (el) => DropdownItem(
@@ -79,6 +82,7 @@ class _FilterState extends ConsumerState<FilterRow> {
             ref.read(selectedFiltersProvider.notifier).setSelectedFilters(selection);
             controller.closeDropdown();
           },
+          closeOnBackButton: true,
         ),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -95,9 +99,7 @@ class _FilterState extends ConsumerState<FilterRow> {
       child: ExpansionPanelList(
         elevation: 0,
         expansionCallback: (int index, bool isExpanded) {
-          setState(() {
-            _showFilter = isExpanded;
-          });
+          setState(() => _showFilter = isExpanded);
         },
         children: [
           ExpansionPanel(

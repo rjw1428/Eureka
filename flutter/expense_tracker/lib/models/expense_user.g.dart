@@ -15,6 +15,10 @@ ExpenseUser _$ExpenseUserFromJson(Map<String, dynamic> json) => ExpenseUser(
       role: json['role'] as String,
       initialized: DateTime.parse(json['initialized'] as String),
       userSettings: Map<String, String>.from(json['userSettings'] as Map),
+      noteSuggestions: (json['noteSuggestions'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
       linkedAccounts: (json['linkedAccounts'] as List<dynamic>?)
               ?.map((e) => LinkedUser.fromJson(e as Map<String, dynamic>))
               .toList() ??
@@ -41,6 +45,7 @@ Map<String, dynamic> _$ExpenseUserToJson(ExpenseUser instance) =>
       'linkedAccounts': instance.linkedAccounts,
       'archivedLinkedAccounts': instance.archivedLinkedAccounts,
       'userSettings': instance.userSettings,
+      'noteSuggestions': instance.noteSuggestions,
       'notification': instance.notification,
       'backupLedgerId': instance.backupLedgerId,
       'initialized': instance.initialized.toIso8601String(),

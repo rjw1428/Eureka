@@ -15,33 +15,50 @@ final selectedTimeProvider = StateNotifierProvider<SelectedTimeNotifier, DateTim
   (ref) => SelectedTimeNotifier(),
 );
 
-class SelectedFiltersNotifier extends StateNotifier<List<String>> {
-  SelectedFiltersNotifier(super.budgetCategories);
+class SelectedFiltersNotifier extends StateNotifier<List<String>?> {
+  SelectedFiltersNotifier() : super(null);
+  // Initialize with null
+  // if null, show all expenses
+  // otherwise value will be an array in which we show the corresponding selection
 
-  void setSelectedFilters(List<String> selection) {
+  void setSelectedFilters(List<String>? selection) {
     state = selection;
   }
 }
 
-final selectedFiltersProvider = StateNotifierProvider<SelectedFiltersNotifier, List<String>>((ref) {
-  final expenses = ref.watch(expenseProvider).valueOrNull ?? [];
-  final Set<String> usedCategoryIds = Set.from(
-    expenses.map((el) => el.categoryId),
-  );
-  return SelectedFiltersNotifier(usedCategoryIds.toList());
-});
+final selectedFiltersProvider = StateNotifierProvider<SelectedFiltersNotifier, List<String>?>(
+    (ref) => SelectedFiltersNotifier());
 
 final defaultFilterOptions = Provider<List<CategoryDataWithId>>((ref) {
   final budgetConfigs = ref.watch(budgetProvider).valueOrNull ?? [];
-  final expenses = ref.watch(expenseProvider).valueOrNull ?? [];
+  final usedCategoryIds = ref.watch(expenseProvider.select(
+      (expenses) => (expenses.valueOrNull ?? []).map((expense) => expense.categoryId).toSet()));
 
-  final Set<String> usedCategoryIds = Set.from(
-    expenses.map((el) => el.categoryId),
-  );
   final filterList = usedCategoryIds
       .toList()
       .map((id) => budgetConfigs.firstWhere((config) => config.id == id))
       .toList();
 
   return filterList;
+});
+
+final usedCategoryIdsProvider = Provider<List<String>>((ref) {
+  return ref.watch(expenseProvider).maybeWhen(
+        data: (expenses) {
+          if (expenses.isEmpty) {
+            return <String>[];
+          }
+          return expenses.map((expense) => expense.categoryId).toSet().toList();
+        },
+        orElse: () => <String>[],
+      );
+});
+
+final areAllCategoriesSelectedProvider = Provider<bool>((ref) {
+  final usedCategories = ref.watch(usedCategoryIdsProvider);
+  final selectedFilters = ref.watch(selectedFiltersProvider);
+
+  return selectedFilters == null ||
+      usedCategories.isEmpty ||
+      selectedFilters.length == usedCategories.length;
 });

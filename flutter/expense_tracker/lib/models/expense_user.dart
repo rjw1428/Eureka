@@ -14,6 +14,7 @@ class ExpenseUser {
   final List<LinkedUser> linkedAccounts;
   final List<LinkedUser> archivedLinkedAccounts;
   final Map<String, String> userSettings;
+  final List<String> noteSuggestions;
   final AccountNotification? notification;
   final String? backupLedgerId;
   final DateTime initialized;
@@ -27,6 +28,7 @@ class ExpenseUser {
     required this.role,
     required this.initialized,
     required this.userSettings,
+    this.noteSuggestions = const [],
     this.linkedAccounts = const [],
     this.archivedLinkedAccounts = const [],
     this.notification,
