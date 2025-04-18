@@ -25,9 +25,6 @@ class _TotalRowState extends ConsumerState<TotalRow> {
     final expenses = ref.watch(filteredExpensesProvider).valueOrNull ?? [];
     final List<String> usedCategoryIds = ref.watch(usedCategoryIdsProvider);
     final selectedCategories = ref.watch(selectedFiltersProvider) ?? usedCategoryIds.toList();
-
-    print(usedCategoryIds.length);
-    print(selectedCategories.length);
     final isAllSelected = ref.watch(areAllCategoriesSelectedProvider);
 
     final double totalExpenses = expenses

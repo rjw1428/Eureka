@@ -1,4 +1,5 @@
 import 'package:expense_tracker/models/category.dart';
+import 'package:expense_tracker/providers/expand_filter_row_provider.dart';
 import 'package:expense_tracker/providers/filter_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -19,12 +20,12 @@ class FilterRow extends ConsumerStatefulWidget {
 }
 
 class _FilterState extends ConsumerState<FilterRow> {
-  bool _showFilter = false;
-
   @override
   Widget build(BuildContext context) {
     final selectedFilters =
         ref.watch(selectedFiltersProvider) ?? widget.options.map((opt) => opt.id);
+    final bool showFilter = ref.watch(filterRowStateProvider);
+
     print("selectedFitler: ${selectedFilters.length}");
     final controller = MultiSelectController<String>();
 
@@ -98,9 +99,8 @@ class _FilterState extends ConsumerState<FilterRow> {
       padding: const EdgeInsets.symmetric(horizontal: 8.0),
       child: ExpansionPanelList(
         elevation: 0,
-        expansionCallback: (int index, bool isExpanded) {
-          setState(() => _showFilter = isExpanded);
-        },
+        expansionCallback: (int index, bool expanded) =>
+            ref.read(filterRowStateProvider.notifier).toggleRow(),
         children: [
           ExpansionPanel(
             headerBuilder: (ctx, isOpen) => isOpen
@@ -114,7 +114,7 @@ class _FilterState extends ConsumerState<FilterRow> {
                   ),
             body: const SizedBox(),
             canTapOnHeader: false,
-            isExpanded: _showFilter,
+            isExpanded: showFilter,
           )
         ],
       ),

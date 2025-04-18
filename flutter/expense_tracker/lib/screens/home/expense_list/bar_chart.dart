@@ -3,7 +3,7 @@ import 'dart:ui';
 import 'package:dotted_border/dotted_border.dart';
 import 'package:expense_tracker/constants/strings.dart';
 import 'package:expense_tracker/providers/bar_chart_provider.dart';
-import 'package:expense_tracker/screens/home/summary/summary.dart';
+import 'package:expense_tracker/screens/summary/summary.dart';
 import 'package:expense_tracker/widgets/loading.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
