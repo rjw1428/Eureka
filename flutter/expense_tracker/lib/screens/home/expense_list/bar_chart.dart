@@ -179,6 +179,8 @@ class ChartBar extends StatelessWidget {
   final double limit;
   final double limitedAmount;
 
+  final double overspendIndicatorPadding = 2;
+
   @override
   Widget build(BuildContext context) {
     final isDarkMode = MediaQuery.of(context).platformBrightness == Brightness.dark;
@@ -190,47 +192,27 @@ class ChartBar extends StatelessWidget {
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4),
           child: Stack(
-            alignment: Alignment.bottomCenter,
+            clipBehavior: Clip.none,
             children: [
-              Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  FractionallySizedBox(
-                    heightFactor: size.toDouble(),
-                    widthFactor: .9,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.rectangle,
-                        borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
-                        color: isDarkMode
-                            ? Theme.of(context).colorScheme.secondary
-                            : Theme.of(context).colorScheme.primary.withOpacity(0.65),
-                      ),
+              Positioned(
+                bottom: 0,
+                left: 0,
+                width: constraints.maxWidth,
+                height: constraints.maxHeight,
+                child: FractionallySizedBox(
+                  alignment: Alignment.bottomCenter,
+                  heightFactor: size.toDouble(),
+                  widthFactor: .9,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.rectangle,
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+                      color: isDarkMode
+                          ? Theme.of(context).colorScheme.secondary
+                          : Theme.of(context).colorScheme.primary.withOpacity(0.65),
                     ),
                   ),
-                  Positioned(
-                    top: -20,
-                    left: -0.1 * constraints.maxWidth,
-                    width: constraints.maxWidth,
-                    child: Text(
-                      currency.format(remaining.abs()).length > 7
-                          ? thousandsCurrency.format(remaining.abs())
-                          : currency.format(remaining.abs()),
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                          color: remaining >= 0 ? Colors.green : Colors.red,
-                          fontSize: 12,
-                          fontStyle: FontStyle.italic,
-                          shadows: const [
-                            Shadow(
-                              offset: Offset(1.0, 1.0),
-                              blurRadius: 1.0,
-                              color: Colors.black,
-                            ),
-                          ]),
-                    ),
-                  ),
-                ],
+                ),
               ),
               if (threshold != null)
                 DottedBorder(
@@ -240,15 +222,38 @@ class ChartBar extends StatelessWidget {
                   strokeWidth: 2,
                   customPath: (size) {
                     return Path()
-                      ..moveTo(0, 1)
-                      ..lineTo(size.width, 1)
+                      ..moveTo(overspendIndicatorPadding, 1)
+                      ..lineTo(constraints.maxWidth - overspendIndicatorPadding, 1)
                       ..close();
                   },
                   child: FractionallySizedBox(
+                    alignment: Alignment.topRight,
                     heightFactor: threshold,
-                    widthFactor: 100,
+                    widthFactor: 1,
                   ),
                 ),
+              Positioned(
+                bottom: size.toDouble() * constraints.maxHeight,
+                left: 0,
+                width: constraints.maxWidth,
+                child: Text(
+                  currency.format(remaining.abs()).length > 6
+                      ? thousandsCurrency.format(remaining.abs())
+                      : currency.format(remaining.abs()),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      color: remaining >= 0 ? Colors.green : Colors.red,
+                      fontSize: 12,
+                      fontStyle: FontStyle.italic,
+                      shadows: const [
+                        Shadow(
+                          offset: Offset(1.0, 1.0),
+                          blurRadius: 1.0,
+                          color: Colors.black,
+                        ),
+                      ]),
+                ),
+              ),
             ],
           ),
         );
