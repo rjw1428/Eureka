@@ -1,12 +1,15 @@
 import 'package:expense_tracker/models/expense_user.dart';
 import 'package:expense_tracker/models/linked_user.dart';
 import 'package:expense_tracker/models/pending_request.dart';
+import 'package:expense_tracker/providers/note_suggestion_provider.dart';
 import 'package:expense_tracker/providers/settings_provider.dart';
 import 'package:expense_tracker/providers/user_provider.dart';
 import 'package:expense_tracker/services/account_link.service.dart';
+import 'package:expense_tracker/widgets/add_suggestion.dart';
 import 'package:expense_tracker/widgets/show_dialog.dart';
 import 'package:expense_tracker/widgets/user_icon.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -65,6 +68,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
+  void _showNoteEntryForm() {
+    HapticFeedback.selectionClick();
+    showModalBottomSheet(
+      useSafeArea: true,
+      isScrollControlled: true,
+      context: context,
+      builder: (ctx) {
+        return SuggestionFom(
+            onSubmit: (s) => ref.read(noteSuggestionProvider.notifier).addSuggestion(s));
+      },
+    );
+  }
+
   @override
   void dispose() {
     _firstNameField.dispose();
@@ -84,6 +100,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final keyboardSpace = MediaQuery.of(context).viewInsets.bottom;
     final userSettings = ref.watch(settingsProvider);
     final user = ref.watch(userProvider).valueOrNull;
+    final noteShortcuts = ref.watch(noteSuggestionProvider);
 
     if (user == null) {
       return const Text("Oh Shit");
@@ -304,6 +321,39 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       onPressed: () => _showColorSelector(context, user),
                       label: const Text('Select color'),
                       icon: const Icon(Icons.color_lens_outlined),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Note Suggestions',
+                  style: Theme.of(context).textTheme.titleMedium,
+                  textAlign: TextAlign.start,
+                ),
+                Text(
+                  'These words or phrases will be visible to you when you go to enter an expense. They can be helpful for expenses that occur often that you want to write a note for, but don\'t want to spend the time typing every time.',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                  textAlign: TextAlign.start,
+                ),
+                Wrap(
+                  spacing: 4.0,
+                  runSpacing: 8.0,
+                  children: noteShortcuts
+                      .map((shortcut) => Chip(
+                            label: Text(shortcut),
+                            deleteIcon: const Icon(Icons.clear),
+                            onDeleted: () => ref
+                                .read(noteSuggestionProvider.notifier)
+                                .removeSuggestion(shortcut),
+                          ))
+                      .toList(),
+                ),
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: OutlinedButton(
+                      onPressed: () => _showNoteEntryForm(),
+                      child: const Text('Add Note'),
                     ),
                   ),
                 ),

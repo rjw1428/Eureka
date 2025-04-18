@@ -6,9 +6,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class SuggestionsRow extends ConsumerStatefulWidget {
-  const SuggestionsRow({super.key, required this.textField});
+  const SuggestionsRow({super.key, required this.onClick});
 
-  final TextEditingController textField;
+  final void Function(String?) onClick;
 
   @override
   ConsumerState<SuggestionsRow> createState() => _SuggestionRowState();
@@ -51,22 +51,35 @@ class _SuggestionRowState extends ConsumerState<SuggestionsRow> {
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: suggestions
-                    .map(
-                      (suggestion) => Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8.0),
-                        child: OutlinedButton(
-                          onPressed: () =>
-                              widget.textField.text = '${widget.textField.text} $suggestion',
-                          child: Text(suggestion),
-                        ),
-                      ),
-                    )
+                    .map((suggestion) => Suggestion(
+                          text: suggestion,
+                          action: () => widget.onClick(suggestion),
+                        ))
                     .toList(),
               ),
             ),
           ),
         ),
       ],
+    );
+  }
+}
+//
+
+class Suggestion extends StatelessWidget {
+  const Suggestion({super.key, required this.text, required this.action});
+
+  final String text;
+  final void Function() action;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8.0),
+      child: OutlinedButton(
+        onPressed: action,
+        child: Text(text),
+      ),
     );
   }
 }
