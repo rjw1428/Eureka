@@ -51,7 +51,12 @@ class _LoginScreenState extends State<LoginScreen> {
                       _showCreateAccountForm = false;
                       _showLoginForm = false;
                     });
-                    await AuthService().googleLogin();
+                    try {
+                      await AuthService().googleLogin();
+                    } catch (e) {
+                      // Handle error
+                      print("Error during Google login: $e");
+                    }
                   },
                   label: const Text("Login with Google", textAlign: TextAlign.center),
                 ),

@@ -3,12 +3,18 @@ const logger = require("firebase-functions/logger");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const { onDocumentCreated } = require("firebase-functions/firestore");
+const functions = require('firebase-functions/v1');
 
 initializeApp();
 
 // Create a ledger for new users and add to account
-exports.initializeExpenseTrackerAccount = onCall(async (request) => {
+exports.initializeExpenseTrackerAccount = functions.auth.user().onCreate(async (user) => {
     const now = new Date().toISOString();
+    const userId = user.uid;
+    const email = user.email;
+    const displayNameParts = user.displayName?.split(" ") || [];
+    const firstName = displayNameParts.length == 0 ? 'New' : displayNameParts[0];
+    const lastName = displayNameParts.length == 0 ? 'User' : displayNameParts[1];
     try {
         const ledgerSnapshot = await getFirestore().collection("ledger").add({
             budgetConfig: {},
@@ -17,12 +23,12 @@ exports.initializeExpenseTrackerAccount = onCall(async (request) => {
 
         await getFirestore()
             .collection("expenseUsers")
-            .doc(request.data["userId"])
+            .doc(userId)
             .set({
                 role: "primary",
-                email: request.data["email"],
-                firstName: request.data["firstName"],
-                lastName: request.data["lastName"],
+                email,
+                firstName,
+                lastName,
                 ledgerId: ledgerSnapshot.id,
                 initialized: now,
                 linkedAccounts: [],

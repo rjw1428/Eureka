@@ -27,8 +27,6 @@ class AuthService {
         email: email,
         password: password,
       );
-      final id = currentUserId;
-      await initializeAccount(firstName, lastName, email, id!);
     } on FirebaseAuthException catch (e) {
       if (e.code == 'weak-password') {
         return const Response(
@@ -103,25 +101,6 @@ class AuthService {
         message: 'Unknown error occurred, please try again.',
       );
     }
-  }
-
-  Future<bool> initializeAccount(
-      String firstName, String lastName, String email, String userId) async {
-    // Completer here is just used to trigger an error message
-    Completer<bool> completer = Completer();
-    try {
-      // This could be moved to a local call - no need for a cloud function
-      await functions.httpsCallable("initializeExpenseTrackerAccount").call({
-        'firstName': firstName,
-        'lastName': lastName,
-        'userId': userId,
-        'email': email,
-      });
-      completer.complete(true);
-    } catch (e) {
-      completer.complete(false);
-    }
-    return completer.future;
   }
 
   Future<Response> forgotPassword(String email) async {

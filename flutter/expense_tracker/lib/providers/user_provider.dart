@@ -16,7 +16,7 @@ final userIdProvider = StreamProvider<String?>((ref) {
 final userProvider = StreamProvider<ExpenseUser?>((ref) {
   final firestore = ref.read(backendProvider);
   final uid = ref.watch(userIdProvider).valueOrNull;
-  print("UID: ${uid}");
+  print("UID: $uid");
   if (uid == null) {
     // ref.invalidateSelf();
     return Stream.value(null);
