@@ -53,6 +53,7 @@ class ExpenseWithCategoryData extends Expense {
 
   factory ExpenseWithCategoryData.fromJson(Map<String, dynamic> json) =>
       _$ExpenseWithCategoryDataFromJson(json);
+  @override
   Map<String, dynamic> toJson() => _$ExpenseWithCategoryDataToJson(this);
 
   String get title {
