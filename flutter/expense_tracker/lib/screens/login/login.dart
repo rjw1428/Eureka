@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:expense_tracker/constants/strings.dart';
 import 'package:expense_tracker/screens/login/login.create_account.dart';
 import 'package:expense_tracker/screens/login/login.email.dart';
@@ -60,15 +62,17 @@ class _LoginScreenState extends State<LoginScreen> {
                   },
                   label: const Text("Login with Google", textAlign: TextAlign.center),
                 ),
-                // const SizedBox(height: 16),
-                // ElevatedButton.icon(
-                //   icon: const Icon(
-                //     FontAwesomeIcons.apple,
-                //     size: 20,
-                //   ),
-                //   onPressed: () async => await AuthService().appleLogin(),
-                //   label: const Text("Login with Apple", textAlign: TextAlign.center),
-                // ),
+                if (Platform.isIOS)
+                const SizedBox(height: 16),
+                if (Platform.isIOS)
+                ElevatedButton.icon(
+                  icon: const Icon(
+                    FontAwesomeIcons.apple,
+                    size: 20,
+                  ),
+                  onPressed: () async => await AuthService().appleLogin(),
+                  label: const Text("Login with Apple", textAlign: TextAlign.center),
+                ),
                 const SizedBox(height: 16),
                 if (!_showLoginForm)
                   ElevatedButton.icon(

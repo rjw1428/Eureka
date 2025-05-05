@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 // ignore: non_constant_identifier_names
 final WEB_CLIENT_ID = dotenv.env['WEB_CLIENT_ID'];
@@ -42,7 +43,8 @@ class AuthService {
     } catch (e) {
       return const Response(
         success: false,
-        message: 'Something went wrong, unable to create an account, please try again.',
+        message:
+            'Something went wrong, unable to create an account, please try again.',
       );
     }
     return const Response(success: true);
@@ -52,11 +54,13 @@ class AuthService {
     try {
       if (kIsWeb) {
         GoogleAuthProvider googleProvider = GoogleAuthProvider();
-        googleProvider.addScope('https://www.googleapis.com/auth/contacts.readonly');
+        googleProvider
+            .addScope('https://www.googleapis.com/auth/contacts.readonly');
         await FirebaseAuth.instance.signInWithPopup(googleProvider);
       } else {
         final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
-        final GoogleSignInAuthentication? googleAuth = await googleUser?.authentication;
+        final GoogleSignInAuthentication? googleAuth =
+            await googleUser?.authentication;
 
         if (googleAuth != null) {
           final credential = GoogleAuthProvider.credential(
@@ -73,21 +77,30 @@ class AuthService {
 
   Future<void> appleLogin() async {
     try {
-      final appleProvider = AppleAuthProvider();
-      appleProvider.addScope('email');
-      if (kIsWeb) {
-        await FirebaseAuth.instance.signInWithPopup(appleProvider);
-      } else {
-        await FirebaseAuth.instance.signInWithProvider(appleProvider);
-      }
+      final appleCredential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+      );
+
+      // Create a Firebase credential from the Apple credential
+      final firebaseCredential = OAuthProvider('apple.com').credential(
+        idToken: appleCredential.identityToken,
+        accessToken: appleCredential.authorizationCode,
+      );
+
+      // Sign in with Firebase
+      await FirebaseAuth.instance.signInWithCredential(firebaseCredential);
     } catch (e) {
-      print('Apple Login Error');
+      print('Error signing in with Apple: $e');
     }
   }
 
   Future<Response> emailLogin(String email, String password) async {
     try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(email: email, password: password);
+      await FirebaseAuth.instance
+          .signInWithEmailAndPassword(email: email, password: password);
       return const Response(success: true);
     } on FirebaseAuthException catch (e) {
       print('Login error: ${e.code}: ${e.message}');
