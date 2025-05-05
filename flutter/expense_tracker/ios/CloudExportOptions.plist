@@ -23,7 +23,7 @@
     <key>provisioningProfiles</key>
     <dict>
         <key>com.rwss.spendwatch</key>
-        <string>AppStoreDistribution</string>
+        <string>SpendWatchDistribution</string>
     </dict>
 </dict>
 </plist>

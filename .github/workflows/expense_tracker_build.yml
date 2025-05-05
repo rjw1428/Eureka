@@ -13,16 +13,68 @@ on:
     #     # if: contains(github.event.pull_request.title, '[ExpenseTracker]')
 
 env:
-    FLUTTER_VERSION: "3.24.3" # Adjust to your Flutter version
+    FLUTTER_VERSION: "3.29.3" # Adjust to your Flutter version
 
 jobs:
     build_ios:
         name: Build iOS App
-        runs-on: macos-latest
+        runs-on: macos-15
         # if: github.event.pull_request.merged == true
 
         steps:
             - uses: actions/checkout@v4
+
+            - name: Install Apple Certificate
+              env:
+                BUILD_CERTIFICATE_BASE64: ${{ secrets.IOS_P12_CERTIFICATE }}
+                P12_PASSWORD: ${{ secrets.IOS_P12_PASSWORD }}
+                KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD || 'temporary_password' }}
+              run: |
+                # Create variables
+                CERTIFICATE_PATH=$RUNNER_TEMP/certificate.p12
+                KEYCHAIN_PATH=$RUNNER_TEMP/build.keychain
+
+                # Import certificate from secrets
+                echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
+
+                # Create temporary keychain
+                security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+                security set-keychain-settings -lut 3600 $KEYCHAIN_PATH
+                security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+                # Import certificate to keychain
+                security import $CERTIFICATE_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+                security list-keychain -d user -s $KEYCHAIN_PATH
+
+
+                # # Import certificate to keychain
+                # security import certificate.p12 -k build.keychain -P "$P12_PASSWORD" -T /usr/bin/codesign
+                # security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" build.keychain
+
+                # Clean up certificate file
+                rm -f $CERTIFICATE_PATH
+
+            - name: Install Provisioning Profile
+              env:
+                PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE }}
+              run: |
+
+                # Create variables
+                PROFILE_PATH=$RUNNER_TEMP/profile.mobileprovision
+
+                # Import profile from secrets
+                echo -n "$PROVISIONING_PROFILE_BASE64" | base64 --decode -o $PROFILE_PATH
+
+                # Create directory if it doesn't exist
+                mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+
+                # Copy provisioning profile to directory
+                cp $PROFILE_PATH ~/Library/MobileDevice/Provisioning\ Profiles/
+                
+                # Clean up file
+                rm -f $PROFILE_PATH
+                
+                echo "Installed provisioning profile"
 
             - name: Setup Flutter
               uses: subosito/flutter-action@v2
@@ -31,37 +83,9 @@ jobs:
                   channel: "stable"
                   cache: true
 
-            - name: Flutter Pub Get
+            - name: Install Flutter dependencies
               working-directory: ./flutter/expense_tracker
               run: flutter pub get
-
-            - name: Install Apple Certificate
-              env:
-                BUILD_CERTIFICATE_BASE64: ${{ secrets.IOS_P12_CERTIFICATE }}
-                P12_PASSWORD: ${{ secrets.IOS_P12_PASSWORD }}
-                KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
-              run: |
-                # Create temporary keychain
-                security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
-                security default-keychain -s build.keychain
-                security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
-                security set-keychain-settings -t 3600 -l ~/Library/Keychains/build.keychain
-
-                # Import certificate to keychain
-                echo $BUILD_CERTIFICATE_BASE64 | base64 --decode > certificate.p12
-                security import certificate.p12 -k build.keychain -P "$P12_PASSWORD" -T /usr/bin/codesign
-                security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" build.keychain
-
-            - name: Install Provisioning Profile
-              env:
-                PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE }}
-              run: |
-                # Create directory for provisioning profiles if it doesn't exist
-                mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-                
-                # Decode and copy provisioning profile
-                echo $PROVISIONING_PROFILE_BASE64 | base64 --decode > pp.mobileprovision
-                cp pp.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
 
             - name: Build iOS
               working-directory: ./flutter/expense_tracker
@@ -84,10 +108,8 @@ jobs:
                 api-private-key: ${{ secrets.APPSTORE_API_PRIVATE_KEY }}
 
             - name: Clean up keychain and provisioning profile
-              if: ${{ always() }}
               run: |
                 security delete-keychain build.keychain
-                rm -r ~/Library/MobileDevice/Provisioning\ Profiles/
 
     build_android:
         name: Build Android App
