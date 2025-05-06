@@ -12,7 +12,8 @@ exports.initializeExpenseTrackerAccount = functions.auth.user().onCreate(async (
     const now = new Date().toISOString();
     const userId = user.uid;
     const email = user.email;
-    const displayNameParts = user.displayName?.split(" ") || [];
+    console.log(JSON.stringify(user));
+    const displayNameParts = user.displayName ? user.displayName.split(" ") : [];
     const firstName = displayNameParts.length == 0 ? 'New' : displayNameParts[0];
     const lastName = displayNameParts.length == 0 ? 'User' : displayNameParts[1];
     try {

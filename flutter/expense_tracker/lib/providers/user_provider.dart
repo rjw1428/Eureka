@@ -13,12 +13,27 @@ final userIdProvider = StreamProvider<String?>((ref) {
       .shareReplay(maxSize: 1);
 });
 
+final collectionExists = FutureProvider<bool>((ref) async {
+  final firestore = ref.read(backendProvider);
+  final uid = ref.watch(userIdProvider).valueOrNull;
+  if (uid == null) {
+    return false;
+  }
+  final doc = await firestore.collection('expenseUsers').doc(uid).get();
+  return doc.exists;
+});
+
 final userProvider = StreamProvider<ExpenseUser?>((ref) {
   final firestore = ref.read(backendProvider);
   final uid = ref.watch(userIdProvider).valueOrNull;
   print("UID: $uid");
   if (uid == null) {
-    // ref.invalidateSelf();
+    return Stream.value(null);
+  }
+
+  final x = ref.watch(collectionExists).valueOrNull;
+  if (x == null || x == false) {
+    print('Collection does not exist');
     return Stream.value(null);
   }
 
@@ -26,12 +41,13 @@ final userProvider = StreamProvider<ExpenseUser?>((ref) {
       .collection('expenseUsers')
       .doc(uid)
       .snapshots()
-      .map(
+      .map<ExpenseUser?>(
         (event) => ExpenseUser.fromJson({
           'id': event.id,
           ...event.data()!,
         }),
       )
-      .doOnDone(() => print('CLOSED: expenseUserFetch stream'))
-      .handleError((err) => print('WARN: expenseUserFetch stream errored ${err.toString()}'));
+      .handleError((err) => print('WARN: expenseUserFetch stream errored ${err.toString()}'))
+      .onErrorReturn(null)
+      .doOnDone(() => print('CLOSED: expenseUserFetch stream'));
 });

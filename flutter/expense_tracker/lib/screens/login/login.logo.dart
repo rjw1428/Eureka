@@ -34,7 +34,10 @@ class _LoginLogoState extends State<LoginLogo> with SingleTickerProviderStateMix
     _controller.forward();
     Future.delayed(
       const Duration(milliseconds: 500),
-      () => setState(() => visible = true),
+      () {
+        if (!mounted) return;
+        return setState(() => visible = true);
+      },
     );
     super.initState();
   }
