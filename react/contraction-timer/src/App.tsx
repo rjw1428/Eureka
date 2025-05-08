@@ -183,7 +183,7 @@ function App() {
 
   
   return (
-    <div style={{display: 'flex', flexDirection: 'column', justifyContent: 'space-around', height: '90vh', overflow: 'hidden'}}>
+    <div style={{display: 'flex', flexDirection: 'column', justifyContent: 'space-around', height: '80vh', overflow: 'hidden'}}>
       <p>Total Monitoring Time</p>
       <h1>{overallTime}</h1>
 
