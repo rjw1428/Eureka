@@ -14,28 +14,33 @@ exports.initializeExpenseTrackerAccount = functions.auth.user().onCreate(async (
     const email = user.email;
     console.log(JSON.stringify(user));
     const displayNameParts = user.displayName ? user.displayName.split(" ") : [];
-    const firstName = displayNameParts.length == 0 ? 'New' : displayNameParts[0];
-    const lastName = displayNameParts.length == 0 ? 'User' : displayNameParts[1];
     try {
         const ledgerSnapshot = await getFirestore().collection("ledger").add({
             budgetConfig: {},
             initialized: now,
         });
 
+        let data = {
+            role: "primary",
+            email,
+            ledgerId: ledgerSnapshot.id,
+            initialized: now,
+            linkedAccounts: [],
+            archivedLinkedAccounts: [],
+            userSettings: {},
+        };
+        
+        if (displayNameParts.length > 0) {
+            const firstName = displayNameParts[0];
+            const lastName =  displayNameParts[1];
+            data["firstName"] = firstName || "New";
+            data["lastName"] = lastName || "User";
+        }
+
         await getFirestore()
             .collection("expenseUsers")
             .doc(userId)
-            .set({
-                role: "primary",
-                email,
-                firstName,
-                lastName,
-                ledgerId: ledgerSnapshot.id,
-                initialized: now,
-                linkedAccounts: [],
-                archivedLinkedAccounts: [],
-                userSettings: {},
-            });
+            .set(data, { merge: true });
     } catch (e) {
         logger.error(e);
         return false;

@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:expense_tracker/models/expense_user.dart';
@@ -159,47 +157,41 @@ class AccountLinkService {
       print('User deleted');
       AuthService().logOut();
       return 'success';
-    } catch (error) {
-      if (error is FirebaseAuthException) {
-        print('Error deleting user: ${error.code}');
-        if (error.code != 'requires-recent-login') {
-          return error.message ?? 'An error occurred while deleting your account. Please try again later.';
-        }
-        final provider = firebaseUser.providerData.first;
-
-        if (provider.providerId == 'google.com') {
-          try {
-            await AuthService().googleLogin();
-            await firebaseUser.delete();
-            return 'success';
-          } catch (e) {
-            print('Error re-authenticating with Google: $e');
-            return 'You need to re-authenticate with Google before deleting your account.';
-          }
-        }
-
-        else if (provider.providerId == 'apple.com') {
-          try {
-            await AuthService().appleLogin();
-            await firebaseUser.delete();
-            return 'success';
-          } catch (e) {
-            print('Error re-authenticating with Apple: $e');
-            return 'You need to re-authenticate with Apple before deleting your account.';
-          }
-        }
-
-        else if (provider.providerId == 'password') {
-          print('Re-authentication with email and password is required.');
-          return 'You need to re-authenticate with email and password before deleting your account. Try logging out and back in and then try deleting your account again.';
-        }
-
-        return 'Something went wrong, please try again later.';
-      } else {
-        // Handle other types of errors
-        print('Error deleting user: $error');
-        return 'An unexpected error occurred. Please try again later.';
+    } on FirebaseAuthException catch (error) {
+      print('Error deleting user: ${error.code}');
+      if (error.code != 'requires-recent-login') {
+        return error.message ?? 'An error occurred while deleting your account. Please try again later.';
       }
+      final provider = firebaseUser.providerData.first;
+
+      if (provider.providerId == 'google.com') {
+        try {
+          await AuthService().googleLogin();
+          await firebaseUser.delete();
+          return 'success';
+        } catch (e) {
+          print('Error re-authenticating with Google: $e');
+          return 'You need to re-authenticate with Google before deleting your account.';
+        }
+      }
+
+      else if (provider.providerId == 'apple.com') {
+        try {
+          await AuthService().appleLogin();
+          await firebaseUser.delete();
+          return 'success';
+        } catch (e) {
+          print('Error re-authenticating with Apple: $e');
+          return 'You need to re-authenticate with Apple before deleting your account.';
+        }
+      }
+
+      else if (provider.providerId == 'password') {
+        print('Re-authentication with email and password is required.');
+        return 'You need to re-authenticate with email and password before deleting your account. Try logging out and back in and then try deleting your account again.';
+      }
+
+      return 'Something went wrong, please try again later.';
     }
   }
 }

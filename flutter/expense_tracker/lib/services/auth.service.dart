@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:expense_tracker/models/response.dart';
 import 'package:expense_tracker/services/local_storage.service.dart';
@@ -24,10 +25,17 @@ class AuthService {
   Future<Response> createUser(
       String firstName, String lastName, String email, String password) async {
     try {
-      await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      final userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
+
+      await FirebaseFirestore.instance.collection('expenseUsers').doc(userCredential.user!.uid).set({
+        'firstName': firstName,
+        'lastName': lastName,
+      });
+
+      return const Response(success: true);
     } on FirebaseAuthException catch (e) {
       if (e.code == 'weak-password') {
         return const Response(
@@ -47,7 +55,7 @@ class AuthService {
             'Something went wrong, unable to create an account, please try again.',
       );
     }
-    return const Response(success: true);
+    return const Response(success: false, message: 'Unknown error occurred.');
   }
 
   Future<void> googleLogin() async {
