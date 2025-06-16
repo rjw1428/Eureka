@@ -298,3 +298,29 @@ exports.updateLinkedAccounts = onCall(async (request) => {
 
     return true;
 });
+
+exports.promoteAccount = onCall(async (request) => {
+    try {
+        const id = request.data["id"];
+        const removeId = request.data["removeId"];
+        const targetRef = getFirestore()
+            .collection("expenseUsers")
+            .doc(id);
+
+        const targetSnapshot = await targetRef.get();
+        const updatedLinkedAccounts = (targetSnapshot.data().linkedAccounts || []).filter(
+            (account) => account.id !== removeId
+        );
+
+        await targetRef.update({
+            role: "primary",
+            backupLedgerId: null,
+            linkedAccounts: updatedLinkedAccounts,
+        });
+    } catch (e) {
+        logger.error(e);
+        return false;
+    }
+    return true;
+
+})

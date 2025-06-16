@@ -31,11 +31,11 @@ final userProvider = StreamProvider<ExpenseUser?>((ref) {
     return Stream.value(null);
   }
 
-  final x = ref.watch(collectionExists).valueOrNull;
-  if (x == null || x == false) {
-    print('Collection does not exist');
-    return Stream.value(null);
-  }
+  // final x = ref.watch(collectionExists).valueOrNull;
+  // if (x == null || x == false) {
+  //   print('Collection does not exist');
+  //   return Stream.value(null);
+  // }
 
   return firestore
       .collection('expenseUsers')

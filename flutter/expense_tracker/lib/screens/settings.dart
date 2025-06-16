@@ -68,6 +68,36 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
+  void onDeleteAccount(ExpenseUser user) {
+    showDialogNotification(
+      'Are you sure you want delete your accounut?',
+      Text(
+        user.linkedAccounts.isNotEmpty
+            ? 'Deleting your account will also unlink all of your linked accounts. Any expenses that were added to by you will remain for the linked user. This action cannot be undone.'
+            : 'Deleting your accounut will remove all of your data from the app. This action cannot be undone.',
+      ),
+      context,
+      TextButton(
+        onPressed: () async {
+          final result = await AccountLinkService().onDeleteAccount(user);
+          if (mounted) {
+            if (result != 'success') {
+              Navigator.pop(context);
+              showDialogNotification(
+                'Error Deleting Account',
+                Text(result),
+                context,
+              );
+              return;
+            }
+            Navigator.pushNamedAndRemoveUntil(context, '/', (Route<dynamic> route) => false);
+          }
+        },
+        child: const Text('I am sure'),
+      ),
+    );
+  }
+
   void _showNoteEntryForm() {
     HapticFeedback.selectionClick();
     showModalBottomSheet(
@@ -331,7 +361,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   textAlign: TextAlign.start,
                 ),
                 Text(
-                  'These words or phrases will be visible to you when you go to enter an expense. They can be helpful for expenses that occur often that you want to write a note for, but don\'t want to spend the time typing every time.',
+                  'These words or phrases will be visible to you when you enter an expense. They can be helpful for expenses which occur often and you would like to include a note for, but don\'t want to re-type every time.',
                   style: Theme.of(context).textTheme.bodyMedium,
                   textAlign: TextAlign.start,
                 ),
@@ -355,6 +385,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       onPressed: () => _showNoteEntryForm(),
                       child: const Text('Add Note'),
                     ),
+                  ),
+                ),
+                Divider(height: 48, thickness: 2, indent: 5, endIndent: 5, color: Theme.of(context).colorScheme.secondary),
+                Center(
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red.shade900,
+                      foregroundColor: Colors.white,
+                    ),
+                    icon: const Icon(Icons.delete_outline,
+                      size: 20,
+                    ),
+                    onPressed: () => onDeleteAccount(user),
+                    label: const Text("Delete Account", textAlign: TextAlign.center),
                   ),
                 ),
               ],

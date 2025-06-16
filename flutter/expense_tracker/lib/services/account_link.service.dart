@@ -1,9 +1,13 @@
+import 'dart:math';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:expense_tracker/models/expense_user.dart';
 import 'package:expense_tracker/models/linked_user.dart';
 import 'package:expense_tracker/models/pending_request.dart';
 import 'package:expense_tracker/models/response.dart';
+import 'package:expense_tracker/services/auth.service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:rxdart/transformers.dart';
 
 class AccountLinkService {
@@ -105,5 +109,97 @@ class AccountLinkService {
     return _db.collection('pendingShareRequests').doc(requestId).get().then(
           (request) => PendingRequest.fromJson({...request.data()!, 'id': requestId}),
         );
+  }
+
+  Future<String> onDeleteAccount(ExpenseUser user) async {
+    final isPrepared = await _prepareAccountForDeletion(user);
+    if (!isPrepared) {
+      return 'Something went wrong, unable to handle linked accounts. Try again later.';
+    }
+
+    return await _deleteFirebaseAccount();
+  }
+
+  Future<bool> _prepareAccountForDeletion(ExpenseUser user) async {
+    try {
+      // Delete all pending requests
+      final pendingRequests = await _db
+          .collection('pendingShareRequests')
+          .where('requestingUser', isEqualTo: user.id)
+          .get();
+
+      for (final request in pendingRequests.docs) {
+        await _db.collection('pendingShareRequests').doc(request.id).delete();
+      }
+
+      // Delete all linked accounts
+      for (final linkedAccount in user.linkedAccounts) {
+        if (user.role == 'primary') {
+          // Upgrade secondary accounts to primary
+          functions.httpsCallable("promoteAccount").call({
+            'id': linkedAccount.id,
+            'removeId': user.id,
+          });
+        }
+        else {
+          await onUnlink(linkedAccount, user);
+        }
+      }
+    } catch (e) {
+      print('Error preparing account for deletion: $e');
+      return false;
+    }
+    return true;
+  }
+
+  Future<String> _deleteFirebaseAccount() async {
+    final firebaseUser = FirebaseAuth.instance.currentUser!;
+    try {
+      await firebaseUser.delete();
+      print('User deleted');
+      AuthService().logOut();
+      return 'success';
+    } catch (error) {
+      if (error is FirebaseAuthException) {
+        print('Error deleting user: ${error.code}');
+        if (error.code != 'requires-recent-login') {
+          return error.message ?? 'An error occurred while deleting your account. Please try again later.';
+        }
+        final provider = firebaseUser.providerData.first;
+
+        if (provider.providerId == 'google.com') {
+          try {
+            await AuthService().googleLogin();
+            await firebaseUser.delete();
+            return 'success';
+          } catch (e) {
+            print('Error re-authenticating with Google: $e');
+            return 'You need to re-authenticate with Google before deleting your account.';
+          }
+        }
+
+        else if (provider.providerId == 'apple.com') {
+          try {
+            await AuthService().appleLogin();
+            await firebaseUser.delete();
+            return 'success';
+          } catch (e) {
+            print('Error re-authenticating with Apple: $e');
+            return 'You need to re-authenticate with Apple before deleting your account.';
+          }
+        }
+
+        else if (provider.providerId == 'password') {
+          print('Re-authentication with email and password is required.');
+          return 'You need to re-authenticate with email and password before deleting your account. Try logging out and back in and then try deleting your account again.';
+        }
+
+        return 'Something went wrong, please try again later.';
+      } else {
+        // Handle other types of errors
+        print('Error deleting user: $error');
+        return 'An unexpected error occurred. Please try again later.';
+      }
+    }
   }
 }
