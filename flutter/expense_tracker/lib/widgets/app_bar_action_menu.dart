@@ -25,12 +25,16 @@ class AppBarActionMenu extends ConsumerWidget {
               HapticFeedback.selectionClick();
               if (value == "SETTINGS") {
                 Navigator.push(
-                    context, MaterialPageRoute(builder: (ctx) => const SettingsScreen()));
+                    context,
+                    MaterialPageRoute(
+                        builder: (ctx) => const SettingsScreen()));
                 return;
               }
               if (value == "BUDGET") {
                 Navigator.push(
-                    context, MaterialPageRoute(builder: (ctx) => const BudgetConfigScreen()));
+                    context,
+                    MaterialPageRoute(
+                        builder: (ctx) => const BudgetConfigScreen()));
                 return;
               }
               if (value == "HELP") {
@@ -51,8 +55,11 @@ class AppBarActionMenu extends ConsumerWidget {
                           const SizedBox(height: 15),
                           ...helpText.expand((section) {
                             return [
-                              Text(section.title, style: Theme.of(context).textTheme.titleMedium),
-                              Text(section.info, style: Theme.of(context).textTheme.bodySmall),
+                              Text(section.title,
+                                  style:
+                                      Theme.of(context).textTheme.titleMedium),
+                              Text(section.info,
+                                  style: Theme.of(context).textTheme.bodySmall),
                               const SizedBox(height: 15),
                             ];
                           }),
@@ -75,6 +82,7 @@ class AppBarActionMenu extends ConsumerWidget {
               }
               if (value == "LOGOUT") {
                 AuthService().logOut();
+                ref.read(userCreationStateProvider.notifier).loggedOut();
                 return;
               }
             },
@@ -108,7 +116,9 @@ class AppBarActionMenu extends ConsumerWidget {
                       Icons.monetization_on,
                       color: Theme.of(context).textTheme.headlineLarge?.color,
                     ),
-                    const Padding(padding: EdgeInsets.only(left: 8), child: Text('Budget'))
+                    const Padding(
+                        padding: EdgeInsets.only(left: 8),
+                        child: Text('Budget'))
                   ],
                 ),
               ),
@@ -120,7 +130,9 @@ class AppBarActionMenu extends ConsumerWidget {
                       Icons.settings,
                       color: Theme.of(context).textTheme.headlineLarge?.color,
                     ),
-                    const Padding(padding: EdgeInsets.only(left: 8), child: Text('Settings'))
+                    const Padding(
+                        padding: EdgeInsets.only(left: 8),
+                        child: Text('Settings'))
                   ],
                 ),
               ),
@@ -132,7 +144,8 @@ class AppBarActionMenu extends ConsumerWidget {
                       Icons.help,
                       color: Theme.of(context).textTheme.headlineLarge?.color,
                     ),
-                    const Padding(padding: EdgeInsets.only(left: 8), child: Text('Help'))
+                    const Padding(
+                        padding: EdgeInsets.only(left: 8), child: Text('Help'))
                   ],
                 ),
               ),
@@ -144,7 +157,9 @@ class AppBarActionMenu extends ConsumerWidget {
                       Icons.logout,
                       color: Theme.of(context).textTheme.headlineLarge?.color,
                     ),
-                    const Padding(padding: EdgeInsets.only(left: 8), child: Text('Log Out'))
+                    const Padding(
+                        padding: EdgeInsets.only(left: 8),
+                        child: Text('Log Out'))
                   ],
                 ),
               ),

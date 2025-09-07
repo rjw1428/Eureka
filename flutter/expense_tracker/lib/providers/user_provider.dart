@@ -31,12 +31,6 @@ final userProvider = StreamProvider<ExpenseUser?>((ref) {
     return Stream.value(null);
   }
 
-  // final x = ref.watch(collectionExists).valueOrNull;
-  // if (x == null || x == false) {
-  //   print('Collection does not exist');
-  //   return Stream.value(null);
-  // }
-
   return firestore
       .collection('expenseUsers')
       .doc(uid)
@@ -47,7 +41,44 @@ final userProvider = StreamProvider<ExpenseUser?>((ref) {
           ...event.data()!,
         }),
       )
-      .handleError((err) => print('WARN: expenseUserFetch stream errored ${err.toString()}'))
+      .handleError((err) =>
+          print('WARN: expenseUserFetch stream errored ${err.toString()}'))
       .onErrorReturn(null)
       .doOnDone(() => print('CLOSED: expenseUserFetch stream'));
+});
+
+class UserCreationState extends StateNotifier<bool?> {
+  UserCreationState(this.ref) : super(null) {
+    _initialize();
+  }
+
+  final Ref ref;
+
+  Future<void> _initialize() async {
+    final uid = ref.read(userIdProvider).valueOrNull;
+    if (uid == null) {
+      state = null;
+      return;
+    }
+    final firestore = ref.read(backendProvider);
+    final doc = await firestore.collection('expenseUsers').doc(uid).get();
+    state = doc.exists;
+  }
+
+  void loggedIn() {
+    _initialize();
+  }
+
+  void loggedOut() {
+    state = null;
+  }
+
+  void setCreated() {
+    state = true;
+  }
+}
+
+final userCreationStateProvider =
+    StateNotifierProvider<UserCreationState, bool?>((ref) {
+  return UserCreationState(ref);
 });

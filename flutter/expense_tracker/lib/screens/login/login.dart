@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:expense_tracker/constants/strings.dart';
+import 'package:expense_tracker/providers/user_provider.dart';
 import 'package:expense_tracker/screens/login/login.create_account.dart';
 import 'package:expense_tracker/screens/login/login.email.dart';
 import 'package:expense_tracker/screens/login/login.header.dart';
@@ -8,16 +9,17 @@ import 'package:expense_tracker/screens/login/login.logo.dart';
 import 'package:expense_tracker/services/auth.service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _showLoginForm = false;
   bool _showCreateAccountForm = false;
 
@@ -56,6 +58,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     });
                     try {
                       await AuthService().googleLogin();
+                      ref.read(userCreationStateProvider.notifier).loggedIn();
                     } catch (e) {
                       // Handle error
                       print("Error during Google login: $e");
@@ -71,7 +74,19 @@ class _LoginScreenState extends State<LoginScreen> {
                       FontAwesomeIcons.apple,
                       size: 20,
                     ),
-                    onPressed: () async => await AuthService().appleLogin(),
+                    onPressed: () async {
+                      setState(() {
+                        _showCreateAccountForm = false;
+                        _showLoginForm = false;
+                      });
+                      try {
+                        await AuthService().appleLogin();
+                        ref.read(userCreationStateProvider.notifier).loggedIn();
+                      } catch (e) {
+                        // Handle error
+                        print("Error during Apple login: $e");
+                      }
+                    },
                     label: const Text("Login with Apple",
                         textAlign: TextAlign.center),
                   ),

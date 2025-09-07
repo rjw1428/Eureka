@@ -1,16 +1,18 @@
+import 'package:expense_tracker/providers/user_provider.dart';
 import 'package:expense_tracker/screens/login/login.forgot_password.dart';
 import 'package:expense_tracker/services/auth.service.dart';
 import 'package:expense_tracker/widgets/show_dialog.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
-class LoginWithEmailForm extends StatefulWidget {
+class LoginWithEmailForm extends ConsumerStatefulWidget {
   const LoginWithEmailForm({super.key});
   @override
-  State<LoginWithEmailForm> createState() => _LoginWithEmailState();
+  ConsumerState<LoginWithEmailForm> createState() => _LoginWithEmailState();
 }
 
-class _LoginWithEmailState extends State<LoginWithEmailForm> {
+class _LoginWithEmailState extends ConsumerState<LoginWithEmailForm> {
   final _emailControl = TextEditingController();
   final _passwordControl = TextEditingController();
 
@@ -47,6 +49,10 @@ class _LoginWithEmailState extends State<LoginWithEmailForm> {
         Text(response.message!),
         context,
       );
+    }
+
+    if (mounted) {
+      ref.read(userCreationStateProvider.notifier).loggedIn();
     }
   }
 

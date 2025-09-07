@@ -24,6 +24,7 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
 
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
+  final String email = AuthService().currentUser?.email ?? '';
 
   @override
   void dispose() {
@@ -52,7 +53,6 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
 
   Future<void> _saveUserProfile(
       String userId, List<CategoryDataWithId> categories) async {
-    final String email = ModalRoute.of(context)!.settings.arguments as String;
     final isValid = _formKey2.currentState?.validate() ?? false;
     if (isValid) {
       try {
@@ -75,7 +75,8 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
           noteSuggestions: [],
         );
         await AuthService().createUserProfile(userProfile);
-        // Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
+        ref.read(userCreationStateProvider.notifier).setCreated();
+        Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('An error occurred: $e')),

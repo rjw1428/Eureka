@@ -22,7 +22,7 @@ class AuthService {
   }
 
   String? get currentUserId => FirebaseAuth.instance.currentUser!.uid;
-
+  User? get currentUser => FirebaseAuth.instance.currentUser;
   Future<Response> createUser(String email, String password) async {
     try {
       final userCredential =
@@ -64,16 +64,18 @@ class AuthService {
       await docRef.set(profile);
     } catch (e) {
       print('Error creating user profile: $e');
+      rethrow;
     }
   }
 
-  Future<void> googleLogin() async {
+  Future<bool> googleLogin() async {
     try {
       if (kIsWeb) {
         GoogleAuthProvider googleProvider = GoogleAuthProvider();
         googleProvider
             .addScope('https://www.googleapis.com/auth/contacts.readonly');
         await FirebaseAuth.instance.signInWithPopup(googleProvider);
+        return await _userProfileExists();
       } else {
         final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
         final GoogleSignInAuthentication? googleAuth =
@@ -86,9 +88,11 @@ class AuthService {
           );
           await FirebaseAuth.instance.signInWithCredential(credential);
         }
+        return await _userProfileExists();
       }
     } on FirebaseAuthException catch (e) {
       print('googleLogin exception: $e');
+      rethrow;
     }
   }
 
@@ -153,5 +157,15 @@ class AuthService {
   Future<void> logOut() async {
     await FirebaseAuth.instance.signOut();
     await LocalStorageService().onLogout();
+  }
+
+  Future<bool> _userProfileExists() async {
+    if (currentUserId == null) return false;
+
+    final doc = await FirebaseFirestore.instance
+        .collection('expenseUsers')
+        .doc(currentUserId)
+        .get();
+    return doc.exists;
   }
 }
