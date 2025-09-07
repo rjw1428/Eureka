@@ -10,29 +10,11 @@ class CreateAccountForm extends StatefulWidget {
 }
 
 class _CreateAccountState extends State<CreateAccountForm> {
-  final _firstNameControl = TextEditingController();
-  final _lastNameControl = TextEditingController();
   final _emailControl = TextEditingController();
   final _passwordControl = TextEditingController();
   final _confirmPasswordControl = TextEditingController();
 
   bool validateInput() {
-    if (_firstNameControl.text.trim().isEmpty) {
-      showDialogNotification(
-        'First Name Missing',
-        const Text('A first name is required to create an account'),
-        context,
-      );
-      return false;
-    }
-    if (_lastNameControl.text.trim().isEmpty) {
-      showDialogNotification(
-        'Last Name Missing',
-        const Text('A last name is required to create an account'),
-        context,
-      );
-      return false;
-    }
     if (_passwordControl.text.length < 6) {
       showDialogNotification(
         'Password too short',
@@ -55,8 +37,6 @@ class _CreateAccountState extends State<CreateAccountForm> {
 
   void createAccount() async {
     final response = await AuthService().createUser(
-      _firstNameControl.text.trim(),
-      _lastNameControl.text.trim(),
       _emailControl.text.trim(),
       _passwordControl.text,
     );
@@ -69,6 +49,11 @@ class _CreateAccountState extends State<CreateAccountForm> {
       );
       return;
     }
+
+    if (mounted) {
+      Navigator.of(context)
+          .pushNamedAndRemoveUntil('/welcome', (route) => false);
+    }
   }
 
   @override
@@ -76,8 +61,6 @@ class _CreateAccountState extends State<CreateAccountForm> {
     _emailControl.dispose();
     _passwordControl.dispose();
     _confirmPasswordControl.dispose();
-    _firstNameControl.dispose();
-    _lastNameControl.dispose();
     super.dispose();
   }
 
@@ -87,20 +70,6 @@ class _CreateAccountState extends State<CreateAccountForm> {
       width: 200,
       child: Column(
         children: [
-          TextField(
-            textCapitalization: TextCapitalization.sentences,
-            controller: _firstNameControl,
-            decoration: const InputDecoration(
-              label: Text('First Name'),
-            ),
-          ),
-          TextField(
-            textCapitalization: TextCapitalization.sentences,
-            controller: _lastNameControl,
-            decoration: const InputDecoration(
-              label: Text('Last Name'),
-            ),
-          ),
           TextField(
             controller: _emailControl,
             decoration: const InputDecoration(

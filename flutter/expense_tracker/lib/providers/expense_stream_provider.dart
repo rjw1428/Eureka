@@ -40,30 +40,25 @@ class ExpenseNotifier extends StateNotifier<List<ExpenseWithCategoryData>> {
     return firestore.collection('ledger').doc(user.ledgerId).collection(month);
   }
 
-  Future _checkSummaryCollection(Expense expense) async {
-    final collectionRef = firestore.collection('ledger').doc(user.ledgerId).collection('summaries');
+  Future addExpense(Expense expense) async {
     final docId = _summaryId(expense);
-
+    final collectionRef = firestore.collection('ledger').doc(user.ledgerId).collection('summaries');
     final summaryDoc = await collectionRef.doc(docId).get();
+    
+    // If the summary document does not exist, create it with initial values
     if (!summaryDoc.exists) {
-      collectionRef.doc(docId).set({
+      await collectionRef.doc(docId).set({
         'startDate': DateTime(expense.date.year, expense.date.month),
         'categoryId': expense.categoryId
       });
     }
-  }
-
-  Future addExpense(Expense expense) async {
-    await _checkSummaryCollection(expense);
     try {
       return Future.wait([
-        _summaryCollection(expense).then(
-          (summaryDocRef) => summaryDocRef.update({
-            'lastUpdate': FieldValue.serverTimestamp(),
-            'total': FieldValue.increment(expense.amount),
-            'count': FieldValue.increment(1)
-          }),
-        ),
+        collectionRef.doc(docId).update({
+          'lastUpdate': FieldValue.serverTimestamp(),
+          'total': FieldValue.increment(expense.amount),
+          'count': FieldValue.increment(1)
+        }),
         _expenseCollection(expense.date).then((collectionRef) {
           expense.submittedBy = user.id;
           final newExpenseData = expense.toJson();

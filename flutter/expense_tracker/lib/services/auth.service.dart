@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:expense_tracker/models/expense_user.dart';
 import 'package:expense_tracker/models/response.dart';
 import 'package:expense_tracker/services/local_storage.service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -22,20 +23,15 @@ class AuthService {
 
   String? get currentUserId => FirebaseAuth.instance.currentUser!.uid;
 
-  Future<Response> createUser(
-      String firstName, String lastName, String email, String password) async {
+  Future<Response> createUser(String email, String password) async {
     try {
-      final userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      final userCredential =
+          await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
 
-      await FirebaseFirestore.instance.collection('expenseUsers').doc(userCredential.user!.uid).set({
-        'firstName': firstName,
-        'lastName': lastName,
-      });
-
-      return const Response(success: true);
+      return Response(success: true, message: userCredential.user?.uid);
     } on FirebaseAuthException catch (e) {
       if (e.code == 'weak-password') {
         return const Response(
@@ -56,6 +52,19 @@ class AuthService {
       );
     }
     return const Response(success: false, message: 'Unknown error occurred.');
+  }
+
+  Future<void> createUserProfile(ExpenseUser userProfile) async {
+    try {
+      final id = userProfile.toJson()['id'];
+      final docRef =
+          FirebaseFirestore.instance.collection('expenseUsers').doc(id);
+      final profile = userProfile.toJson();
+      profile.remove('id');
+      await docRef.set(profile);
+    } catch (e) {
+      print('Error creating user profile: $e');
+    }
   }
 
   Future<void> googleLogin() async {
