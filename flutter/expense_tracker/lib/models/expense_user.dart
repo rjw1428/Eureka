@@ -38,4 +38,6 @@ class ExpenseUser {
   factory ExpenseUser.fromJson(Map<String, dynamic> json) {
     return _$ExpenseUserFromJson(json);
   }
+
+  Map<String, dynamic> toJson() => _$ExpenseUserToJson(this);
 }

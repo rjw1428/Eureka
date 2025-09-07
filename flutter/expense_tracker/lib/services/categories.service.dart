@@ -12,11 +12,16 @@ class CategoriesService {
     return _instance;
   }
 
-  Future<void> updateCategory(CategoryDataWithId category, String ledgerId) async {
+  Future<void> updateCategory(
+      CategoryDataWithId category, String ledgerId) async {
     final docRef = await _budgetCategoryCollection(ledgerId);
     var categoryUpdate = category.toJson();
     categoryUpdate.remove('id');
-    return docRef.update({"budgetConfig.${category.id}": categoryUpdate});
+    try {
+      return docRef.update({"budgetConfig.${category.id}": categoryUpdate});
+    } catch (e) {
+      print('Error updating category: $e');
+    }
   }
 
   Future<void> remove(CategoryDataWithId category, String ledgerId) async {
@@ -31,7 +36,8 @@ class CategoriesService {
     return docRef.update({"budgetConfig.${category.id}": categoryUpdate});
   }
 
-  Future<DocumentReference<Map<String, dynamic>>> _budgetCategoryCollection(String ledgerId) async {
+  Future<DocumentReference<Map<String, dynamic>>> _budgetCategoryCollection(
+      String ledgerId) async {
     return _db.collection('ledger').doc(ledgerId);
   }
 }

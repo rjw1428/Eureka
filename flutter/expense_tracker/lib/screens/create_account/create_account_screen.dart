@@ -1,0 +1,135 @@
+import 'package:expense_tracker/constants/strings.dart';
+import 'package:expense_tracker/models/category.dart';
+import 'package:expense_tracker/models/expense_user.dart';
+import 'package:expense_tracker/providers/backend_provider.dart';
+import 'package:expense_tracker/providers/user_provider.dart';
+import 'package:expense_tracker/screens/create_account/create_profile_step.dart';
+import 'package:expense_tracker/screens/create_account/init_budget_step.dart';
+import 'package:expense_tracker/services/auth.service.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+class CreateAccountScreen extends ConsumerStatefulWidget {
+  const CreateAccountScreen({super.key});
+
+  @override
+  ConsumerState<CreateAccountScreen> createState() =>
+      _CreateAccountScreenState();
+}
+
+class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
+  final _pageController = PageController();
+  final _formKey1 = GlobalKey<FormState>();
+  final _formKey2 = GlobalKey<FormState>();
+
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    _firstNameController.dispose();
+    _lastNameController.dispose();
+    super.dispose();
+  }
+
+  Future<String> createUserBudget(
+      String userId, List<CategoryDataWithId> categories) async {
+    final budgetMap = {
+      for (var category in categories) category.id: category.toJson(),
+    };
+    print(budgetMap);
+    try {
+      final doc = await ref.read(backendProvider).collection('ledger').add({
+        'budgetConfig': budgetMap,
+      });
+      return doc.id;
+    } catch (e) {
+      print('Error creating user budget: $e');
+      return '';
+    }
+  }
+
+  Future<void> _saveUserProfile(
+      String userId, List<CategoryDataWithId> categories) async {
+    final isValid = _formKey2.currentState?.validate() ?? false;
+    if (isValid) {
+      try {
+        final ledgerId = await createUserBudget(userId, categories);
+        print('Created ledger with ID: $ledgerId');
+        if (ledgerId.isEmpty) {
+          throw Exception('Failed to create ledger');
+        }
+        final userProfile = ExpenseUser(
+          id: userId,
+          firstName: _firstNameController.text,
+          lastName: _lastNameController.text,
+          email: _emailController.text,
+          ledgerId: ledgerId,
+          role: 'primary',
+          initialized: DateTime.now(),
+          userSettings: {'color': kDefaultColorString},
+          linkedAccounts: [],
+          archivedLinkedAccounts: [],
+          noteSuggestions: [],
+        );
+        await AuthService().createUserProfile(userProfile);
+        // Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('An error occurred: $e')),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final userId = ref.watch(userIdProvider).value;
+
+    if (userId == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Create Account'),
+      ),
+      body: PageView(
+        controller: _pageController,
+        physics: const NeverScrollableScrollPhysics(),
+        children: [
+          CreateProfileStep(
+            formKey: _formKey1,
+            firstNameController: _firstNameController,
+            lastNameController: _lastNameController,
+            onCreate: () => {
+              if (_formKey1.currentState!.validate())
+                {
+                  _pageController.nextPage(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                  ),
+                }
+            },
+          ),
+          CreateInitialBudgetStep(
+            formKey: _formKey2,
+            onCreate: (categories) async {
+              await _saveUserProfile(userId, categories);
+              Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
+            },
+          )
+        ],
+      ),
+    );
+  }
+}

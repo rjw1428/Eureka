@@ -29,7 +29,8 @@ class _BudgetConfigScreenState extends ConsumerState<BudgetConfigScreen> {
         error: (error, stack) => Text(error.toString()),
         loading: () => const Loading(),
         data: (configs) {
-          final double totalBudget = configs.fold(0, (sum, val) => sum + val.budget);
+          final double totalBudget =
+              configs.fold(0, (sum, val) => sum + val.budget);
           return Scaffold(
             resizeToAvoidBottomInset: true,
             body: SafeArea(
@@ -68,14 +69,16 @@ class _BudgetConfigScreenState extends ConsumerState<BudgetConfigScreen> {
                     Expanded(
                       child: CategoryList(
                         categoryList: configs,
-                        onEdit: (id) => openAddCategoryOverlay(context, user.ledgerId, id),
+                        onEdit: (id) =>
+                            openAddCategoryOverlay(context, user.ledgerId, id),
                       ),
                     ),
                     Center(
                       child: Padding(
                         padding: const EdgeInsets.symmetric(vertical: 8.0),
                         child: OutlinedButton.icon(
-                          onPressed: () => openAddCategoryOverlay(context, user.ledgerId),
+                          onPressed: () =>
+                              openAddCategoryOverlay(context, user.ledgerId),
                           label: const Text('Add a spending category'),
                           icon: const Icon(Icons.playlist_add),
                         ),

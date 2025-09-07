@@ -21,7 +21,9 @@ void main() async {
   runApp(
     ProviderScope(
       child: Consumer(builder: (context, ref, child) {
-        final seedColor = ref.watch(settingsProvider.select((settings) => settings.color));
+        //final isNewUser = ref.watch(isNewUserProvider);
+        final seedColor =
+            ref.watch(settingsProvider.select((settings) => settings.color));
         final colorScheme = ColorScheme.fromSeed(
           seedColor: seedColor,
         );

@@ -9,10 +9,12 @@ class CategoryList extends ConsumerWidget {
     super.key,
     required this.categoryList,
     required this.onEdit,
+    this.isEditable = false,
   });
 
   final List<CategoryDataWithId> categoryList;
   final void Function(CategoryDataWithId) onEdit;
+  final bool isEditable;
 
   @override
   Widget build(Object context, WidgetRef ref) {
@@ -41,11 +43,12 @@ class CategoryList extends ConsumerWidget {
                           'Budget: ${currency.format(category.budget)}',
                           textAlign: TextAlign.end,
                         ),
-                        if (user!.role == 'primary')
+                        if (user?.role == 'primary' || isEditable)
                           Row(
                             children: [
                               TextButton(
-                                  onPressed: () => onEdit(category), child: const Icon(Icons.edit)),
+                                  onPressed: () => onEdit(category),
+                                  child: const Icon(Icons.edit)),
                             ],
                           )
                       ],

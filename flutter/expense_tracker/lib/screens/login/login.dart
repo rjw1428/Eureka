@@ -61,19 +61,20 @@ class _LoginScreenState extends State<LoginScreen> {
                       print("Error during Google login: $e");
                     }
                   },
-                  label: const Text("Login with Google", textAlign: TextAlign.center),
+                  label: const Text("Login with Google",
+                      textAlign: TextAlign.center),
                 ),
+                if (!kIsWeb && Platform.isIOS) const SizedBox(height: 16),
                 if (!kIsWeb && Platform.isIOS)
-                const SizedBox(height: 16),
-                if (!kIsWeb && Platform.isIOS)
-                ElevatedButton.icon(
-                  icon: const Icon(
-                    FontAwesomeIcons.apple,
-                    size: 20,
+                  ElevatedButton.icon(
+                    icon: const Icon(
+                      FontAwesomeIcons.apple,
+                      size: 20,
+                    ),
+                    onPressed: () async => await AuthService().appleLogin(),
+                    label: const Text("Login with Apple",
+                        textAlign: TextAlign.center),
                   ),
-                  onPressed: () async => await AuthService().appleLogin(),
-                  label: const Text("Login with Apple", textAlign: TextAlign.center),
-                ),
                 const SizedBox(height: 16),
                 if (!_showLoginForm)
                   ElevatedButton.icon(
@@ -81,18 +82,17 @@ class _LoginScreenState extends State<LoginScreen> {
                       FontAwesomeIcons.envelope,
                       size: 18,
                     ),
-                    onPressed: () => setState(
-                      () {  
-                        _showLoginForm = true;
-                       _showCreateAccountForm = false;
+                    onPressed: () => setState(() {
+                      _showLoginForm = true;
+                      _showCreateAccountForm = false;
                     }),
                     label: const Text(
                       "Login with Email",
                       textAlign: TextAlign.center,
                     ),
                   ),
-                if (_showLoginForm && !_showCreateAccountForm) const LoginWithEmailForm(),
-
+                if (_showLoginForm && !_showCreateAccountForm)
+                  const LoginWithEmailForm(),
                 const Padding(
                   padding: EdgeInsets.only(top: 8.0),
                   child: Text('or'),
@@ -109,7 +109,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     },
                     child: const Text("Click here to create an account"),
                   ),
-                if (_showCreateAccountForm && !_showLoginForm) const CreateAccountForm(),
+                if (_showCreateAccountForm && !_showLoginForm)
+                  const CreateAccountForm(),
               ],
             ),
           )),

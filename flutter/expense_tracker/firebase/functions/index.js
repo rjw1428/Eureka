@@ -8,46 +8,46 @@ const functions = require('firebase-functions/v1');
 initializeApp();
 
 // Create a ledger for new users and add to account
-exports.initializeExpenseTrackerAccount = functions.auth.user().onCreate(async (user) => {
-    const now = new Date().toISOString();
-    const userId = user.uid;
-    const email = user.email;
-    console.log(JSON.stringify(user));
-    const displayNameParts = user.displayName ? user.displayName.split(" ") : [];
-    try {
-        const ledgerSnapshot = await getFirestore().collection("ledger").add({
-            budgetConfig: {},
-            initialized: now,
-        });
+// exports.initializeExpenseTrackerAccount = functions.auth.user().onCreate(async (user) => {
+//     const now = new Date().toISOString();
+//     const userId = user.uid;
+//     const email = user.email;
+//     console.log(JSON.stringify(user));
+//     const displayNameParts = user.displayName ? user.displayName.split(" ") : [];
+//     try {
+//         const ledgerSnapshot = await getFirestore().collection("ledger").add({
+//             budgetConfig: {},
+//             initialized: now,
+//         });
 
-        let data = {
-            role: "primary",
-            email,
-            ledgerId: ledgerSnapshot.id,
-            initialized: now,
-            linkedAccounts: [],
-            archivedLinkedAccounts: [],
-            userSettings: {},
-        };
+//         let data = {
+//             role: "primary",
+//             email,
+//             ledgerId: ledgerSnapshot.id,
+//             initialized: now,
+//             linkedAccounts: [],
+//             archivedLinkedAccounts: [],
+//             userSettings: {},
+//         };
         
-        if (displayNameParts.length > 0) {
-            const firstName = displayNameParts[0];
-            const lastName =  displayNameParts[1];
-            data["firstName"] = firstName || "New";
-            data["lastName"] = lastName || "User";
-        }
+//         if (displayNameParts.length > 0) {
+//             const firstName = displayNameParts[0];
+//             const lastName =  displayNameParts[1];
+//             data["firstName"] = firstName || "New";
+//             data["lastName"] = lastName || "User";
+//         }
 
-        await getFirestore()
-            .collection("expenseUsers")
-            .doc(userId)
-            .set(data, { merge: true });
-    } catch (e) {
-        logger.error(e);
-        return false;
-    }
+//         await getFirestore()
+//             .collection("expenseUsers")
+//             .doc(userId)
+//             .set(data, { merge: true });
+//     } catch (e) {
+//         logger.error(e);
+//         return false;
+//     }
 
-    return true;
-});
+//     return true;
+// });
 
 // Create a summary entry on writing an expense (currently only used in migration and will be removed)
 // exports.updateSummaryOnCreate = onDocumentCreated('/ledger/{ledgerId}/{timeframe}/{documentId}', async (event) => {
@@ -276,7 +276,7 @@ exports.unlinkRequest = onCall(async (request) => {
 // On updating color, notify all linked accounts
 exports.updateLinkedAccounts = onCall(async (request) => {
     try {
-        const ids = request.data["ids"];
+        const ids = request.data["ids"]
         const sourceId = request.data["self"];
         const color = request.data["color"];
 
