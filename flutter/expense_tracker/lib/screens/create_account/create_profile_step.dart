@@ -1,6 +1,10 @@
+import 'package:expense_tracker/constants/strings.dart';
+import 'package:expense_tracker/providers/user_provider.dart';
+import 'package:expense_tracker/services/account_link.service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class CreateProfileStep extends StatelessWidget {
+class CreateProfileStep extends ConsumerWidget {
   final GlobalKey<FormState> formKey;
   final TextEditingController firstNameController;
   final TextEditingController lastNameController;
@@ -15,7 +19,7 @@ class CreateProfileStep extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Form(
@@ -27,8 +31,13 @@ class CreateProfileStep extends StatelessWidget {
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 20),
-            const Text('Please enter your details to create your profile.'),
-            const SizedBox(height: 20),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+              child: Text(
+                profileWelcomeText,
+                textAlign: TextAlign.center,
+              ),
+            ),
             ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 400),
               child: TextFormField(
@@ -59,6 +68,17 @@ class CreateProfileStep extends StatelessWidget {
             ElevatedButton(
               onPressed: onCreate,
               child: const Text('Create Profile'),
+            ),
+            const SizedBox(height: 20),
+            TextButton(
+              onPressed: () async {
+                final resp = await AccountLinkService().deleteFirebaseAccount();
+                print('Account deletion response: $resp');
+                ref.read(userCreationStateProvider.notifier).loggedOut();
+                Navigator.pushNamedAndRemoveUntil(
+                    context, '/', (route) => false);
+              },
+              child: const Text('Back'),
             ),
           ],
         ),

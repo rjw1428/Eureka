@@ -84,11 +84,13 @@ class AccountLinkService {
     final initiatorUpdate = user.role == 'primary'
         ? {
             'linkedAccounts': FieldValue.arrayRemove([linkedAccount.toJson()]),
-            'archivedLinkedAccounts': FieldValue.arrayUnion([linkedAccount.toJson()])
+            'archivedLinkedAccounts':
+                FieldValue.arrayUnion([linkedAccount.toJson()])
           }
         : {
             'linkedAccounts': FieldValue.arrayRemove([linkedAccount.toJson()]),
-            'archivedLinkedAccounts': FieldValue.arrayUnion([linkedAccount.toJson()]),
+            'archivedLinkedAccounts':
+                FieldValue.arrayUnion([linkedAccount.toJson()]),
             'role': 'primary',
             'backupLedgerId': null,
             'ledgerId': user.backupLedgerId,
@@ -105,7 +107,8 @@ class AccountLinkService {
 
   Future<PendingRequest> getPendingRequest(String requestId) {
     return _db.collection('pendingShareRequests').doc(requestId).get().then(
-          (request) => PendingRequest.fromJson({...request.data()!, 'id': requestId}),
+          (request) =>
+              PendingRequest.fromJson({...request.data()!, 'id': requestId}),
         );
   }
 
@@ -115,7 +118,7 @@ class AccountLinkService {
       return 'Something went wrong, unable to handle linked accounts. Try again later.';
     }
 
-    return await _deleteFirebaseAccount();
+    return await deleteFirebaseAccount();
   }
 
   Future<bool> _prepareAccountForDeletion(ExpenseUser user) async {
@@ -138,8 +141,7 @@ class AccountLinkService {
             'id': linkedAccount.id,
             'removeId': user.id,
           });
-        }
-        else {
+        } else {
           await onUnlink(linkedAccount, user);
         }
       }
@@ -150,7 +152,7 @@ class AccountLinkService {
     return true;
   }
 
-  Future<String> _deleteFirebaseAccount() async {
+  Future<String> deleteFirebaseAccount() async {
     final firebaseUser = FirebaseAuth.instance.currentUser!;
     try {
       await firebaseUser.delete();
@@ -160,7 +162,8 @@ class AccountLinkService {
     } on FirebaseAuthException catch (error) {
       print('Error deleting user: ${error.code}');
       if (error.code != 'requires-recent-login') {
-        return error.message ?? 'An error occurred while deleting your account. Please try again later.';
+        return error.message ??
+            'An error occurred while deleting your account. Please try again later.';
       }
       final provider = firebaseUser.providerData.first;
 
@@ -173,9 +176,7 @@ class AccountLinkService {
           print('Error re-authenticating with Google: $e');
           return 'You need to re-authenticate with Google before deleting your account.';
         }
-      }
-
-      else if (provider.providerId == 'apple.com') {
+      } else if (provider.providerId == 'apple.com') {
         try {
           await AuthService().appleLogin();
           await firebaseUser.delete();
@@ -184,9 +185,7 @@ class AccountLinkService {
           print('Error re-authenticating with Apple: $e');
           return 'You need to re-authenticate with Apple before deleting your account.';
         }
-      }
-
-      else if (provider.providerId == 'password') {
+      } else if (provider.providerId == 'password') {
         print('Re-authentication with email and password is required.');
         return 'You need to re-authenticate with email and password before deleting your account. Try logging out and back in and then try deleting your account again.';
       }

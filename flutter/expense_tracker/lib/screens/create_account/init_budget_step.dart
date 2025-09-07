@@ -6,11 +6,15 @@ import 'package:flutter/material.dart';
 class CreateInitialBudgetStep extends StatefulWidget {
   final GlobalKey<FormState> formKey;
   final Function(List<CategoryDataWithId>) onCreate;
+  final Function() onBack;
+  final List<CategoryDataWithId> categories;
 
   const CreateInitialBudgetStep({
     super.key,
     required this.formKey,
     required this.onCreate,
+    required this.onBack,
+    required this.categories,
   });
 
   @override
@@ -19,8 +23,6 @@ class CreateInitialBudgetStep extends StatefulWidget {
 }
 
 class _CreateInitialBudgetStepState extends State<CreateInitialBudgetStep> {
-  final List<CategoryDataWithId> _categories = [];
-
   openAddCategoryOverlay(BuildContext context, [CategoryDataWithId? category]) {
     showModalBottomSheet(
       useSafeArea: true,
@@ -40,22 +42,22 @@ class _CreateInitialBudgetStepState extends State<CreateInitialBudgetStep> {
 
   void _addCategory(BuildContext context, CategoryDataWithId category) {
     setState(() {
-      _categories.add(category);
+      widget.categories.add(category);
     });
   }
 
   void _updateCategory(BuildContext context, CategoryDataWithId category) {
     setState(() {
-      final index = _categories.indexWhere((c) => c.id == category.id);
+      final index = widget.categories.indexWhere((c) => c.id == category.id);
       if (index != -1) {
-        _categories[index] = category;
+        widget.categories[index] = category;
       }
     });
   }
 
   void _removeCategory(BuildContext context, CategoryDataWithId category) {
     setState(() {
-      _categories.removeWhere((c) => c.id == category.id);
+      widget.categories.removeWhere((c) => c.id == category.id);
     });
   }
 
@@ -78,7 +80,7 @@ class _CreateInitialBudgetStepState extends State<CreateInitialBudgetStep> {
               validator: (value) => null,
               builder: (FormFieldState<List<CategoryDataWithId>> state) {
                 return CategoryList(
-                  categoryList: _categories,
+                  categoryList: widget.categories,
                   onEdit: (category) =>
                       openAddCategoryOverlay(context, category),
                   isEditable: true,
@@ -90,7 +92,7 @@ class _CreateInitialBudgetStepState extends State<CreateInitialBudgetStep> {
                 padding: const EdgeInsets.symmetric(vertical: 8.0),
                 child: OutlinedButton.icon(
                   onPressed: () => openAddCategoryOverlay(context),
-                  label: Text(_categories.isEmpty
+                  label: Text(widget.categories.isEmpty
                       ? 'Add your first budget category'
                       : 'Add another budget category'),
                   icon: const Icon(Icons.playlist_add),
@@ -100,7 +102,7 @@ class _CreateInitialBudgetStepState extends State<CreateInitialBudgetStep> {
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () {
-                if (_categories.isEmpty) {
+                if (widget.categories.isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text(
@@ -110,9 +112,16 @@ class _CreateInitialBudgetStepState extends State<CreateInitialBudgetStep> {
                   return;
                 }
 
-                widget.onCreate(_categories);
+                widget.onCreate(widget.categories);
               },
               child: const Text('Get Started!'),
+            ),
+            const SizedBox(height: 20),
+            TextButton(
+              onPressed: () {
+                widget.onBack();
+              },
+              child: const Text('Back'),
             ),
           ],
         ),

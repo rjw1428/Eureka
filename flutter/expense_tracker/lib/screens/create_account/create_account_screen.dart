@@ -25,6 +25,7 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
   final String email = AuthService().currentUser?.email ?? '';
+  final List<CategoryDataWithId> _categories = [];
 
   @override
   void dispose() {
@@ -97,7 +98,7 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Create Account'),
+        title: const Text('Welcome to ${APP_TITLE}!'),
       ),
       body: PageView(
         controller: _pageController,
@@ -119,9 +120,16 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
           ),
           CreateInitialBudgetStep(
             formKey: _formKey2,
+            categories: _categories,
             onCreate: (categories) async {
               await _saveUserProfile(userId, categories);
               Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
+            },
+            onBack: () {
+              _pageController.previousPage(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+              );
             },
           )
         ],
