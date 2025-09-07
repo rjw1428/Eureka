@@ -22,18 +22,12 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
   final _formKey1 = GlobalKey<FormState>();
   final _formKey2 = GlobalKey<FormState>();
 
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
 
   @override
   void dispose() {
     _pageController.dispose();
-    _emailController.dispose();
-    _passwordController.dispose();
-    _confirmPasswordController.dispose();
     _firstNameController.dispose();
     _lastNameController.dispose();
     super.dispose();
@@ -58,6 +52,7 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
 
   Future<void> _saveUserProfile(
       String userId, List<CategoryDataWithId> categories) async {
+    final String email = ModalRoute.of(context)!.settings.arguments as String;
     final isValid = _formKey2.currentState?.validate() ?? false;
     if (isValid) {
       try {
@@ -70,7 +65,7 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
           id: userId,
           firstName: _firstNameController.text,
           lastName: _lastNameController.text,
-          email: _emailController.text,
+          email: email,
           ledgerId: ledgerId,
           role: 'primary',
           initialized: DateTime.now(),

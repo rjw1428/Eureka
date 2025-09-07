@@ -51,8 +51,9 @@ class _CreateAccountState extends State<CreateAccountForm> {
     }
 
     if (mounted) {
-      Navigator.of(context)
-          .pushNamedAndRemoveUntil('/welcome', (route) => false);
+      Navigator.of(context).pushNamedAndRemoveUntil(
+          '/welcome', (route) => false,
+          arguments: _emailControl.text.trim());
     }
   }
 
