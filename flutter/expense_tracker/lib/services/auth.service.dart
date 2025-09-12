@@ -73,7 +73,8 @@ class AuthService {
       if (kIsWeb) {
         GoogleAuthProvider googleProvider = GoogleAuthProvider();
         googleProvider
-            .addScope('https://www.googleapis.com/auth/contacts.readonly');
+            .addScope('https://www.googleapis.com/auth/contacts.readonly')
+            .setCustomParameters({"prompt": "select_account"});
         await FirebaseAuth.instance.signInWithPopup(googleProvider);
         return await _userProfileExists();
       } else {

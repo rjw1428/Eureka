@@ -1,7 +1,28 @@
 import 'package:expense_tracker/models/expense_user.dart';
 import 'package:expense_tracker/providers/backend_provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rxdart/rxdart.dart';
+
+class UserState {
+  bool isAuthenticated;
+  bool isCreated;
+
+  UserState({
+    required this.isAuthenticated,
+    required this.isCreated,
+  });
+
+  copyWith({
+    bool? isAuthenticated,
+    bool? isCreated,
+  }) {
+    return UserState(
+      isAuthenticated: isAuthenticated ?? this.isAuthenticated,
+      isCreated: isCreated ?? this.isCreated,
+    );
+  }
+}
 
 // Used on home screen to determine if user is logged in or not
 final userIdProvider = StreamProvider<String?>((ref) {
@@ -9,6 +30,7 @@ final userIdProvider = StreamProvider<String?>((ref) {
   return auth
       .authStateChanges()
       .map((user) => user?.uid)
+      .startWith(auth.currentUser?.uid)
       .distinct((prev, cur) => prev == cur)
       .shareReplay(maxSize: 1);
 });
@@ -47,7 +69,7 @@ final userProvider = StreamProvider<ExpenseUser?>((ref) {
       .doOnDone(() => print('CLOSED: expenseUserFetch stream'));
 });
 
-class UserCreationState extends StateNotifier<bool?> {
+class UserCreationState extends StateNotifier<UserState?> {
   UserCreationState(this.ref) : super(null) {
     _initialize();
   }
@@ -55,14 +77,24 @@ class UserCreationState extends StateNotifier<bool?> {
   final Ref ref;
 
   Future<void> _initialize() async {
-    final uid = ref.read(userIdProvider).valueOrNull;
-    if (uid == null) {
+    ref.watch(userIdProvider).when(data: (uid) async {
+      if (uid == null) {
+        state = UserState(isAuthenticated: false, isCreated: false);
+        return;
+      }
+
+      final firestore = ref.read(backendProvider);
+      final doc = await firestore.collection('expenseUsers').doc(uid).get();
+      state = UserState(isAuthenticated: true, isCreated: doc.exists);
+    }, error: (error, stack) {
+      print('Error fetching user ID: $error');
       state = null;
       return;
-    }
-    final firestore = ref.read(backendProvider);
-    final doc = await firestore.collection('expenseUsers').doc(uid).get();
-    state = doc.exists;
+    }, loading: () {
+      print('Loading user ID...');
+      state = null;
+      return;
+    });
   }
 
   void loggedIn() {
@@ -70,15 +102,15 @@ class UserCreationState extends StateNotifier<bool?> {
   }
 
   void loggedOut() {
-    state = null;
+    state = UserState(isAuthenticated: false, isCreated: false);
   }
 
   void setCreated() {
-    state = true;
+    state = state!.copyWith(isCreated: true);
   }
 }
 
 final userCreationStateProvider =
-    StateNotifierProvider<UserCreationState, bool?>((ref) {
+    StateNotifierProvider<UserCreationState, UserState?>((ref) {
   return UserCreationState(ref);
 });

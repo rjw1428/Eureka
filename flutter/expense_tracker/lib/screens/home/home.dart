@@ -1,7 +1,9 @@
+import 'package:expense_tracker/constants/strings.dart';
 import 'package:expense_tracker/providers/user_provider.dart';
 import 'package:expense_tracker/screens/create_account/create_account_screen.dart';
 import 'package:expense_tracker/screens/home/expense_list/expenses_screen.dart';
 import 'package:expense_tracker/screens/login/login.dart';
+import 'package:expense_tracker/widgets/loading.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -10,11 +12,19 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isCreated = ref.watch(userCreationStateProvider);
-    if (isCreated == null) {
+    final userAccountState = ref.watch(userCreationStateProvider);
+    if (userAccountState == null) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text(APP_TITLE),
+        ),
+        body: const Loading(),
+      );
+    }
+    if (!userAccountState.isAuthenticated) {
       return const LoginScreen();
     }
-    if (!isCreated) {
+    if (!userAccountState.isCreated) {
       return const CreateAccountScreen();
     }
     final user = ref.read(userProvider).valueOrNull!;
