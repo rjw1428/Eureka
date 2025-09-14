@@ -1,6 +1,5 @@
 import 'package:expense_tracker/models/expense_user.dart';
 import 'package:expense_tracker/providers/backend_provider.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rxdart/rxdart.dart';
 
