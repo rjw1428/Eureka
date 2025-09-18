@@ -112,6 +112,9 @@ class AuthService {
         accessToken: appleCredential.authorizationCode,
       );
 
+      appleCredential.familyName;
+      appleCredential.familyName;
+
       // Sign in with Firebase
       await FirebaseAuth.instance.signInWithCredential(firebaseCredential);
     } catch (e) {

@@ -17,6 +17,7 @@ class Expense {
     this.note,
     this.id,
     this.reactions = const [],
+    this.hideUntil,
   });
 
   String categoryId;
@@ -26,6 +27,7 @@ class Expense {
   double amount;
   DateTime date;
   List<String> reactions;
+  DateTime? hideUntil;
 
   factory Expense.fromJson(Map<String, dynamic> json) => _$ExpenseFromJson(json);
   Map<String, dynamic> toJson() => _$ExpenseToJson(this);

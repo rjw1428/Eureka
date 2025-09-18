@@ -34,17 +34,21 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
   final _amount = TextEditingController();
   String? _selectedCategory;
   DateTime _selectedDate = DateTime.now();
+  DateTime? _hideUntilDate;
 
   void _showDatePicker() async {
     final now = DateTime.now();
     final firstDate = now.subtract(const Duration(days: 365));
-    final date = await showDatePicker(context: context, firstDate: firstDate, lastDate: now);
+    final date = await showDatePicker(
+        context: context, firstDate: firstDate, lastDate: now);
 
     if (date == null) {
       return;
     }
     // If user selects current date, then make sure the time part of the date is no
-    if (date.year == now.year && date.month == now.month && date.day == now.day) {
+    if (date.year == now.year &&
+        date.month == now.month &&
+        date.day == now.day) {
       setState(() => _selectedDate = now);
       return;
     }
@@ -52,6 +56,24 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
     final endOfDayDate = DateTime(date.year, date.month, date.day, 23, 59, 59);
     // Otherwise, set the time part to the ned of the day
     setState(() => _selectedDate = endOfDayDate);
+  }
+
+  void _showHideUntilDatePicker() async {
+    final now = DateTime.now();
+    final firstDate = now.subtract(const Duration(days: 365));
+    final date = await showDatePicker(
+      context: context,
+      firstDate: firstDate,
+      lastDate: now.add(const Duration(days: 365)),
+    );
+
+    if (date == null) {
+      return;
+    }
+
+    final endOfDayDate = DateTime(date.year, date.month, date.day, 23, 59, 59);
+    // Otherwise, set the time part to the ned of the day
+    setState(() => _hideUntilDate = endOfDayDate);
   }
 
   void _submit() {
@@ -81,6 +103,7 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
       note: _note.text.trim().isNotEmpty ? _note.text : null,
       date: _selectedDate,
       categoryId: _selectedCategory!,
+      hideUntil: _hideUntilDate,
     );
 
     if (widget.initialExpense != null) {
@@ -108,6 +131,7 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
       _amount.text = widget.initialExpense!.amount.toStringAsFixed(2);
       _note.text = widget.initialExpense!.note ?? '';
       _selectedDate = widget.initialExpense!.date;
+      _hideUntilDate = widget.initialExpense!.hideUntil;
       formTitle = 'Edit Expense';
       actionButtonLabel = 'Update';
     }
@@ -117,7 +141,8 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
   @override
   Widget build(BuildContext context) {
     final keyboardSpace = MediaQuery.of(context).viewInsets.bottom;
-    final categoryConfig = ref.watch(activeBudgetCategoriesWithSpend).valueOrNull ?? [];
+    final categoryConfig =
+        ref.watch(activeBudgetCategoriesWithSpend).valueOrNull ?? [];
     final user = ref.read(userProvider).valueOrNull!;
     return SingleChildScrollView(
       child: Padding(
@@ -161,7 +186,8 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
                             ],
                           )))
                       .toList(),
-                  onChanged: (value) => setState(() => _selectedCategory = value),
+                  onChanged: (value) =>
+                      setState(() => _selectedCategory = value),
                 ),
               ),
               IconButton(
@@ -181,20 +207,24 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
                       prefixText: '\$',
                       label: Text('Amount'),
                     ),
-                    keyboardType:
-                        const TextInputType.numberWithOptions(signed: true, decimal: true),
+                    keyboardType: const TextInputType.numberWithOptions(
+                        signed: true, decimal: true),
                   ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
                   flex: 2,
-                  child: TextButton.icon(
-                    onPressed: _showDatePicker,
-                    icon: const Icon(Icons.calendar_month),
-                    iconAlignment: IconAlignment.start,
-                    label: Text(
-                      'Date Occurred: ${dateFormatter.format(_selectedDate)}',
-                    ),
+                  child: Column(
+                    children: [
+                      TextButton.icon(
+                        onPressed: _showDatePicker,
+                        icon: const Icon(Icons.calendar_month),
+                        iconAlignment: IconAlignment.start,
+                        label: Text(
+                          'Date Occurred: ${dateFormatter.format(_selectedDate)}',
+                        ),
+                      ),
+                    ],
                   ),
                 )
               ],
@@ -218,7 +248,82 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
                 ],
               ),
             ),
-            SuggestionsRow(onClick: (suggestion) => _note.text = '${_note.text} $suggestion'),
+            SuggestionsRow(
+                onClick: (suggestion) =>
+                    _note.text = '${_note.text} $suggestion'),
+            ExpansionTile(
+              title: const Text('Advanced'),
+              controlAffinity: ListTileControlAffinity.leading,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      flex: 0,
+                      child: TextButton.icon(
+                        onPressed: _showHideUntilDatePicker,
+                        icon: const Icon(Icons.visibility_off),
+                        iconAlignment: IconAlignment.start,
+                        label: Text(
+                          'Hide Until: ${_hideUntilDate != null ? dateFormatter.format(_hideUntilDate!) : 'None'}',
+                        ),
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () =>
+                              setState(() => _hideUntilDate = null),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.help_outline_rounded),
+                          onPressed: () => showDialog<String>(
+                            context: context,
+                            builder: (BuildContext context) => Dialog(
+                              child: Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: <Widget>[
+                                    Center(
+                                        child: Text(
+                                      'Hide Until',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .headlineMedium,
+                                    )),
+                                    const SizedBox(height: 15),
+                                    const Text(
+                                        'Let\'s say it\'s your significant other\'s birthday and you want to get them a gift, and actually be ahead of the game for once.'),
+                                    const SizedBox(height: 15),
+                                    const Text(
+                                        'This option allows you to set when it will actually show up in the expense list. The total and summary will still update to reflect the amout spent, but the surprise won\'t be ruined!'),
+                                    const SizedBox(
+                                      height: 15,
+                                    ),
+                                    Center(
+                                      child: TextButton(
+                                        onPressed: () {
+                                          HapticFeedback.selectionClick();
+                                          Navigator.pop(context);
+                                        },
+                                        child: const Text('Close'),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  ],
+                ),
+              ],
+            ),
             const SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,

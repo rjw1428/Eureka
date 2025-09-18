@@ -17,6 +17,9 @@ Expense _$ExpenseFromJson(Map<String, dynamic> json) => Expense(
               ?.map((e) => e as String)
               .toList() ??
           const [],
+      hideUntil: json['hideUntil'] == null
+          ? null
+          : DateTime.parse(json['hideUntil'] as String),
     );
 
 Map<String, dynamic> _$ExpenseToJson(Expense instance) => <String, dynamic>{
@@ -27,6 +30,7 @@ Map<String, dynamic> _$ExpenseToJson(Expense instance) => <String, dynamic>{
       'amount': instance.amount,
       'date': instance.date.toIso8601String(),
       'reactions': instance.reactions,
+      'hideUntil': instance.hideUntil?.toIso8601String(),
     };
 
 ExpenseWithCategoryData _$ExpenseWithCategoryDataFromJson(
@@ -42,7 +46,10 @@ ExpenseWithCategoryData _$ExpenseWithCategoryDataFromJson(
       ..id = json['id'] as String?
       ..note = json['note'] as String?
       ..reactions =
-          (json['reactions'] as List<dynamic>).map((e) => e as String).toList();
+          (json['reactions'] as List<dynamic>).map((e) => e as String).toList()
+      ..hideUntil = json['hideUntil'] == null
+          ? null
+          : DateTime.parse(json['hideUntil'] as String);
 
 Map<String, dynamic> _$ExpenseWithCategoryDataToJson(
         ExpenseWithCategoryData instance) =>
@@ -54,5 +61,6 @@ Map<String, dynamic> _$ExpenseWithCategoryDataToJson(
       'amount': instance.amount,
       'date': instance.date.toIso8601String(),
       'reactions': instance.reactions,
+      'hideUntil': instance.hideUntil?.toIso8601String(),
       'category': instance.category,
     };
