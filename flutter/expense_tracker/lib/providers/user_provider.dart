@@ -113,3 +113,30 @@ final userCreationStateProvider =
     StateNotifierProvider<UserCreationState, UserState?>((ref) {
   return UserCreationState(ref);
 });
+
+class AppleUserProfile {
+  String givenName;
+  String familyName;
+
+  AppleUserProfile({
+    required this.givenName,
+    required this.familyName,
+  });
+}
+
+class AppleBullshitState extends StateNotifier<AppleUserProfile?> {
+  AppleBullshitState(this.ref) : super(null) {
+    state = null;
+  }
+
+  final Ref ref;
+
+  setAppleBullshit(String given, String family) {
+    state = AppleUserProfile(givenName: given, familyName: family);
+  }
+}
+
+final appleBullshitStateProvider =
+    StateNotifierProvider<AppleBullshitState, AppleUserProfile?>((ref) {
+  return AppleBullshitState(ref);
+});

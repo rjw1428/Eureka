@@ -25,7 +25,10 @@ class HomeScreen extends ConsumerWidget {
       return const LoginScreen();
     }
     if (!userAccountState.isCreated) {
-      return const CreateAccountScreen();
+      final appleShit = ref.read(appleBullshitStateProvider);
+      return CreateAccountScreen(
+        appleProfile: appleShit,
+      );
     }
     final user = ref.read(userProvider).valueOrNull!;
     return ExpenseScreen(user: user);

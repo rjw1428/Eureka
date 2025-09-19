@@ -80,7 +80,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         _showLoginForm = false;
                       });
                       try {
-                        await AuthService().appleLogin();
+                        final appleProfile = await AuthService().appleLogin();
+                        if (appleProfile != null) {
+                          ref
+                              .read(appleBullshitStateProvider.notifier)
+                              .setAppleBullshit(appleProfile.givenName,
+                                  appleProfile.familyName);
+                        }
                         ref.read(userCreationStateProvider.notifier).loggedIn();
                       } catch (e) {
                         // Handle error

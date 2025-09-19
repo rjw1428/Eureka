@@ -8,6 +8,7 @@ class CreateInitialBudgetStep extends StatefulWidget {
   final Function(List<CategoryDataWithId>) onCreate;
   final Function() onBack;
   final List<CategoryDataWithId> categories;
+  final String firstName;
 
   const CreateInitialBudgetStep({
     super.key,
@@ -15,6 +16,7 @@ class CreateInitialBudgetStep extends StatefulWidget {
     required this.onCreate,
     required this.onBack,
     required this.categories,
+    required this.firstName,
   });
 
   @override
@@ -74,7 +76,8 @@ class _CreateInitialBudgetStepState extends State<CreateInitialBudgetStep> {
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 20),
-            const Text('Now let\'s setup a budget to get you started.'),
+            Text(
+                'Hi ${widget.firstName}!, Now let\'s setup a budget to get you started.'),
             const SizedBox(height: 20),
             FormField<List<CategoryDataWithId>>(
               validator: (value) => null,

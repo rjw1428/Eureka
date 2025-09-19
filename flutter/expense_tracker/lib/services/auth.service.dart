@@ -1,8 +1,11 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:expense_tracker/constants/utils.dart' as my_utils;
 import 'package:expense_tracker/models/expense_user.dart';
 import 'package:expense_tracker/models/response.dart';
+import 'package:expense_tracker/providers/user_provider.dart';
 import 'package:expense_tracker/services/local_storage.service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
@@ -97,9 +100,12 @@ class AuthService {
     }
   }
 
-  Future<void> appleLogin() async {
+  Future<AppleUserProfile?> appleLogin() async {
     try {
+      final rawNonce = my_utils.generateNonce();
+      final nonce = my_utils.sha256ofString(rawNonce);
       final appleCredential = await SignInWithApple.getAppleIDCredential(
+        nonce: Platform.isIOS ? nonce : null,
         scopes: [
           AppleIDAuthorizationScopes.email,
           AppleIDAuthorizationScopes.fullName,
@@ -110,15 +116,24 @@ class AuthService {
       final firebaseCredential = OAuthProvider('apple.com').credential(
         idToken: appleCredential.identityToken,
         accessToken: appleCredential.authorizationCode,
+        rawNonce: Platform.isIOS ? rawNonce : null,
       );
-
-      appleCredential.familyName;
-      appleCredential.familyName;
 
       // Sign in with Firebase
       await FirebaseAuth.instance.signInWithCredential(firebaseCredential);
+
+      //If it's the first time, return the apple user profile
+      if (appleCredential.givenName != null &&
+          appleCredential.familyName != null) {
+        return AppleUserProfile(
+            givenName: appleCredential.givenName!,
+            familyName: appleCredential.familyName!);
+      } else {
+        return null;
+      }
     } catch (e) {
       print('Error signing in with Apple: $e');
+      rethrow;
     }
   }
 

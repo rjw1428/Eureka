@@ -5,12 +5,18 @@ import 'package:expense_tracker/providers/backend_provider.dart';
 import 'package:expense_tracker/providers/user_provider.dart';
 import 'package:expense_tracker/screens/create_account/create_profile_step.dart';
 import 'package:expense_tracker/screens/create_account/init_budget_step.dart';
+import 'package:expense_tracker/services/account_link.service.dart';
 import 'package:expense_tracker/services/auth.service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class CreateAccountScreen extends ConsumerStatefulWidget {
-  const CreateAccountScreen({super.key});
+  const CreateAccountScreen({
+    super.key,
+    this.appleProfile,
+  });
+
+  final AppleUserProfile? appleProfile;
 
   @override
   ConsumerState<CreateAccountScreen> createState() =>
@@ -26,6 +32,15 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
   final _lastNameController = TextEditingController();
   final String email = AuthService().currentUser?.email ?? '';
   final List<CategoryDataWithId> _categories = [];
+
+  @override
+  void initState() {
+    if (widget.appleProfile != null) {
+      _firstNameController.text = widget.appleProfile!.givenName;
+      _lastNameController.text = widget.appleProfile!.familyName;
+    }
+    super.initState();
+  }
 
   @override
   void dispose() {
@@ -104,28 +119,37 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
         controller: _pageController,
         physics: const NeverScrollableScrollPhysics(),
         children: [
-          CreateProfileStep(
-            formKey: _formKey1,
-            firstNameController: _firstNameController,
-            lastNameController: _lastNameController,
-            onCreate: () => {
-              if (_formKey1.currentState!.validate())
-                {
-                  _pageController.nextPage(
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeInOut,
-                  ),
-                }
-            },
-          ),
+          if (widget.appleProfile == null)
+            CreateProfileStep(
+              formKey: _formKey1,
+              firstNameController: _firstNameController,
+              lastNameController: _lastNameController,
+              onCreate: () => {
+                if (_formKey1.currentState!.validate())
+                  {
+                    _pageController.nextPage(
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                    ),
+                  }
+              },
+            ),
           CreateInitialBudgetStep(
             formKey: _formKey2,
             categories: _categories,
+            firstName: _firstNameController.text,
             onCreate: (categories) async {
               await _saveUserProfile(userId, categories);
               Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
             },
-            onBack: () {
+            onBack: () async {
+              if (widget.appleProfile != null) {
+                final resp = await AccountLinkService().deleteFirebaseAccount();
+                print('Account deletion response: $resp');
+                ref.read(userCreationStateProvider.notifier).loggedOut();
+                Navigator.pushNamedAndRemoveUntil(
+                    context, '/', (route) => false);
+              }
               _pageController.previousPage(
                 duration: const Duration(milliseconds: 300),
                 curve: Curves.easeInOut,
