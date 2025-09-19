@@ -7,6 +7,7 @@ import 'package:expense_tracker/screens/login/login.email.dart';
 import 'package:expense_tracker/screens/login/login.header.dart';
 import 'package:expense_tracker/screens/login/login.logo.dart';
 import 'package:expense_tracker/services/auth.service.dart';
+import 'package:expense_tracker/widgets/show_dialog.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -62,6 +63,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     } catch (e) {
                       // Handle error
                       print("Error during Google login: $e");
+                      showDialogNotification(
+                          "Something went wrong", Text(e.toString()), context);
                     }
                   },
                   label: const Text("Login with Google",

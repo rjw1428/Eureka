@@ -3,6 +3,7 @@ import 'package:expense_tracker/providers/settings_provider.dart';
 import 'package:expense_tracker/routing.dart';
 import 'package:expense_tracker/services/local_storage.service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:expense_tracker/firebase_options.dart';
@@ -20,12 +21,14 @@ void main() async {
   await LocalStorageService().initialize();
   WidgetsFlutterBinding.ensureInitialized();
 
-  // try {
-  //   FirebaseFirestore.instance.useFirestoreEmulator('localhost', 8080);
-  //   await FirebaseAuth.instance.useAuthEmulator('localhost', 9099);
-  // } catch (e) {
-  //   print(e);
-  // }
+  if (kDebugMode) {
+    try {
+      FirebaseFirestore.instance.useFirestoreEmulator('localhost', 8080);
+      await FirebaseAuth.instance.useAuthEmulator('localhost', 9099);
+    } catch (e) {
+      print(e);
+    }
+  }
 
   runApp(
     ProviderScope(
