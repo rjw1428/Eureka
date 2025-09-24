@@ -16,16 +16,16 @@ class ReportScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(userProvider).value!;
-    final summary$ = ref.watch(
-        expenseSummaryProvider((categoryId: categoryId, start: user.initialized, end: null)));
-    final budgetConfig = ref.watch(budgetProvider
-        .select((configs) => configs.value!.firstWhere((config) => config.id == categoryId)));
+    final summary$ = ref.watch(expenseSummaryProvider(
+        (categoryId: categoryId, start: user.initialized, end: null)));
+    final budgetConfig = ref.watch(budgetProvider.select((configs) =>
+        configs.value!.firstWhere((config) => config.id == categoryId)));
     return summary$.when(
         error: (error, stack) => Text(error.toString()),
         loading: () => const Loading(),
         data: (summary) {
-          final totalDelta =
-              summary.fold(0.0, (sum, data) => sum + (budgetConfig.budget - data.total));
+          final totalDelta = summary.fold(
+              0.0, (sum, data) => sum + (budgetConfig.budget - data.total));
           final totalSpend = summary.fold(0.0, (sum, data) => sum + data.total);
 
           return SafeArea(
@@ -72,7 +72,6 @@ class ReportScreen extends ConsumerWidget {
                   ),
                   Center(
                     child: SizedBox(
-                      width: MediaQuery.of(context).size.width * 0.9,
                       height: MediaQuery.of(context).size.height *
                           (MediaQuery.of(context).size.width > 800 ? 0.5 : .3),
                       child: ReportChart(
@@ -92,7 +91,8 @@ class ReportScreen extends ConsumerWidget {
                             const SizedBox(
                               width: 8,
                             ),
-                            Text('${currency.format(budgetConfig.budget)} per month'),
+                            Text(
+                                '${currency.format(budgetConfig.budget)} per month'),
                           ],
                         ),
                         Row(
@@ -111,7 +111,9 @@ class ReportScreen extends ConsumerWidget {
                     child: SingleChildScrollView(
                       child: Column(
                         children: summary.map((data) {
-                          return SummaryItem(reportData: data, budgetAmount: budgetConfig.budget);
+                          return SummaryItem(
+                              reportData: data,
+                              budgetAmount: budgetConfig.budget);
                         }).toList(),
                       ),
                     ),

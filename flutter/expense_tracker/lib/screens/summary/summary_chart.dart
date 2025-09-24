@@ -13,16 +13,23 @@ class ReportChart extends ConsumerWidget {
   final List<SummaryEntry> data;
   final CategoryDataWithId budgetData;
 
-  List<LineChartBarData> lineChartBarData1(List<SummaryEntry> chartData, Color themeColor) {
+  List<LineChartBarData> lineChartBarData1(
+      List<SummaryEntry> chartData, Color themeColor) {
     chartData.sort((a, b) => a.startDate.compareTo(b.startDate));
+
+    if (chartData.isEmpty) {
+      return [];
+    }
     final offset = chartData.first.startDate.month;
 
-    final filteredData = chartData.asMap().entries.map((entry) => entry.value).toList();
+    final filteredData =
+        chartData.asMap().entries.map((entry) => entry.value).toList();
 
     final selectedCategoryData = filteredData
         .asMap()
         .entries
-        .map((entry) => FlSpot((offset + entry.key).toDouble(), entry.value.total))
+        .map((entry) =>
+            FlSpot((offset + entry.key).toDouble(), entry.value.total))
         .toList();
     return [
       LineChartBarData(
@@ -73,19 +80,24 @@ class ReportChart extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final themeColor = ref.watch(settingsProvider.select((settings) => settings.color));
+    final themeColor =
+        ref.watch(settingsProvider.select((settings) => settings.color));
     final width = MediaQuery.of(context).size.width;
-    final int dataMax = data.fold(0, (max, entry) => max > entry.total ? max : entry.total.toInt());
-    final int dataMin = data.fold(0, (min, entry) => min < entry.total ? min : entry.total.toInt());
-    final int yMax = dataMax > budgetData.budget ? dataMax : budgetData.budget.toInt();
+    final int dataMax = data.fold(
+        0, (max, entry) => max > entry.total ? max : entry.total.toInt());
+    final int dataMin = data.fold(
+        0, (min, entry) => min < entry.total ? min : entry.total.toInt());
+    final int yMax =
+        dataMax > budgetData.budget ? dataMax : budgetData.budget.toInt();
     final int yInterval = getChartInterval(yMax - dataMin);
 
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 8, vertical: width < 600 ? 16 : 0),
-      padding: const EdgeInsets.symmetric(
-        vertical: 16,
-        horizontal: 8,
-      ),
+      margin:
+          EdgeInsets.symmetric(horizontal: 8, vertical: width < 600 ? 16 : 0),
+      // padding: const EdgeInsets.symmetric(
+      //   vertical: 16,
+      //   horizontal: 8,
+      // ),
       width: double.infinity,
       height: double.infinity,
       decoration: BoxDecoration(
@@ -106,7 +118,8 @@ class ReportChart extends ConsumerWidget {
             touchTooltipData: LineTouchTooltipData(
               fitInsideHorizontally: true,
               fitInsideVertically: true,
-              getTooltipColor: (touchedSpot) => Colors.blueGrey.withOpacity(0.8),
+              getTooltipColor: (touchedSpot) =>
+                  Colors.blueGrey.withOpacity(0.8),
               getTooltipItems: (data) => data.map((spot) {
                 // print(spot.toString());
                 return LineTooltipItem(
@@ -123,10 +136,12 @@ class ReportChart extends ConsumerWidget {
                   showTitles: true,
                   reservedSize: 32,
                   interval: 1,
-                  getTitlesWidget: (double value, TitleMeta meta) => SideTitleWidget(
-                      axisSide: meta.axisSide,
-                      child: Text(formatter.format(DateTime(2025, value.toInt())),
-                          style: Theme.of(context).textTheme.labelSmall))),
+                  getTitlesWidget: (double value, TitleMeta meta) =>
+                      SideTitleWidget(
+                          axisSide: meta.axisSide,
+                          child: Text(
+                              formatter.format(DateTime(2025, value.toInt())),
+                              style: Theme.of(context).textTheme.labelSmall))),
             ),
             rightTitles: const AxisTitles(
               sideTitles: SideTitles(showTitles: false),
@@ -140,8 +155,8 @@ class ReportChart extends ConsumerWidget {
                 showTitles: true,
                 reservedSize: yMax > 1000 ? 32 : 22,
                 interval: yInterval.toDouble(),
-                getTitlesWidget: (value, meta) =>
-                    Text(value.toStringAsFixed(0), style: Theme.of(context).textTheme.labelSmall),
+                getTitlesWidget: (value, meta) => Text(value.toStringAsFixed(0),
+                    style: Theme.of(context).textTheme.labelSmall),
               ),
             ),
           ),
