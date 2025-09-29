@@ -26,7 +26,8 @@ class ExpenseItem extends ConsumerWidget {
       if (expense.submittedBy == null) {
         return null;
       }
-      return linkedUsers.firstWhereOrNull((linkedUser) => linkedUser.id == expense.submittedBy);
+      return linkedUsers.firstWhereOrNull(
+          (linkedUser) => linkedUser.id == expense.submittedBy);
     }));
 
     return LayoutBuilder(
@@ -55,7 +56,20 @@ class ExpenseItem extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.start,
                       children: [
-                        Text(expense.formattedDate, style: Theme.of(context).textTheme.titleSmall),
+                        Row(
+                          children: [
+                            Text(expense.formattedDate,
+                                style: Theme.of(context).textTheme.titleSmall),
+                            if (expense.imageUrl != null)
+                              const Padding(
+                                padding: EdgeInsets.only(left: 8.0),
+                                child: Icon(
+                                  Icons.receipt,
+                                  size: 16,
+                                ),
+                              ),
+                          ],
+                        ),
                         Text(expense.title),
                       ],
                     ),
@@ -132,15 +146,46 @@ class ExpenseItem extends ConsumerWidget {
             onRemove(expense);
           } else if (value == "REACT" && onReact != null) {
             onReact(expense, ctx);
+          } else if (value == "VIEW_RECEIPT") {
+            showDialog(
+              context: ctx,
+              builder: (context) => Dialog(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Image.network(expense.imageUrl!),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                      child: const Text('Close'),
+                    ),
+                  ],
+                ),
+              ),
+            );
           }
         },
         itemBuilder: (context) => [
+              if (expense.imageUrl != null)
+                const PopupMenuItem(
+                    value: "VIEW_RECEIPT",
+                    child: Row(
+                      children: [
+                        Icon(Icons.receipt_long),
+                        Padding(
+                            padding: EdgeInsets.only(left: 8),
+                            child: Text('View Receipt'))
+                      ],
+                    )),
               const PopupMenuItem(
                   value: "EDIT",
                   child: Row(
                     children: [
                       Icon(Icons.edit),
-                      Padding(padding: EdgeInsets.only(left: 8), child: Text('Edit'))
+                      Padding(
+                          padding: EdgeInsets.only(left: 8),
+                          child: Text('Edit'))
                     ],
                   )),
               if (kIsWeb)
@@ -149,7 +194,9 @@ class ExpenseItem extends ConsumerWidget {
                     child: Row(
                       children: [
                         Icon(Icons.emoji_emotions),
-                        Padding(padding: EdgeInsets.only(left: 8), child: Text('React'))
+                        Padding(
+                            padding: EdgeInsets.only(left: 8),
+                            child: Text('React'))
                       ],
                     )),
               // // ON PUSH TASK
@@ -158,7 +205,9 @@ class ExpenseItem extends ConsumerWidget {
                   child: Row(
                     children: [
                       Icon(Icons.delete),
-                      Padding(padding: EdgeInsets.only(left: 8), child: Text('Remove'))
+                      Padding(
+                          padding: EdgeInsets.only(left: 8),
+                          child: Text('Remove'))
                     ],
                   ))
             ]);

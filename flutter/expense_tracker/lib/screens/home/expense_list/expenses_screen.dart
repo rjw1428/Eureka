@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:expense_tracker/constants/strings.dart';
 import 'package:expense_tracker/models/expense.dart';
 import 'package:expense_tracker/models/expense_user.dart';
@@ -46,23 +47,30 @@ class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
     );
   }
 
-  void _addExpense(Expense expense) async {
-    final resp = await ref.read(expenseModifierProvider.notifier).addExpense(expense);
+  void _addExpense(Expense expense, {File? imageFile}) async {
+    final resp = await ref
+        .read(expenseModifierProvider.notifier)
+        .addExpense(expense, imageFile: imageFile);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           duration: const Duration(seconds: 3),
-          content: Text(resp == null ? 'An error occurred while adding expense' : 'Expense added!'),
+          content: Text(resp == null
+              ? 'An error occurred while adding expense'
+              : 'Expense added!'),
         ),
       );
     }
   }
 
-  void _updateExpense(Expense expense) async {
+  void _updateExpense(Expense expense, {File? imageFile}) async {
     final currentExpenses = ref.read(expenseProvider).value ?? [];
-    final previousExpense = currentExpenses.firstWhere((e) => e.id == expense.id);
+    final previousExpense =
+        currentExpenses.firstWhere((e) => e.id == expense.id);
 
-    await ref.read(expenseModifierProvider.notifier).updateExpense(expense, previousExpense);
+    await ref
+        .read(expenseModifierProvider.notifier)
+        .updateExpense(expense, previousExpense, imageFile: imageFile);
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -94,8 +102,10 @@ class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
     }
   }
 
-  void _handlePendingRequest(String userId, AccountNotification notification) async {
-    final request = await AccountLinkService().getPendingRequest(notification.data!['requestId']);
+  void _handlePendingRequest(
+      String userId, AccountNotification notification) async {
+    final request = await AccountLinkService()
+        .getPendingRequest(notification.data!['requestId']);
     if (mounted) {
       showDialogNotification(
         'Link Account',
@@ -128,7 +138,8 @@ class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
     return;
   }
 
-  void _handlePrimaryUnlinkRequest(String userId, AccountNotification notification) async {
+  void _handlePrimaryUnlinkRequest(
+      String userId, AccountNotification notification) async {
     final String sourceEmail = notification.data!['email'];
 
     showDialogNotification(
@@ -140,7 +151,8 @@ class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
     return;
   }
 
-  void _handleSecondaryUnlinkRequest(String userId, AccountNotification notification) async {
+  void _handleSecondaryUnlinkRequest(
+      String userId, AccountNotification notification) async {
     final String sourceEmail = notification.data!['email'];
 
     showDialogNotification(
@@ -254,7 +266,9 @@ class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
       ),
       body: LayoutBuilder(
         builder: (ctx, constraints) {
-          return constraints.maxWidth < 600 ? columnOrientationLayout() : rowOrientationLayout();
+          return constraints.maxWidth < 600
+              ? columnOrientationLayout()
+              : rowOrientationLayout();
         },
       ),
       floatingActionButton: IconButton.filled(

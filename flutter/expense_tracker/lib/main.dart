@@ -3,6 +3,7 @@ import 'package:expense_tracker/providers/settings_provider.dart';
 import 'package:expense_tracker/routing.dart';
 import 'package:expense_tracker/services/local_storage.service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -24,6 +25,7 @@ void main() async {
   if (kDebugMode) {
     try {
       FirebaseFirestore.instance.useFirestoreEmulator('localhost', 8080);
+      FirebaseStorage.instance.useStorageEmulator('localhost', 9199);
       await FirebaseAuth.instance.useAuthEmulator('localhost', 9099);
     } catch (e) {
       print(e);

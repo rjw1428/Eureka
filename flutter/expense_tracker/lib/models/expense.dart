@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:expense_tracker/constants/icons.dart';
 import 'package:expense_tracker/models/category.dart';
 import 'package:flutter/material.dart';
@@ -18,6 +20,8 @@ class Expense {
     this.id,
     this.reactions = const [],
     this.hideUntil,
+    this.imageUrl,
+    this.thumbnailUrl,
   });
 
   String categoryId;
@@ -28,6 +32,11 @@ class Expense {
   DateTime date;
   List<String> reactions;
   DateTime? hideUntil;
+  String? imageUrl;
+  String? thumbnailUrl;
+
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  File? imageFile;
 
   factory Expense.fromJson(Map<String, dynamic> json) => _$ExpenseFromJson(json);
   Map<String, dynamic> toJson() => _$ExpenseToJson(this);

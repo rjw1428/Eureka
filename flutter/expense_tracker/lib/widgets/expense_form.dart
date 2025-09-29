@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:expense_tracker/constants/strings.dart';
 import 'package:expense_tracker/models/expense.dart';
 import 'package:expense_tracker/providers/budget_provider.dart';
@@ -5,9 +7,11 @@ import 'package:expense_tracker/providers/user_provider.dart';
 import 'package:expense_tracker/services/category_form.provider.dart';
 import 'package:expense_tracker/widgets/show_dialog.dart';
 import 'package:expense_tracker/widgets/suggestions_row.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 
 class ExpenseForm extends ConsumerStatefulWidget {
   const ExpenseForm({
@@ -17,7 +21,7 @@ class ExpenseForm extends ConsumerStatefulWidget {
     this.initialExpense,
   });
 
-  final void Function(Expense) onSubmit;
+  final void Function(Expense, {File? imageFile}) onSubmit;
   final void Function(ExpenseWithCategoryData) onRemove;
   final ExpenseWithCategoryData? initialExpense;
 
@@ -35,6 +39,29 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
   String? _selectedCategory;
   DateTime _selectedDate = DateTime.now();
   DateTime? _hideUntilDate;
+  File? _selectedImage;
+
+  void _pickImage() async {
+    final imagePicker = ImagePicker();
+    // final pickedImage = await imagePicker.pickImage(
+    //   source: ImageSource.gallery,
+    //   imageQuality: 50,
+    //   maxWidth: 150,
+    // );
+    final pickedImage = await imagePicker.pickImage(
+      source: kIsWeb ? ImageSource.gallery : ImageSource.camera,
+      imageQuality: 50,
+      maxWidth: 150,
+    );
+
+    if (pickedImage == null) {
+      return;
+    }
+
+    setState(() {
+      _selectedImage = File(pickedImage.path);
+    });
+  }
 
   void _showDatePicker() async {
     final now = DateTime.now();
@@ -107,10 +134,11 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
     );
 
     if (widget.initialExpense != null) {
+      newExpense.imageUrl = widget.initialExpense!.imageUrl;
       newExpense.updateId(widget.initialExpense!.id!);
-      widget.onSubmit(newExpense);
+      widget.onSubmit(newExpense, imageFile: _selectedImage);
     } else {
-      widget.onSubmit(newExpense);
+      widget.onSubmit(newExpense, imageFile: _selectedImage);
     }
 
     Navigator.pop(context);
@@ -255,71 +283,100 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
               title: const Text('Advanced'),
               controlAffinity: ListTileControlAffinity.leading,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                Column(
                   children: [
-                    Expanded(
-                      flex: 0,
-                      child: TextButton.icon(
-                        onPressed: _showHideUntilDatePicker,
-                        icon: const Icon(Icons.visibility_off),
-                        iconAlignment: IconAlignment.start,
-                        label: Text(
-                          'Hide Until: ${_hideUntilDate != null ? dateFormatter.format(_hideUntilDate!) : 'None'}',
-                        ),
-                      ),
-                    ),
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        IconButton(
-                          icon: const Icon(Icons.clear),
-                          onPressed: () =>
-                              setState(() => _hideUntilDate = null),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.help_outline_rounded),
-                          onPressed: () => showDialog<String>(
-                            context: context,
-                            builder: (BuildContext context) => Dialog(
-                              child: Padding(
-                                padding: const EdgeInsets.all(16.0),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: <Widget>[
-                                    Center(
-                                        child: Text(
-                                      'Hide Until',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .headlineMedium,
-                                    )),
-                                    const SizedBox(height: 15),
-                                    const Text(
-                                        'Let\'s say it\'s your significant other\'s birthday and you want to get them a gift, and actually be ahead of the game for once.'),
-                                    const SizedBox(height: 15),
-                                    const Text(
-                                        'This option allows you to set when it will actually show up in the expense list. The total and summary will still update to reflect the amout spent, but the surprise won\'t be ruined!'),
-                                    const SizedBox(
-                                      height: 15,
-                                    ),
-                                    Center(
-                                      child: TextButton(
-                                        onPressed: () {
-                                          HapticFeedback.selectionClick();
-                                          Navigator.pop(context);
-                                        },
-                                        child: const Text('Close'),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
+                        Expanded(
+                          flex: 0,
+                          child: TextButton.icon(
+                            onPressed: _showHideUntilDatePicker,
+                            icon: const Icon(Icons.visibility_off),
+                            iconAlignment: IconAlignment.start,
+                            label: Text(
+                              'Hide Until: ${_hideUntilDate != null ? dateFormatter.format(_hideUntilDate!) : 'None'}',
                             ),
                           ),
                         ),
+                        Row(
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.clear),
+                              onPressed: () =>
+                                  setState(() => _hideUntilDate = null),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.help_outline_rounded),
+                              onPressed: () => showDialog<String>(
+                                context: context,
+                                builder: (BuildContext context) => Dialog(
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(16.0),
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: <Widget>[
+                                        Center(
+                                            child: Text(
+                                          'Hide Until',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .headlineMedium,
+                                        )),
+                                        const SizedBox(height: 15),
+                                        const Text(
+                                            'Let\'s say it\'s your significant other\'s birthday and you want to get them a gift, and actually be ahead of the game for once.'),
+                                        const SizedBox(height: 15),
+                                        const Text(
+                                            'This option allows you to set when it will actually show up in the expense list. The total and summary will still update to reflect the amout spent, but the surprise won\'t be ruined!'),
+                                        const SizedBox(
+                                          height: 15,
+                                        ),
+                                        Center(
+                                          child: TextButton(
+                                            onPressed: () {
+                                              HapticFeedback.selectionClick();
+                                              Navigator.pop(context);
+                                            },
+                                            child: const Text('Close'),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        )
                       ],
-                    )
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        TextButton.icon(
+                          onPressed: _pickImage,
+                          icon: const Icon(Icons.camera_alt),
+                          label: const Text('Add Receipt'),
+                        ),
+                        if (_selectedImage != null)
+                          Image.file(
+                            _selectedImage!,
+                            width: 60,
+                            height: 60,
+                            fit: BoxFit.cover,
+                          ),
+                        if (widget.initialExpense?.imageUrl != null)
+                          Image.network(
+                            widget.initialExpense!.imageUrl!,
+                            width: 60,
+                            height: 60,
+                            fit: BoxFit.cover,
+                          ),
+                      ],
+                    ),
                   ],
                 ),
               ],

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:collection/collection.dart';
 import 'package:expense_tracker/constants/utils.dart';
@@ -10,6 +11,7 @@ import 'package:expense_tracker/providers/budget_provider.dart';
 import 'package:expense_tracker/providers/expense_provider.dart';
 import 'package:expense_tracker/providers/filter_provider.dart';
 import 'package:expense_tracker/providers/user_provider.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:rxdart/rxdart.dart';
@@ -47,13 +49,44 @@ class ExpenseNotifier extends StateNotifier<List<ExpenseWithCategoryData>> {
     return firestore.collection('ledger').doc(user.ledgerId).collection(month);
   }
 
-  Future addExpense(Expense expense) async {
+  Future addExpense(Expense expense, {File? imageFile}) async {
+    String? expenseId;
+
     final docId = _summaryId(expense);
     final collectionRef = firestore
         .collection('ledger')
         .doc(user.ledgerId)
         .collection('summaries');
     final summaryDoc = await collectionRef.doc(docId).get();
+
+    if (imageFile != null) {
+      try {
+        final storageRef = FirebaseStorage.instance
+            .ref()
+            .child('receipts_inbound')
+            .child('$expenseId.jpg');
+        await storageRef.putFile(imageFile);
+        expense.imageUrl = await storageRef.getDownloadURL();
+      } catch (e) {
+        final collectionRef = await _expenseCollection(expense.date);
+        await collectionRef.doc(expenseId).delete();
+        return null;
+      }
+    }
+
+    try {
+      final collectionRef = await _expenseCollection(expense.date);
+      expense.submittedBy = user.id;
+      final newExpenseData = expense.toJson();
+      newExpenseData.remove('id');
+      // Not sure why this property is here when undoing a delete
+      // probably fine, but not looking into it now.
+      newExpenseData.remove('category');
+      final response = await collectionRef.add(newExpenseData);
+      expenseId = response.id;
+    } catch (e) {
+      return null;
+    }
 
     // If the summary document does not exist, create it with initial values
     if (!summaryDoc.exists) {
@@ -63,29 +96,21 @@ class ExpenseNotifier extends StateNotifier<List<ExpenseWithCategoryData>> {
       });
     }
     try {
-      return Future.wait([
-        collectionRef.doc(docId).update({
-          'lastUpdate': FieldValue.serverTimestamp(),
-          'total': FieldValue.increment(expense.amount),
-          'count': FieldValue.increment(1)
-        }),
-        _expenseCollection(expense.date).then((collectionRef) {
-          expense.submittedBy = user.id;
-          final newExpenseData = expense.toJson();
-          newExpenseData.remove('id');
-          // Not sure why this property is here when undoing a delete
-          // probably fine, but not looking into it now.
-          newExpenseData.remove('category');
-          collectionRef.add(newExpenseData);
-        })
-      ]);
+      await collectionRef.doc(docId).update({
+        'lastUpdate': FieldValue.serverTimestamp(),
+        'total': FieldValue.increment(expense.amount),
+        'count': FieldValue.increment(1)
+      });
+      return expenseId;
     } catch (e) {
+      final collectionRef = await _expenseCollection(expense.date);
+      await collectionRef.doc(expenseId).delete();
       return null;
     }
   }
 
   Future<void> removeExpense(Expense expense) async {
-    await Future.wait([
+    final futures = [
       _summaryCollection(expense).then((ref) => ref.update({
             'lastUpdate': FieldValue.serverTimestamp(),
             'total': FieldValue.increment(-1 * expense.amount),
@@ -93,14 +118,38 @@ class ExpenseNotifier extends StateNotifier<List<ExpenseWithCategoryData>> {
           })),
       _expenseCollection(expense.date)
           .then((ref) => ref.doc(expense.id!).delete()),
-    ]);
+    ];
+
+    if (expense.imageUrl != null) {
+      final storageRef = FirebaseStorage.instance.refFromURL(expense.imageUrl!);
+      futures.add(storageRef.delete());
+    }
+    await Future.wait(futures);
   }
 
-  Future<void> updateExpense(Expense expense, Expense previousExpense) async {
+  Future<void> updateExpense(Expense expense, Expense previousExpense,
+      {File? imageFile}) async {
     final isSameMonthBucket =
         expense.date.month == previousExpense.date.month &&
             expense.date.year == previousExpense.date.year;
     expense.submittedBy = user.id;
+
+    // If a new file is added, write the file
+    if (expense.imageUrl == null && imageFile != null) {
+      final storageRef = FirebaseStorage.instance
+          .ref()
+          .child('receipts_inbound')
+          .child('${expense.id}.jpg');
+      await storageRef.putFile(imageFile);
+      expense.imageUrl = await storageRef.getDownloadURL();
+    }
+    // if there was a file, but it is removed, delete it
+    else if (previousExpense.imageUrl != null && expense.imageUrl == null) {
+      // If the image is removed, delete the old image from storage
+      final storageRef =
+          FirebaseStorage.instance.refFromURL(previousExpense.imageUrl!);
+      await storageRef.delete();
+    }
 
     if (isSameMonthBucket) {
       List<Future> actions = [
@@ -148,7 +197,7 @@ class ExpenseNotifier extends StateNotifier<List<ExpenseWithCategoryData>> {
     // If the date has changed, remove the previous expense and add the new one
     await Future.wait([
       removeExpense(previousExpense),
-      addExpense(expense),
+      addExpense(expense, imageFile: imageFile),
     ]);
     return;
   }
