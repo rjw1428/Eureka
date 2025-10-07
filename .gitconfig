@@ -1,0 +1,13 @@
+[commit]
+	gpgsign = true
+[tag]
+	gpgSign = true
+[alias]
+	ch = !checkout_by_name
+	lg = log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%ai) %C(bold blue)<%an>%Creset'
+	up = "push --set-upstream origin "
+	oops = commit --amend --no-edit
+[core]
+	excludesFile = <Path To .gitignore_global
+[push]
+	autoSetupRemote = true
