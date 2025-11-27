@@ -1,3 +1,4 @@
+import 'package:collection/collection.dart';
 import 'package:expense_tracker/constants/strings.dart';
 import 'package:expense_tracker/models/expense.dart';
 import 'package:expense_tracker/providers/budget_provider.dart';
@@ -32,6 +33,7 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
   String actionButtonLabel = 'Save';
   final _note = TextEditingController();
   final _amount = TextEditingController();
+  final _amountFocusNode = FocusNode();
   String? _selectedCategory;
   DateTime _selectedDate = DateTime.now();
   DateTime? _hideUntilDate;
@@ -39,16 +41,13 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
   void _showDatePicker() async {
     final now = DateTime.now();
     final firstDate = now.subtract(const Duration(days: 365));
-    final date = await showDatePicker(
-        context: context, firstDate: firstDate, lastDate: now);
+    final date = await showDatePicker(context: context, firstDate: firstDate, lastDate: now);
 
     if (date == null) {
       return;
     }
     // If user selects current date, then make sure the time part of the date is no
-    if (date.year == now.year &&
-        date.month == now.month &&
-        date.day == now.day) {
+    if (date.year == now.year && date.month == now.month && date.day == now.day) {
       setState(() => _selectedDate = now);
       return;
     }
@@ -80,12 +79,8 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
     HapticFeedback.selectionClick();
     final enteredAmount = double.tryParse(_amount.text);
     if (enteredAmount == null || enteredAmount == 0) {
-      showDialogNotification(
-          'Invalid Amount',
-          Text(enteredAmount == 0
-              ? 'Make sure the amount is not 0'
-              : 'Make sure the amount is a number'),
-          context);
+      showDialogNotification('Invalid Amount',
+          Text(enteredAmount == 0 ? 'Make sure the amount is not 0' : 'Make sure the amount is a number'), context);
       return;
     }
 
@@ -121,6 +116,7 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
   void dispose() {
     _note.dispose();
     _amount.dispose();
+    _amountFocusNode.dispose();
     super.dispose();
   }
 
@@ -136,13 +132,23 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
       actionButtonLabel = 'Update';
     }
     super.initState();
+    _amountFocusNode.addListener(_evaluateAmountExpression);
+  }
+
+  void _evaluateAmountExpression() {
+    String text = _amount.text;
+    if (text.contains('-')) {
+      var parts = text.split('-');
+      var nums = parts.map((el) => double.tryParse(el)).toList();
+      var result = nums.slice(1).fold(nums[0] ?? 0, (result, double? num) => result - (num ?? 0));
+      _amount.text = result.toString();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final keyboardSpace = MediaQuery.of(context).viewInsets.bottom;
-    final categoryConfig =
-        ref.watch(activeBudgetCategoriesWithSpend).valueOrNull ?? [];
+    final categoryConfig = ref.watch(activeBudgetCategoriesWithSpend).valueOrNull ?? [];
     final user = ref.read(userProvider).valueOrNull!;
     return SingleChildScrollView(
       child: Padding(
@@ -186,8 +192,7 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
                             ],
                           )))
                       .toList(),
-                  onChanged: (value) =>
-                      setState(() => _selectedCategory = value),
+                  onChanged: (value) => setState(() => _selectedCategory = value),
                 ),
               ),
               IconButton(
@@ -203,12 +208,12 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
                   flex: 1,
                   child: TextField(
                     controller: _amount,
+                    focusNode: _amountFocusNode,
                     decoration: const InputDecoration(
                       prefixText: '\$',
                       label: Text('Amount'),
                     ),
-                    keyboardType: const TextInputType.numberWithOptions(
-                        signed: true, decimal: true),
+                    keyboardType: const TextInputType.numberWithOptions(signed: true, decimal: true),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -248,9 +253,7 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
                 ],
               ),
             ),
-            SuggestionsRow(
-                onClick: (suggestion) =>
-                    _note.text = '${_note.text} $suggestion'),
+            SuggestionsRow(onClick: (suggestion) => _note.text = '${_note.text} $suggestion'),
             ExpansionTile(
               title: const Text('Advanced'),
               controlAffinity: ListTileControlAffinity.leading,
@@ -273,8 +276,7 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
                       children: [
                         IconButton(
                           icon: const Icon(Icons.clear),
-                          onPressed: () =>
-                              setState(() => _hideUntilDate = null),
+                          onPressed: () => setState(() => _hideUntilDate = null),
                         ),
                         IconButton(
                           icon: const Icon(Icons.help_outline_rounded),
@@ -290,9 +292,7 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
                                     Center(
                                         child: Text(
                                       'Hide Until',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .headlineMedium,
+                                      style: Theme.of(context).textTheme.headlineMedium,
                                     )),
                                     const SizedBox(height: 15),
                                     const Text(
