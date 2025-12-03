@@ -77,6 +77,7 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
 
   void _submit() {
     HapticFeedback.selectionClick();
+    _evaluateAmountExpression();
     final enteredAmount = double.tryParse(_amount.text);
     if (enteredAmount == null || enteredAmount == 0) {
       showDialogNotification('Invalid Amount',
