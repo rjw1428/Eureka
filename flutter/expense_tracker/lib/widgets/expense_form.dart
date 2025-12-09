@@ -142,7 +142,7 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
       var parts = text.split('-');
       var nums = parts.map((el) => double.tryParse(el)).toList();
       var result = nums.slice(1).fold(nums[0] ?? 0, (result, double? num) => result - (num ?? 0));
-      _amount.text = result.toString();
+      _amount.text = result.toStringAsFixed(2);
     }
   }
 
