@@ -25,14 +25,18 @@ class NoteSuggestionNotifier extends StateNotifier<Map<String, List<String>>> {
     return firestore.collection('expenseUsers').doc(user!.id).update({'noteSuggestions': updatedSuggestions});
   }
 
-  removeSuggestion(String toRemove) {
+  removeSuggestion(String toRemove, String categoryId) {
     if (user == null) {
       return;
     }
 
-    return firestore.collection('expenseUsers').doc(user!.id).update({
-      'noteSuggestions': FieldValue.arrayRemove([toRemove])
-    });
+    final suggestions = List<String>.from(user!.noteSuggestions[categoryId] ?? []);
+    if (suggestions.contains(toRemove)) {
+      suggestions.remove(toRemove);
+    }
+    final updatedSuggestions = Map<String, List<String>>.from(user!.noteSuggestions);
+    updatedSuggestions[categoryId] = suggestions;
+    return firestore.collection('expenseUsers').doc(user!.id).update({'noteSuggestions': updatedSuggestions});
   }
 }
 

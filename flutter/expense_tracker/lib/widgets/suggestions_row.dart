@@ -48,16 +48,19 @@ class _SuggestionRowState extends ConsumerState<SuggestionsRow> {
             thumbVisibility: kIsWeb,
             thickness: kIsWeb ? 8.0 : 2.0,
             radius: const Radius.circular(4),
-            child: SingleChildScrollView(
-              controller: _scrollController,
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: suggestions
-                    .map((suggestion) => Suggestion(
-                          text: suggestion,
-                          action: () => widget.onClick(suggestion),
-                        ))
-                    .toList(),
+            child: Padding(
+              padding: EdgeInsets.only(bottom: suggestions.isEmpty ? 0 : 24.0),
+              child: SingleChildScrollView(
+                controller: _scrollController,
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: suggestions
+                      .map((suggestion) => Suggestion(
+                            text: suggestion,
+                            action: () => widget.onClick(suggestion),
+                          ))
+                      .toList(),
+                ),
               ),
             ),
           ),
@@ -77,7 +80,7 @@ class Suggestion extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8.0),
+      padding: const EdgeInsets.symmetric(horizontal: 4),
       child: OutlinedButton(
         onPressed: action,
         child: Text(text),

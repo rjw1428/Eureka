@@ -1,9 +1,13 @@
 import 'package:expense_tracker/models/category.dart';
+import 'package:expense_tracker/providers/note_suggestion_provider.dart';
 import 'package:expense_tracker/screens/budgetConfig/category_list.dart';
+import 'package:expense_tracker/widgets/add_suggestion.dart';
 import 'package:expense_tracker/widgets/category_form.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class CreateInitialBudgetStep extends StatefulWidget {
+class CreateInitialBudgetStep extends ConsumerStatefulWidget {
   final GlobalKey<FormState> formKey;
   final Function(List<CategoryDataWithId>) onCreate;
   final Function() onBack;
@@ -20,11 +24,10 @@ class CreateInitialBudgetStep extends StatefulWidget {
   });
 
   @override
-  State<CreateInitialBudgetStep> createState() =>
-      _CreateInitialBudgetStepState();
+  ConsumerState<CreateInitialBudgetStep> createState() => _CreateInitialBudgetStepState();
 }
 
-class _CreateInitialBudgetStepState extends State<CreateInitialBudgetStep> {
+class _CreateInitialBudgetStepState extends ConsumerState<CreateInitialBudgetStep> {
   openAddCategoryOverlay(BuildContext context, [CategoryDataWithId? category]) {
     showModalBottomSheet(
       useSafeArea: true,
@@ -32,9 +35,8 @@ class _CreateInitialBudgetStepState extends State<CreateInitialBudgetStep> {
       context: context,
       builder: (ctx) {
         return CategoryForm(
-          onSubmit: (newCategory) => category == null
-              ? _addCategory(context, newCategory)
-              : _updateCategory(context, newCategory),
+          onSubmit: (newCategory) =>
+              category == null ? _addCategory(context, newCategory) : _updateCategory(context, newCategory),
           initialCategory: category,
           onRemove: (category) => _removeCategory(context, category),
         );
@@ -63,6 +65,22 @@ class _CreateInitialBudgetStepState extends State<CreateInitialBudgetStep> {
     });
   }
 
+  void _showNoteEntryForm(String? categoryId) {
+    HapticFeedback.selectionClick();
+    showModalBottomSheet(
+      useSafeArea: true,
+      isScrollControlled: true,
+      context: context,
+      builder: (ctx) {
+        return SuggestionFom(
+            onSubmit: (text, category) {
+              ref.read(noteSuggestionProvider.notifier).addSuggestion(text, category);
+            },
+            categoryId: categoryId);
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -76,16 +94,15 @@ class _CreateInitialBudgetStepState extends State<CreateInitialBudgetStep> {
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 20),
-            Text(
-                'Hi ${widget.firstName}!, Now let\'s setup a budget to get you started.'),
+            Text('Hi ${widget.firstName}!, Now let\'s setup a budget to get you started.'),
             const SizedBox(height: 20),
             FormField<List<CategoryDataWithId>>(
               validator: (value) => null,
               builder: (FormFieldState<List<CategoryDataWithId>> state) {
                 return CategoryList(
                   categoryList: widget.categories,
-                  onEdit: (category) =>
-                      openAddCategoryOverlay(context, category),
+                  onEdit: (category) => openAddCategoryOverlay(context, category),
+                  onAddShortcut: _showNoteEntryForm,
                   isEditable: true,
                 );
               },
@@ -95,9 +112,8 @@ class _CreateInitialBudgetStepState extends State<CreateInitialBudgetStep> {
                 padding: const EdgeInsets.symmetric(vertical: 8.0),
                 child: OutlinedButton.icon(
                   onPressed: () => openAddCategoryOverlay(context),
-                  label: Text(widget.categories.isEmpty
-                      ? 'Add your first budget category'
-                      : 'Add another budget category'),
+                  label: Text(
+                      widget.categories.isEmpty ? 'Add your first budget category' : 'Add another budget category'),
                   icon: const Icon(Icons.playlist_add),
                 ),
               ),

@@ -8,9 +8,11 @@ class SuggestionFom extends ConsumerStatefulWidget {
   const SuggestionFom({
     super.key,
     required this.onSubmit,
+    this.categoryId,
   });
 
   final void Function(String, String) onSubmit;
+  final String? categoryId;
 
   @override
   ConsumerState<SuggestionFom> createState() {
@@ -82,6 +84,9 @@ class _SuggestionFormState extends ConsumerState<SuggestionFom> {
 
   @override
   void initState() {
+    if (widget.categoryId != null) {
+      _selectedCategory = widget.categoryId;
+    }
     super.initState();
   }
 
@@ -98,33 +103,35 @@ class _SuggestionFormState extends ConsumerState<SuggestionFom> {
               formTitle,
               style: Theme.of(context).textTheme.titleLarge,
             ),
-            DropdownButton(
-              hint: const Text('Category'),
-              isExpanded: true,
-              value: _selectedCategory,
-              items: categories
-                  .map((category) => DropdownMenuItem(
-                      value: category.id,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.only(right: 8.0),
-                                child: Icon(category.iconData),
-                              ),
-                              Text(category.label),
-                            ],
-                          ),
-                        ],
-                      )))
-                  .toList(),
-              onChanged: (value) => setState(() => _selectedCategory = value),
-            ),
-            const SizedBox(
-              height: 16,
-            ),
+            if (widget.categoryId == null)
+              DropdownButton(
+                hint: const Text('Category'),
+                isExpanded: true,
+                value: _selectedCategory,
+                items: categories
+                    .map((category) => DropdownMenuItem(
+                        value: category.id,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.only(right: 8.0),
+                                  child: Icon(category.iconData),
+                                ),
+                                Text(category.label),
+                              ],
+                            ),
+                          ],
+                        )))
+                    .toList(),
+                onChanged: (value) => setState(() => _selectedCategory = value),
+              ),
+            if (widget.categoryId == null)
+              const SizedBox(
+                height: 16,
+              ),
             TextField(
               textCapitalization: TextCapitalization.words,
               controller: _label,

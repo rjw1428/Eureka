@@ -30,7 +30,11 @@ class HomeScreen extends ConsumerWidget {
         appleProfile: appleShit,
       );
     }
-    final user = ref.read(userProvider).valueOrNull!;
+    final user = ref.read(userProvider).valueOrNull;
+    if (user == null) {
+      print("User is undefined");
+      return const Loading();
+    }
     return ExpenseScreen(user: user);
   }
 }
