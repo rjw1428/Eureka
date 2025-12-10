@@ -1,25 +1,28 @@
 import 'dart:io';
+import 'package:expense_tracker/providers/budget_provider.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class SuggestionFom extends StatefulWidget {
+class SuggestionFom extends ConsumerStatefulWidget {
   const SuggestionFom({
     super.key,
     required this.onSubmit,
   });
 
-  final void Function(String) onSubmit;
+  final void Function(String, String) onSubmit;
 
   @override
-  State<StatefulWidget> createState() {
+  ConsumerState<SuggestionFom> createState() {
     return _SuggestionFormState();
   }
 }
 
-class _SuggestionFormState extends State<SuggestionFom> {
+class _SuggestionFormState extends ConsumerState<SuggestionFom> {
   String formTitle = 'Add Note Shortcut';
   String actionButtonLabel = 'Save';
   final _label = TextEditingController();
+  String? _selectedCategory;
 
   void _showDialog(String title, String content) {
     bool isIos = false;
@@ -35,9 +38,7 @@ class _SuggestionFormState extends State<SuggestionFom> {
           builder: (ctx) => CupertinoAlertDialog(
                 title: Text(title),
                 content: Text(content),
-                actions: [
-                  TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Okay'))
-                ],
+                actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Okay'))],
               ));
     } else {
       showDialog(
@@ -45,9 +46,7 @@ class _SuggestionFormState extends State<SuggestionFom> {
           builder: (ctx) => AlertDialog(
                 title: Text(title),
                 content: Text(content),
-                actions: [
-                  TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Okay'))
-                ],
+                actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Okay'))],
               ));
     }
   }
@@ -55,6 +54,12 @@ class _SuggestionFormState extends State<SuggestionFom> {
   void _submit() {
     final enteredText = _label.text.trim();
 
+    if (_selectedCategory == null) {
+      _showDialog(
+        "Invalid Shortcut text",
+        "A category is required",
+      );
+    }
     if (enteredText.isEmpty) {
       _showDialog(
         'Invalid Shortcut text',
@@ -63,7 +68,7 @@ class _SuggestionFormState extends State<SuggestionFom> {
       return;
     }
 
-    widget.onSubmit(enteredText);
+    widget.onSubmit(enteredText, _selectedCategory!);
 
     Navigator.pop(context);
     return;
@@ -82,6 +87,7 @@ class _SuggestionFormState extends State<SuggestionFom> {
 
   @override
   Widget build(BuildContext context) {
+    final categories = ref.watch(activeBudgetCategoriesWithSpend).valueOrNull ?? [];
     final keyboardSpace = MediaQuery.of(context).viewInsets.bottom;
     return SingleChildScrollView(
       child: Padding(
@@ -92,20 +98,38 @@ class _SuggestionFormState extends State<SuggestionFom> {
               formTitle,
               style: Theme.of(context).textTheme.titleLarge,
             ),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      textCapitalization: TextCapitalization.words,
-                      controller: _label,
-                      decoration: const InputDecoration(
-                        label: Text('Note Shortcut'),
-                      ),
-                    ),
-                  ),
-                ],
+            DropdownButton(
+              hint: const Text('Category'),
+              isExpanded: true,
+              value: _selectedCategory,
+              items: categories
+                  .map((category) => DropdownMenuItem(
+                      value: category.id,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.only(right: 8.0),
+                                child: Icon(category.iconData),
+                              ),
+                              Text(category.label),
+                            ],
+                          ),
+                        ],
+                      )))
+                  .toList(),
+              onChanged: (value) => setState(() => _selectedCategory = value),
+            ),
+            const SizedBox(
+              height: 16,
+            ),
+            TextField(
+              textCapitalization: TextCapitalization.words,
+              controller: _label,
+              decoration: const InputDecoration(
+                label: Text('Note Shortcut'),
               ),
             ),
             Padding(

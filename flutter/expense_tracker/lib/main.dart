@@ -21,20 +21,19 @@ void main() async {
   await LocalStorageService().initialize();
   WidgetsFlutterBinding.ensureInitialized();
 
-  if (kDebugMode) {
-    try {
-      FirebaseFirestore.instance.useFirestoreEmulator('localhost', 8080);
-      await FirebaseAuth.instance.useAuthEmulator('localhost', 9099);
-    } catch (e) {
-      print(e);
-    }
-  }
+  // if (kDebugMode) {
+  //   try {
+  //     FirebaseFirestore.instance.useFirestoreEmulator('localhost', 8080);
+  //     await FirebaseAuth.instance.useAuthEmulator('localhost', 9099);
+  //   } catch (e) {
+  //     print(e);
+  //   }
+  // }
 
   runApp(
     ProviderScope(
       child: Consumer(builder: (context, ref, child) {
-        final seedColor =
-            ref.watch(settingsProvider.select((settings) => settings.color));
+        final seedColor = ref.watch(settingsProvider.select((settings) => settings.color));
         final colorScheme = ColorScheme.fromSeed(
           seedColor: seedColor,
         );

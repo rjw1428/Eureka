@@ -6,9 +6,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class SuggestionsRow extends ConsumerStatefulWidget {
-  const SuggestionsRow({super.key, required this.onClick});
+  const SuggestionsRow({super.key, required this.onClick, required this.categoryId});
 
   final void Function(String?) onClick;
+  final String categoryId;
 
   @override
   ConsumerState<SuggestionsRow> createState() => _SuggestionRowState();
@@ -24,7 +25,8 @@ class _SuggestionRowState extends ConsumerState<SuggestionsRow> {
 
   @override
   Widget build(BuildContext context) {
-    final suggestions = ref.watch(noteSuggestionProvider);
+    final suggestionsObject = ref.watch(noteSuggestionProvider);
+    final suggestions = suggestionsObject[widget.categoryId] ?? [];
     if (suggestions.isEmpty) {
       return const SizedBox(height: 1);
     }

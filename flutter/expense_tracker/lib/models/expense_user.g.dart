@@ -15,10 +15,11 @@ ExpenseUser _$ExpenseUserFromJson(Map<String, dynamic> json) => ExpenseUser(
       role: json['role'] as String,
       initialized: DateTime.parse(json['initialized'] as String),
       userSettings: Map<String, String>.from(json['userSettings'] as Map),
-      noteSuggestions: (json['noteSuggestions'] as List<dynamic>?)
-              ?.map((e) => e as String)
-              .toList() ??
-          const [],
+      noteSuggestions: (json['noteSuggestions'] as Map<String, dynamic>?)?.map(
+            (k, e) => MapEntry(
+                k, (e as List<dynamic>).map((e) => e as String).toList()),
+          ) ??
+          const {},
       linkedAccounts: (json['linkedAccounts'] as List<dynamic>?)
               ?.map((e) => LinkedUser.fromJson(e as Map<String, dynamic>))
               .toList() ??

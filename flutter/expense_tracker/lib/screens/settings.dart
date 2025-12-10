@@ -29,8 +29,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   final _lastNameField = TextEditingController();
 
   void _showColorSelector(BuildContext context, ExpenseUser user) {
-    Color selectedColor =
-        ref.read(settingsProvider.select((settings) => settings.color));
+    Color selectedColor = ref.read(settingsProvider.select((settings) => settings.color));
     showDialogNotification(
       'Select a color',
       HueRingPicker(
@@ -50,8 +49,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  void _openUnlinkConfirmationDialog(
-      LinkedUser linkedAccount, ExpenseUser user) {
+  void _openUnlinkConfirmationDialog(LinkedUser linkedAccount, ExpenseUser user) {
     showDialogNotification(
       'Are you sure you want to unlink?',
       Text(
@@ -93,8 +91,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               );
               return;
             }
-            Navigator.pushNamedAndRemoveUntil(
-                context, '/', (Route<dynamic> route) => false);
+            Navigator.pushNamedAndRemoveUntil(context, '/', (Route<dynamic> route) => false);
           }
         },
         child: const Text('I am sure'),
@@ -109,9 +106,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       isScrollControlled: true,
       context: context,
       builder: (ctx) {
-        return SuggestionFom(
-            onSubmit: (s) =>
-                ref.read(noteSuggestionProvider.notifier).addSuggestion(s));
+        return SuggestionFom(onSubmit: (text, category) {
+          ref.read(noteSuggestionProvider.notifier).addSuggestion(text, category);
+        });
       },
     );
   }
@@ -232,8 +229,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               child: Text(link.email),
                             ),
                             TextButton(
-                                onPressed: () =>
-                                    _openUnlinkConfirmationDialog(link, user),
+                                onPressed: () => _openUnlinkConfirmationDialog(link, user),
                                 child: const Icon(Icons.link_off_outlined)),
                           ],
                         ),
@@ -241,9 +237,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     );
                   }).toList(),
                 ),
-                RequestList(
-                    requestList: requestList,
-                    onRemove: AccountLinkService().removeRequest),
+                RequestList(requestList: requestList, onRemove: AccountLinkService().removeRequest),
                 if (!showLinkForm)
                   Center(
                     child: Padding(
@@ -282,8 +276,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             return;
                           }
 
-                          final RegExp emailRegex = RegExp(
-                              r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+");
+                          final RegExp emailRegex =
+                              RegExp(r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+");
                           if (!emailRegex.hasMatch(_emailField.text.trim())) {
                             showDialogNotification(
                               'Invalid Email',
@@ -293,19 +287,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             return;
                           }
 
-                          if (requestList
-                              .map((req) => req.targetEmail)
-                              .contains(_emailField.text.trim())) {
+                          if (requestList.map((req) => req.targetEmail).contains(_emailField.text.trim())) {
                             showDialogNotification(
                               'Already Requested',
-                              const Text(
-                                  'The email address provided has already been requested'),
+                              const Text('The email address provided has already been requested'),
                               context,
                             );
                             return;
                           }
-                          final response =
-                              await AccountLinkService().sendLinkRequest(
+                          final response = await AccountLinkService().sendLinkRequest(
                             _emailField.text,
                             user.id,
                           );
@@ -375,19 +365,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   style: Theme.of(context).textTheme.bodyMedium,
                   textAlign: TextAlign.start,
                 ),
-                Wrap(
-                  spacing: 4.0,
-                  runSpacing: 8.0,
-                  children: noteShortcuts
-                      .map((shortcut) => Chip(
-                            label: Text(shortcut),
-                            deleteIcon: const Icon(Icons.clear),
-                            onDeleted: () => ref
-                                .read(noteSuggestionProvider.notifier)
-                                .removeSuggestion(shortcut),
-                          ))
-                      .toList(),
-                ),
+                ...noteShortcuts.values.map((suggestionList) {
+                  return Wrap(
+                    spacing: 4.0,
+                    runSpacing: 8.0,
+                    children: suggestionList
+                        .map((shortcut) => Chip(
+                              label: Text(shortcut),
+                              deleteIcon: const Icon(Icons.clear),
+                              onDeleted: () => ref.read(noteSuggestionProvider.notifier).removeSuggestion(shortcut),
+                            ))
+                        .toList(),
+                  );
+                }),
                 Center(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -398,11 +388,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                 ),
                 Divider(
-                    height: 48,
-                    thickness: 2,
-                    indent: 5,
-                    endIndent: 5,
-                    color: Theme.of(context).colorScheme.secondary),
+                    height: 48, thickness: 2, indent: 5, endIndent: 5, color: Theme.of(context).colorScheme.secondary),
                 Center(
                   child: ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
@@ -414,8 +400,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       size: 20,
                     ),
                     onPressed: () => onDeleteAccount(user),
-                    label: const Text("Delete Account",
-                        textAlign: TextAlign.center),
+                    label: const Text("Delete Account", textAlign: TextAlign.center),
                   ),
                 ),
               ],
@@ -428,8 +413,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 }
 
 class RequestList extends StatelessWidget {
-  const RequestList(
-      {super.key, required this.requestList, required this.onRemove});
+  const RequestList({super.key, required this.requestList, required this.onRemove});
 
   final List<PendingRequest> requestList;
   final void Function(PendingRequest) onRemove;
@@ -454,9 +438,7 @@ class RequestList extends StatelessWidget {
                     ),
                     Row(
                       children: [
-                        TextButton(
-                            onPressed: () => onRemove(request),
-                            child: const Icon(Icons.delete_outline)),
+                        TextButton(onPressed: () => onRemove(request), child: const Icon(Icons.delete_outline)),
                       ],
                     )
                   ],

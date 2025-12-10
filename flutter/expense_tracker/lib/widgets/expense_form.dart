@@ -254,7 +254,14 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
                 ],
               ),
             ),
-            SuggestionsRow(onClick: (suggestion) => _note.text = '${_note.text} $suggestion'),
+            if (_selectedCategory != null)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: SuggestionsRow(
+                  onClick: (suggestion) => _note.text = '${_note.text} $suggestion',
+                  categoryId: _selectedCategory!,
+                ),
+              ),
             ExpansionTile(
               title: const Text('Advanced'),
               controlAffinity: ListTileControlAffinity.leading,
