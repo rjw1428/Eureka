@@ -1,5 +1,6 @@
 import 'package:expense_tracker/models/expense_user.dart';
 import 'package:expense_tracker/providers/backend_provider.dart';
+import 'package:expense_tracker/providers/fcm_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rxdart/rxdart.dart';
 
@@ -85,6 +86,12 @@ class UserCreationState extends StateNotifier<UserState?> {
       final firestore = ref.read(backendProvider);
       final doc = await firestore.collection('expenseUsers').doc(uid).get();
       state = UserState(isAuthenticated: true, isCreated: doc.exists);
+
+      // Initialize FCM Service
+      if (doc.exists) {
+        final fcmService = ref.read(fcmServiceProvider);
+        await fcmService.initialize(uid);
+      }
     }, error: (error, stack) {
       print('Error fetching user ID: $error');
       state = null;

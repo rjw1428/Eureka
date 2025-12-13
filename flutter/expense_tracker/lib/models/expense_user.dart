@@ -16,6 +16,7 @@ class ExpenseUser {
   final Map<String, String> userSettings;
   final Map<String, List<String>> noteSuggestions;
   final AccountNotification? notification;
+  final String? fcmToken;
   final String? backupLedgerId;
   final DateTime initialized;
 
@@ -32,6 +33,7 @@ class ExpenseUser {
     this.linkedAccounts = const [],
     this.archivedLinkedAccounts = const [],
     this.notification,
+    this.fcmToken,
     this.backupLedgerId,
   });
 

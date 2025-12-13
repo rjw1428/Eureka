@@ -2,8 +2,8 @@ const { onCall } = require("firebase-functions/v2/https");
 const logger = require("firebase-functions/logger");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
+const { getMessaging } = require("firebase-admin/messaging");
 const { onDocumentCreated } = require("firebase-functions/firestore");
-const functions = require('firebase-functions/v1');
 
 initializeApp();
 
@@ -133,6 +133,39 @@ exports.triggerShareExpenseNotification = onDocumentCreated(
         }
     }
 );
+
+exports.sendReactionNotification = onCall(async (request) => {
+    try {
+        const userId = request.data["id"]
+        const targetSnapshot = await getFirestore()
+            .collection("expenseUsers")
+            .doc(userId)
+            .get();
+
+        if (!targetSnapshot.exists) {
+            logger.warn(
+                `Expense user ${userId} not found for reaction notification.`
+            );
+            return { success: false, message: 'User does not exist' };
+        }
+        const token = targetSnapshot.data().fcmToken
+        if (!token) {
+           return { success: false, message: 'User does not have a token saved' }; 
+        }
+        const message = {
+            notification: {
+                title: "New Reaction!",
+                body: `Someone reacted to your expense with ${reactionEmoji}!`,
+            },
+            tokens: fcmTokens,
+        };
+        const resp = await getMessaging().send(message)
+        logger.log(`Message Status: ${resp}`)
+        return { success: true, message: resp}
+    } catch (e) {
+        return { success: false, message: e}
+    }
+})
 
 exports.triggerLinkedAccount = onCall(async (request) => {
     try {

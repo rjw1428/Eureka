@@ -16,8 +16,7 @@ ExpenseUser _$ExpenseUserFromJson(Map<String, dynamic> json) => ExpenseUser(
       initialized: DateTime.parse(json['initialized'] as String),
       userSettings: Map<String, String>.from(json['userSettings'] as Map),
       noteSuggestions: (json['noteSuggestions'] as Map<String, dynamic>?)?.map(
-            (k, e) => MapEntry(
-                k, (e as List<dynamic>).map((e) => e as String).toList()),
+            (k, e) => MapEntry(k, (e as List<dynamic>).map((e) => e as String).toList()),
           ) ??
           const {},
       linkedAccounts: (json['linkedAccounts'] as List<dynamic>?)
@@ -30,13 +29,12 @@ ExpenseUser _$ExpenseUserFromJson(Map<String, dynamic> json) => ExpenseUser(
           const [],
       notification: json['notification'] == null
           ? null
-          : AccountNotification.fromJson(
-              json['notification'] as Map<String, dynamic>),
+          : AccountNotification.fromJson(json['notification'] as Map<String, dynamic>),
+      fcmToken: json['fcmTokens'] as String?,
       backupLedgerId: json['backupLedgerId'] as String?,
     );
 
-Map<String, dynamic> _$ExpenseUserToJson(ExpenseUser instance) =>
-    <String, dynamic>{
+Map<String, dynamic> _$ExpenseUserToJson(ExpenseUser instance) => <String, dynamic>{
       'id': instance.id,
       'firstName': instance.firstName,
       'lastName': instance.lastName,
@@ -48,6 +46,7 @@ Map<String, dynamic> _$ExpenseUserToJson(ExpenseUser instance) =>
       'userSettings': instance.userSettings,
       'noteSuggestions': instance.noteSuggestions,
       'notification': instance.notification,
+      'fcmToken': instance.fcmToken,
       'backupLedgerId': instance.backupLedgerId,
       'initialized': instance.initialized.toIso8601String(),
     };
