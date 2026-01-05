@@ -1,4 +1,7 @@
+import 'dart:ui';
+
 import 'package:collection/collection.dart';
+import 'package:dotted_border/dotted_border.dart';
 import 'package:expense_tracker/models/expense.dart';
 import 'package:expense_tracker/providers/linked_accounts_provider.dart';
 import 'package:expense_tracker/widgets/user_icon.dart';
@@ -29,6 +32,62 @@ class ExpenseItem extends ConsumerWidget {
       return linkedUsers.firstWhereOrNull((linkedUser) => linkedUser.id == expense.submittedBy);
     }));
 
+    final isHidden = expense.hideUntil?.isAfter(DateTime.now()) ?? false;
+
+    createCardContent() {
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisSize: MainAxisSize.max,
+        children: [
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Opacity(
+                  opacity: isHidden ? 0.4 : 1.0,
+                  child: Icon(
+                    expense.icon,
+                    color: Theme.of(context).iconTheme.color,
+                  ),
+                ),
+              ),
+              Flexible(
+                fit: FlexFit.loose,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    Text(expense.formattedDate, style: Theme.of(context).textTheme.titleSmall),
+                    Text(isHidden ? "Lorem ipsum dolor sit amet" : expense.title),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(width: 8),
+          Row(
+            children: [
+              Text(
+                isHidden ? "\$0.00" : '\$${expense.amount.toStringAsFixed(2)}',
+              ),
+              if (user != null)
+                Padding(
+                  padding: const EdgeInsets.only(left: 8),
+                  child: Opacity(
+                    opacity: 0.7,
+                    child: UserIcon(
+                      user: user,
+                      size: 36,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      );
+    }
+
     return LayoutBuilder(
       builder: (ctx, constraints) => Stack(
         clipBehavior: Clip.none,
@@ -38,45 +97,36 @@ class ExpenseItem extends ConsumerWidget {
               horizontal: 8,
               vertical: 5,
             ),
+            color: isHidden ? Colors.transparent : Theme.of(context).cardTheme.color,
             clipBehavior: Clip.none,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 8,
-                vertical: 8,
-              ),
-              child: Row(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: Icon(expense.icon),
-                  ),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      children: [
-                        Text(expense.formattedDate, style: Theme.of(context).textTheme.titleSmall),
-                        Text(expense.title),
-                      ],
+            child: DottedBorder(
+              strokeWidth: 2,
+              dashPattern: const [6, 3],
+              color: isHidden ? Theme.of(context).cardTheme.color! : Colors.transparent,
+              borderType: BorderType.RRect,
+              radius: const Radius.circular(12),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 8,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  mainAxisSize: MainAxisSize.max,
+                  children: [
+                    Expanded(
+                      child: isHidden
+                          ? ClipRect(
+                              child: ImageFiltered(
+                                imageFilter: ImageFilter.blur(sigmaX: 2.0, sigmaY: 2.0),
+                                child: createCardContent(),
+                              ),
+                            )
+                          : createCardContent(),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    '\$${expense.amount.toStringAsFixed(2)}',
-                  ),
-                  if (user != null)
-                    Padding(
-                      padding: const EdgeInsets.only(left: 8),
-                      child: Opacity(
-                        opacity: 0.7,
-                        child: UserIcon(
-                          user: user,
-                          size: 36,
-                        ),
-                      ),
-                    ),
-                  actionButtons(expense, onEdit, onRemove, onReact, context),
-                ],
+                    actionButtons(expense, onEdit, onRemove, onReact, context),
+                  ],
+                ),
               ),
             ),
           ),
@@ -138,10 +188,7 @@ class ExpenseItem extends ConsumerWidget {
               const PopupMenuItem(
                   value: "EDIT",
                   child: Row(
-                    children: [
-                      Icon(Icons.edit),
-                      Padding(padding: EdgeInsets.only(left: 8), child: Text('Edit'))
-                    ],
+                    children: [Icon(Icons.edit), Padding(padding: EdgeInsets.only(left: 8), child: Text('Edit'))],
                   )),
               if (kIsWeb)
                 const PopupMenuItem(
@@ -156,10 +203,7 @@ class ExpenseItem extends ConsumerWidget {
               const PopupMenuItem(
                   value: "REMOVE",
                   child: Row(
-                    children: [
-                      Icon(Icons.delete),
-                      Padding(padding: EdgeInsets.only(left: 8), child: Text('Remove'))
-                    ],
+                    children: [Icon(Icons.delete), Padding(padding: EdgeInsets.only(left: 8), child: Text('Remove'))],
                   ))
             ]);
   }
