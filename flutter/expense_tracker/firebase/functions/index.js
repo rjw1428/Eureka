@@ -7,78 +7,7 @@ const { onDocumentCreated } = require("firebase-functions/firestore");
 
 initializeApp();
 
-// Create a ledger for new users and add to account
-// exports.initializeExpenseTrackerAccount = functions.auth.user().onCreate(async (user) => {
-//     const now = new Date().toISOString();
-//     const userId = user.uid;
-//     const email = user.email;
-//     console.log(JSON.stringify(user));
-//     const displayNameParts = user.displayName ? user.displayName.split(" ") : [];
-//     try {
-//         const ledgerSnapshot = await getFirestore().collection("ledger").add({
-//             budgetConfig: {},
-//             initialized: now,
-//         });
-
-//         let data = {
-//             role: "primary",
-//             email,
-//             ledgerId: ledgerSnapshot.id,
-//             initialized: now,
-//             linkedAccounts: [],
-//             archivedLinkedAccounts: [],
-//             userSettings: {},
-//         };
-        
-//         if (displayNameParts.length > 0) {
-//             const firstName = displayNameParts[0];
-//             const lastName =  displayNameParts[1];
-//             data["firstName"] = firstName || "New";
-//             data["lastName"] = lastName || "User";
-//         }
-
-//         await getFirestore()
-//             .collection("expenseUsers")
-//             .doc(userId)
-//             .set(data, { merge: true });
-//     } catch (e) {
-//         logger.error(e);
-//         return false;
-//     }
-
-//     return true;
-// });
-
-// Create a summary entry on writing an expense (currently only used in migration and will be removed)
-// exports.updateSummaryOnCreate = onDocumentCreated('/ledger/{ledgerId}/{timeframe}/{documentId}', async (event) => {
-//     const doc = event.data.data();
-//     try {
-//         const ledgerId = event.params.ledgerId
-//         const summaryId = `${event.params.timeframe}_${doc.categoryId}`
-//         const summaryRef = getFirestore().doc(`/ledger/${ledgerId}/summaries/${summaryId}`)
-//         const summarySnapshot = await summaryRef.get()
-
-//         if (summarySnapshot.exists) {
-//             return summaryRef.update({
-//                 count: FieldValue.increment(1),
-//                 total: FieldValue.increment(doc.amount),
-//                 lastUpdate: new Date(doc.date)
-//             })
-//         }
-
-//         return summaryRef.set({
-//             startDate: new Date(doc.date),
-//             categoryId: doc.categoryId,
-//             count: FieldValue.increment(1),
-//             total: FieldValue.increment(doc.amount),
-//             lastUpdate: new Date(doc.date)
-//         })
-//     } catch (e) {
-//         logger.error(e);
-//         logger.log(JSON.stringify(doc))
-//         return null
-//     }
-// })
+// ... (existing functions remain the same)
 
 // On a share request, find the user an create a notification on their account
 exports.triggerShareExpenseNotification = onDocumentCreated(
@@ -361,4 +290,159 @@ exports.promoteAccount = onCall(async (request) => {
     }
     return true;
 
-})
+});
+
+exports.createAmortizedExpenses = onCall(async (request) => {
+    logger.info("Starting createAmortizedExpenses function");
+
+    if (!request.auth) {
+        logger.error("User is not authenticated.");
+        throw new functions.https.HttpsError("unauthenticated", "The function must be called while authenticated.");
+    }
+
+    const { template, firstExpenseId, groupId, months, ledgerId } = request.data;
+    const db = getFirestore();
+
+    if (!template || !firstExpenseId || !groupId || !months || !ledgerId) {
+        logger.error("Missing required data in payload.", request.data);
+        throw new functions.https.HttpsError("invalid-argument", "The function must be called with all required arguments.");
+    }
+
+    const monthlyAmount = template.amount / months;
+    const originalDate = new Date(template.date);
+    let nextId = null;
+    
+    const expensePaths = [];
+    const summaryUpdates = [];
+
+    try {
+        // Add first expense to the manifest
+        const firstExpenseMonthStr = new Intl.DateTimeFormat('en-US', { month: 'short' }).format(originalDate).toUpperCase();
+        const firstExpenseCollectionName = `${originalDate.getFullYear()}_${firstExpenseMonthStr}`;
+        expensePaths.push(`ledger/${ledgerId}/${firstExpenseCollectionName}/${firstExpenseId}`);
+        summaryUpdates.push({
+            path: `ledger/${ledgerId}/summaries/${firstExpenseCollectionName}_${template.categoryId}`,
+            amount: monthlyAmount,
+        });
+
+        for (let i = months; i >= 2; i--) {
+            const expenseDate = new Date(originalDate);
+            expenseDate.setMonth(originalDate.getMonth() + i - 1);
+
+            const monthFormatter = new Intl.DateTimeFormat('en-US', { month: 'short' });
+            const monthStr = monthFormatter.format(expenseDate).toUpperCase();
+            const collectionName = `${expenseDate.getFullYear()}_${monthStr}`;
+
+            const expenseData = {
+                ...template,
+                amount: monthlyAmount,
+                date: expenseDate,
+                amortized: {
+                    groupId: groupId,
+                    index: i,
+                    over: months,
+                    nextId: nextId,
+                },
+                submittedBy: request.auth.uid,
+            };
+            delete expenseData.id;
+
+            const newDocRef = await db.collection("ledger").doc(ledgerId).collection(collectionName).add(expenseData);
+            nextId = newDocRef.id;
+
+            expensePaths.push(newDocRef.path);
+
+            const summaryId = `${collectionName}_${template.categoryId}`;
+            const summaryRef = db.collection("ledger").doc(ledgerId).collection("summaries").doc(summaryId);
+            summaryUpdates.push({ path: summaryRef.path, amount: monthlyAmount });
+            
+            const summaryDoc = await summaryRef.get();
+
+            if (!summaryDoc.exists) {
+                await summaryRef.set({
+                    startDate: new Date(expenseDate.getFullYear(), expenseDate.getMonth()),
+                    categoryId: template.categoryId,
+                    total: 0,
+                    count: 0,
+                });
+            }
+
+            await summaryRef.update({
+                total: FieldValue.increment(monthlyAmount),
+                count: FieldValue.increment(1),
+                lastUpdate: FieldValue.serverTimestamp(),
+            });
+        }
+
+        const firstExpenseRef = db.doc(expensePaths[0]);
+        await firstExpenseRef.update({ "amortized.nextId": nextId });
+
+        // Create the manifest
+        const manifestRef = db.collection("amortization_series").doc(groupId);
+        await manifestRef.set({
+            expensePaths: expensePaths.reverse(), // Reverse to have them in chronological order
+            summaryUpdates,
+            ledgerId,
+            createdAt: FieldValue.serverTimestamp(),
+        });
+
+        logger.info("Successfully created all amortized expenses and manifest.");
+        return { success: true };
+    } catch (error) {
+        logger.error("Error creating amortized expenses:", error);
+        throw new functions.https.HttpsError("internal", "An error occurred while creating the amortized expenses.");
+    }
+});
+
+exports.deleteAmortizedSeries = onCall(async (request) => {
+    logger.info("Starting deleteAmortizedSeries function");
+
+    if (!request.auth) {
+        logger.error("User is not authenticated.");
+        throw new functions.https.HttpsError("unauthenticated", "The function must be called while authenticated.");
+    }
+
+    const { groupId, ledgerId } = request.data;
+    if (!groupId || !ledgerId) {
+        logger.error("Missing groupId or ledgerId in payload.", request.data);
+        throw new functions.https.HttpsError("invalid-argument", "Missing groupId or ledgerId.");
+    }
+    
+    const db = getFirestore();
+    const manifestRef = db.collection("amortization_series").doc(groupId);
+
+    try {
+        const manifestDoc = await manifestRef.get();
+        if (!manifestDoc.exists) {
+            logger.error(`Amortization manifest not found for groupId: ${groupId}`);
+            throw new functions.https.HttpsError("not-found", "Amortization series not found.");
+        }
+
+        const manifestData = manifestDoc.data();
+        const batch = db.batch();
+
+        // Delete all expenses in the series
+        manifestData.expensePaths.forEach(path => {
+            batch.delete(db.doc(path));
+        });
+
+        // Decrement all summary documents
+        manifestData.summaryUpdates.forEach(update => {
+            batch.update(db.doc(update.path), {
+                total: FieldValue.increment(-update.amount),
+                count: FieldValue.increment(-1),
+            });
+        });
+
+        // Delete the manifest itself
+        batch.delete(manifestRef);
+
+        await batch.commit();
+        logger.info(`Successfully deleted amortization series with groupId: ${groupId}`);
+        return { success: true };
+
+    } catch (error) {
+        logger.error(`Error deleting amortization series ${groupId}:`, error);
+        throw new functions.https.HttpsError("internal", "An error occurred while deleting the expense series.");
+    }
+});

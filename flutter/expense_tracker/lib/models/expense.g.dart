@@ -6,6 +6,23 @@ part of 'expense.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
+AmortizationDetails _$AmortizationDetailsFromJson(Map<String, dynamic> json) =>
+    AmortizationDetails(
+      groupId: json['groupId'] as String,
+      nextId: json['nextId'] as String?,
+      index: (json['index'] as num).toInt(),
+      over: (json['over'] as num).toInt(),
+    );
+
+Map<String, dynamic> _$AmortizationDetailsToJson(
+        AmortizationDetails instance) =>
+    <String, dynamic>{
+      'groupId': instance.groupId,
+      'nextId': instance.nextId,
+      'index': instance.index,
+      'over': instance.over,
+    };
+
 Expense _$ExpenseFromJson(Map<String, dynamic> json) => Expense(
       amount: (json['amount'] as num).toDouble(),
       date: DateTime.parse(json['date'] as String),
@@ -20,6 +37,10 @@ Expense _$ExpenseFromJson(Map<String, dynamic> json) => Expense(
       hideUntil: json['hideUntil'] == null
           ? null
           : DateTime.parse(json['hideUntil'] as String),
+      amortized: json['amortized'] == null
+          ? null
+          : AmortizationDetails.fromJson(
+              json['amortized'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$ExpenseToJson(Expense instance) => <String, dynamic>{
@@ -31,6 +52,7 @@ Map<String, dynamic> _$ExpenseToJson(Expense instance) => <String, dynamic>{
       'date': instance.date.toIso8601String(),
       'reactions': instance.reactions,
       'hideUntil': instance.hideUntil?.toIso8601String(),
+      'amortized': instance.amortized?.toJson(),
     };
 
 ExpenseWithCategoryData _$ExpenseWithCategoryDataFromJson(
@@ -42,6 +64,10 @@ ExpenseWithCategoryData _$ExpenseWithCategoryDataFromJson(
       submittedBy: json['submittedBy'] as String?,
       category:
           CategoryDataWithId.fromJson(json['category'] as Map<String, dynamic>),
+      amortized: json['amortized'] == null
+          ? null
+          : AmortizationDetails.fromJson(
+              json['amortized'] as Map<String, dynamic>),
     )
       ..id = json['id'] as String?
       ..note = json['note'] as String?
@@ -62,5 +88,6 @@ Map<String, dynamic> _$ExpenseWithCategoryDataToJson(
       'date': instance.date.toIso8601String(),
       'reactions': instance.reactions,
       'hideUntil': instance.hideUntil?.toIso8601String(),
+      'amortized': instance.amortized,
       'category': instance.category,
     };

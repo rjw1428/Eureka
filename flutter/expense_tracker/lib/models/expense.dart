@@ -8,6 +8,25 @@ part 'expense.g.dart';
 final dateFormatter = DateFormat.yMd();
 
 @JsonSerializable()
+class AmortizationDetails {
+  AmortizationDetails({
+    required this.groupId,
+    this.nextId,
+    required this.index,
+    required this.over,
+  });
+
+  final String groupId;
+  final String? nextId;
+  final int index;
+  final int over;
+
+  factory AmortizationDetails.fromJson(Map<String, dynamic> json) =>
+      _$AmortizationDetailsFromJson(json);
+  Map<String, dynamic> toJson() => _$AmortizationDetailsToJson(this);
+}
+
+@JsonSerializable(explicitToJson: true)
 class Expense {
   Expense({
     required this.amount,
@@ -18,6 +37,7 @@ class Expense {
     this.id,
     this.reactions = const [],
     this.hideUntil,
+    this.amortized,
   });
 
   String categoryId;
@@ -28,6 +48,7 @@ class Expense {
   DateTime date;
   List<String> reactions;
   DateTime? hideUntil;
+  AmortizationDetails? amortized;
 
   factory Expense.fromJson(Map<String, dynamic> json) => _$ExpenseFromJson(json);
   Map<String, dynamic> toJson() => _$ExpenseToJson(this);
@@ -51,6 +72,7 @@ class ExpenseWithCategoryData extends Expense {
     required super.categoryId,
     required super.submittedBy,
     required this.category,
+    super.amortized,
   });
 
   factory ExpenseWithCategoryData.fromJson(Map<String, dynamic> json) =>
