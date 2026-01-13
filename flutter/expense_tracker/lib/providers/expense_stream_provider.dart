@@ -15,6 +15,7 @@ import 'package:expense_tracker/services/auth.service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:rxdart/rxdart.dart';
+import 'package:uuid/uuid.dart';
 
 final format = DateFormat('MMM', 'en_US');
 
@@ -40,6 +41,57 @@ class ExpenseNotifier extends StateNotifier<List<ExpenseWithCategoryData>> {
   Future<CollectionReference<Map<String, dynamic>>> _expenseCollection(DateTime date) async {
     final month = formatMonth(date);
     return firestore.collection('ledger').doc(user.ledgerId).collection(month);
+  }
+
+  Future<void> addAmortizedExpense(Expense templateExpense, int months) async {
+    final groupId = const Uuid().v4();
+    final monthlyAmount = templateExpense.amount / months;
+
+    final firstExpense = Expense(
+      amount: monthlyAmount,
+      date: templateExpense.date,
+      categoryId: templateExpense.categoryId,
+      note: templateExpense.note,
+      submittedBy: user.id,
+      amortized: AmortizationDetails(
+        groupId: groupId,
+        index: 1,
+        over: months,
+      ),
+    );
+
+    try {
+      final collectionRef = await _expenseCollection(firstExpense.date);
+      final docRef = await collectionRef.add(firstExpense.toJson());
+
+      // Also update the summary for the first expense
+      final summaryRef = await _summaryCollection(firstExpense);
+      final summaryDoc = await summaryRef.get();
+      if (!summaryDoc.exists) {
+        await summaryRef.set({
+          'startDate': DateTime(firstExpense.date.year, firstExpense.date.month),
+          'categoryId': firstExpense.categoryId
+        });
+      }
+
+      await Future.wait([
+        summaryRef.update({
+          'lastUpdate': FieldValue.serverTimestamp(),
+          'total': FieldValue.increment(firstExpense.amount),
+          'count': FieldValue.increment(1)
+        }),
+        FirebaseFunctions.instance.httpsCallable('createAmortizedExpenses').call({
+          'template': templateExpense.toJson(),
+          'firstExpenseId': docRef.id,
+          'groupId': groupId,
+          'months': months,
+          'ledgerId': user.ledgerId,
+        }),
+      ]);
+    } catch (e) {
+      print('Error adding amortized expense: $e');
+      // Optionally rethrow or handle the error in the UI
+    }
   }
 
   Future addExpense(Expense expense) async {
@@ -76,14 +128,26 @@ class ExpenseNotifier extends StateNotifier<List<ExpenseWithCategoryData>> {
   }
 
   Future<void> removeExpense(Expense expense) async {
-    await Future.wait([
-      _summaryCollection(expense).then((ref) => ref.update({
-            'lastUpdate': FieldValue.serverTimestamp(),
-            'total': FieldValue.increment(-1 * expense.amount),
-            'count': FieldValue.increment(-1),
-          })),
-      _expenseCollection(expense.date).then((ref) => ref.doc(expense.id!).delete()),
-    ]);
+    if (expense.amortized != null) {
+      try {
+        await FirebaseFunctions.instance.httpsCallable('deleteAmortizedSeries').call({
+          'groupId': expense.amortized!.groupId,
+          'ledgerId': user.ledgerId,
+        });
+      } catch (e) {
+        print('Error deleting amortized expense series: $e');
+        // Optionally rethrow or handle the error in the UI
+      }
+    } else {
+      await Future.wait([
+        _summaryCollection(expense).then((ref) => ref.update({
+              'lastUpdate': FieldValue.serverTimestamp(),
+              'total': FieldValue.increment(-1 * expense.amount),
+              'count': FieldValue.increment(-1),
+            })),
+        _expenseCollection(expense.date).then((ref) => ref.doc(expense.id!).delete()),
+      ]);
+    }
   }
 
   Future<void> updateExpense(Expense expense, Expense previousExpense) async {

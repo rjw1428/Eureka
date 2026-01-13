@@ -2,6 +2,8 @@ import 'package:collection/collection.dart';
 import 'package:expense_tracker/constants/strings.dart';
 import 'package:expense_tracker/models/expense.dart';
 import 'package:expense_tracker/providers/budget_provider.dart';
+import 'package:expense_tracker/providers/expense_provider.dart';
+import 'package:expense_tracker/providers/expense_stream_provider.dart';
 import 'package:expense_tracker/providers/user_provider.dart';
 import 'package:expense_tracker/services/category_form.provider.dart';
 import 'package:expense_tracker/widgets/show_dialog.dart';
@@ -37,6 +39,9 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
   String? _selectedCategory;
   DateTime _selectedDate = DateTime.now();
   DateTime? _hideUntilDate;
+  bool _isAmortized = false;
+  final _amortizationMonthsController = TextEditingController(text: '2');
+  bool _isEditingAmortized = false;
 
   void _showDatePicker() async {
     final now = DateTime.now();
@@ -102,10 +107,26 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
       hideUntil: _hideUntilDate,
     );
 
+    // Case 1: Updating an existing expense. Amortization settings are locked.
     if (widget.initialExpense != null) {
       newExpense.updateId(widget.initialExpense!.id!);
       widget.onSubmit(newExpense);
-    } else {
+    }
+    // Case 2: Adding a new amortized expense.
+    else if (_isAmortized) {
+      final months = int.tryParse(_amortizationMonthsController.text);
+      if (months == null || months < 2 || months > 24) {
+        showDialogNotification(
+          'Invalid Amortization Months',
+          const Text('Amortization must be between 2 and 24 months.'),
+          context,
+        );
+        return;
+      }
+      ref.read(expenseModifierProvider.notifier).addAmortizedExpense(newExpense, months);
+    }
+    // Case 3: Adding a new regular expense.
+    else {
       widget.onSubmit(newExpense);
     }
 
@@ -118,6 +139,7 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
     _note.dispose();
     _amount.dispose();
     _amountFocusNode.dispose();
+    _amortizationMonthsController.dispose();
     super.dispose();
   }
 
@@ -131,6 +153,12 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
       _hideUntilDate = widget.initialExpense!.hideUntil;
       formTitle = 'Edit Expense';
       actionButtonLabel = 'Update';
+
+      if (widget.initialExpense!.amortized != null) {
+        _isAmortized = true;
+        _isEditingAmortized = true;
+        _amortizationMonthsController.text = widget.initialExpense!.amortized!.over.toString();
+      }
     }
     super.initState();
     _amountFocusNode.addListener(_evaluateAmountExpression);
@@ -266,6 +294,31 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
               title: const Text('Advanced'),
               controlAffinity: ListTileControlAffinity.leading,
               children: [
+                SwitchListTile(
+                  title: const Text('Amortize expense'),
+                  subtitle: const Text('Split this expense over multiple months.'),
+                  value: _isAmortized,
+                  onChanged: _isEditingAmortized
+                      ? null
+                      : (bool value) {
+                          setState(() {
+                            _isAmortized = value;
+                          });
+                        },
+                ),
+                if (_isAmortized)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                    child: TextField(
+                      controller: _amortizationMonthsController,
+                      decoration: const InputDecoration(
+                        label: Text('Number of Months (2-24)'),
+                        helperText: 'The total amount will be divided over these months.',
+                      ),
+                      keyboardType: TextInputType.number,
+                      enabled: !_isEditingAmortized,
+                    ),
+                  ),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [

@@ -1,0 +1,55 @@
+To enable SiriKit functionality for your app, you need to perform the following manual steps in Xcode:
+
+**Step 1: Open Xcode Project**
+1.  Open `ios/Runner.xcworkspace` in Xcode.
+
+**Step 2: Add Siri Capability**
+1.  In the Xcode Project Navigator, select the `Runner` target.
+2.  Go to the `Signing & Capabilities` tab.
+3.  Click the `+ Capability` button.
+4.  Search for and select `Siri`.
+
+**Step 3: Create SiriKit Intent Definition File**
+1.  In the Project Navigator, right-click on the `Runner` folder and select `New File...`.
+2.  Choose `SiriKit Intent Definition File` under `iOS > Source`.
+3.  Click `Next` and name the file `AddExpenseIntent.intentdefinition`. Make sure it's added to the `Runner` target.
+4.  Open `AddExpenseIntent.intentdefinition` in Xcode.
+5.  **Define a New Intent:**
+    *   Click the `+` button at the bottom of the editor pane and select `New Intent`.
+    *   In the Inspector pane (right-hand side):
+        *   **Custom Intent > Name:** `AddExpenseIntent`
+        *   **Custom Intent > Category:** `Finance`
+        *   **Custom Intent > Title:** `Add a new expense`
+        *   **Custom Intent > Subtitle:** (Optional, leave blank for now)
+        *   **Custom Intent > Description:** `Adds a new expense to SpendWatch`
+        *   **Parameters:**
+            *   Click the `+` button under `Parameters` to add a new parameter.
+            *   `Name`: `amount`
+            *   `Type`: `Decimal`
+            *   `Localized Display Name`: `amount`
+            *   `Configured for default value`: unchecked
+            *   Click the `+` button again to add another parameter.
+            *   `Name`: `description`
+            *   `Type`: `String`
+            *   `Localized Display Name`: `description`
+            *   `Configured for default value`: unchecked
+        *   **Intent Responses:**
+            *   Under `Responses`, change the default `Response` to:
+                *   `Title`: `Added {description} for {amount}.`
+                *   `Property`: `amount` (from dropdown), `Property`: `description` (from dropdown)
+                *   Add a new response type (click `+` under responses):
+                    *   `Title`: `Could not add expense for {description}.`
+                    *   `Parameter`: `description`
+                    *   `Type`: `Failure`
+            *   Delete the default "Success" and "Failure" responses if not automatically updated.
+        *   **Shortcut Types:**
+            *   Ensure `AddExpenseIntent` is selected.
+            *   **Invocation Phrases:** Add some example phrases here that users might say (e.g., "Add $amount for $description", "I spent $amount on $description", "Log $amount for $description"). Replace `$amount` and `$description` with their respective parameter names from the dropdown.
+
+**Step 4: Update Info.plist (Add Siri Usage Description)**
+1.  Open `ios/Runner/Info.plist`.
+2.  Add a new row (click the `+` button next to any existing key).
+3.  `Key`: `Privacy - Siri Usage Description` (`NSSiriUsageDescription`)
+4.  `Value`: `This app uses Siri to add expenses with your voice.`
+
+Once you have completed these manual steps, please let me know, and I will then provide the Swift code for the Intent Handler.

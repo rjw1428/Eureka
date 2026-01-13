@@ -62,15 +62,61 @@ class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
     final currentExpenses = ref.read(expenseProvider).value ?? [];
     final previousExpense = currentExpenses.firstWhere((e) => e.id == expense.id);
 
-    await ref.read(expenseModifierProvider.notifier).updateExpense(expense, previousExpense);
+    if (previousExpense.amortized != null) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Update Amortized Series'),
+          content: Text(
+              'This is an amortized expense. Updating it will delete the old series and create a new one with the updated amount, note, and category for all ${previousExpense.amortized!.over} entries. Do you want to proceed?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.pop(ctx);
+                final expenseNotifier = ref.read(expenseModifierProvider.notifier);
+                await expenseNotifier.removeExpense(previousExpense);
 
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          duration: Duration(seconds: 3),
-          content: Text('Expense updated!'),
+                // The amount in the form is per-month, but the template needs the total.
+                final totalAmount = expense.amount * previousExpense.amortized!.over;
+                final templateExpense = Expense(
+                  amount: totalAmount,
+                  date: expense.date,
+                  categoryId: expense.categoryId,
+                  note: expense.note,
+                  hideUntil: expense.hideUntil,
+                );
+
+                await expenseNotifier.addAmortizedExpense(
+                    templateExpense, previousExpense.amortized!.over);
+
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      duration: Duration(seconds: 3),
+                      content: Text('Amortized expense series updated!'),
+                    ),
+                  );
+                }
+              },
+              child: const Text('Update All'),
+            )
+          ],
         ),
       );
+    } else {
+      await ref.read(expenseModifierProvider.notifier).updateExpense(expense, previousExpense);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            duration: Duration(seconds: 3),
+            content: Text('Expense updated!'),
+          ),
+        );
+      }
     }
   }
 
