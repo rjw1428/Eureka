@@ -24,7 +24,7 @@
   },
   "functions": [
     {
-      "source": "firebase",
+      "source": "functions",
       "codebase": "default",
       "runtime": "nodejs20",
       "ignore": [

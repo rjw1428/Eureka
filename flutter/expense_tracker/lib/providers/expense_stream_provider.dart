@@ -12,6 +12,7 @@ import 'package:expense_tracker/providers/expense_provider.dart';
 import 'package:expense_tracker/providers/filter_provider.dart';
 import 'package:expense_tracker/providers/user_provider.dart';
 import 'package:expense_tracker/services/auth.service.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:rxdart/rxdart.dart';
@@ -43,27 +44,24 @@ class ExpenseNotifier extends StateNotifier<List<ExpenseWithCategoryData>> {
     return firestore.collection('ledger').doc(user.ledgerId).collection(month);
   }
 
-  Future<void> addAmortizedExpense(Expense templateExpense, int months) async {
+  Future addAmortizedExpense(Expense templateExpense, int months, [String? updateId]) async {
     final groupId = const Uuid().v4();
     final monthlyAmount = templateExpense.amount / months;
-
-    final firstExpense = Expense(
-      amount: monthlyAmount,
-      date: templateExpense.date,
-      categoryId: templateExpense.categoryId,
-      note: templateExpense.note,
-      submittedBy: user.id,
-      amortized: AmortizationDetails(
-        groupId: groupId,
-        index: 1,
-        over: months,
-      ),
+    final amortizedData = AmortizationDetails(
+      groupId: groupId,
+      index: 1,
+      over: months,
     );
+    final firstExpense =
+        templateExpense.copyWith(amount: monthlyAmount, amortized: amortizedData, submittedBy: user.id);
 
     try {
-      final collectionRef = await _expenseCollection(firstExpense.date);
-      final docRef = await collectionRef.add(firstExpense.toJson());
-
+      String? id = updateId;
+      if (updateId == null) {
+        final collectionRef = await _expenseCollection(firstExpense.date);
+        final docRef = await collectionRef.add(firstExpense.toJson());
+        id = docRef.id;
+      }
       // Also update the summary for the first expense
       final summaryRef = await _summaryCollection(firstExpense);
       final summaryDoc = await summaryRef.get();
@@ -82,15 +80,17 @@ class ExpenseNotifier extends StateNotifier<List<ExpenseWithCategoryData>> {
         }),
         FirebaseFunctions.instance.httpsCallable('createAmortizedExpenses').call({
           'template': templateExpense.toJson(),
-          'firstExpenseId': docRef.id,
+          'firstExpenseId': id,
           'groupId': groupId,
           'months': months,
           'ledgerId': user.ledgerId,
         }),
       ]);
+      return id;
     } catch (e) {
       print('Error adding amortized expense: $e');
       // Optionally rethrow or handle the error in the UI
+      return null;
     }
   }
 
@@ -127,17 +127,21 @@ class ExpenseNotifier extends StateNotifier<List<ExpenseWithCategoryData>> {
     }
   }
 
-  Future<void> removeExpense(Expense expense) async {
+  Future<void> removeExpense(Expense expense, [String? updateId]) async {
     if (expense.amortized != null) {
-      try {
-        await FirebaseFunctions.instance.httpsCallable('deleteAmortizedSeries').call({
-          'groupId': expense.amortized!.groupId,
-          'ledgerId': user.ledgerId,
-        });
-      } catch (e) {
-        print('Error deleting amortized expense series: $e');
-        // Optionally rethrow or handle the error in the UI
+      // Immediately delete the selected expense to update the UI
+      if (updateId == null) {
+        final ref = await _expenseCollection(expense.date);
+        await ref.doc(expense.id).delete();
       }
+      // Then, in the background, delete the rest of the series
+      FirebaseFunctions.instance.httpsCallable('deleteAmortizedSeries').call({
+        'groupId': expense.amortized!.groupId,
+        'ledgerId': user.ledgerId,
+        'updateId': updateId,
+      }).catchError((e) {
+        debugPrint('Error deleting amortized expense series in the background: $e');
+      });
     } else {
       await Future.wait([
         _summaryCollection(expense).then((ref) => ref.update({

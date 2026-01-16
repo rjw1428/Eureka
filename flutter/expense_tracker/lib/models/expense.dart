@@ -21,8 +21,7 @@ class AmortizationDetails {
   final int index;
   final int over;
 
-  factory AmortizationDetails.fromJson(Map<String, dynamic> json) =>
-      _$AmortizationDetailsFromJson(json);
+  factory AmortizationDetails.fromJson(Map<String, dynamic> json) => _$AmortizationDetailsFromJson(json);
   Map<String, dynamic> toJson() => _$AmortizationDetailsToJson(this);
 }
 
@@ -60,6 +59,30 @@ class Expense {
   updateId(String oldId) {
     id = oldId;
   }
+
+  Expense copyWith({
+    double? amount,
+    DateTime? date,
+    String? categoryId,
+    String? id,
+    String? note,
+    String? submittedBy,
+    List<String>? reactions,
+    DateTime? hideUntil,
+    AmortizationDetails? amortized,
+  }) {
+    return Expense(
+      amount: amount ?? this.amount,
+      date: date ?? this.date,
+      categoryId: categoryId ?? this.categoryId,
+      submittedBy: submittedBy ?? this.submittedBy,
+      note: note ?? this.note,
+      id: id ?? this.id,
+      reactions: reactions ?? List.from(this.reactions),
+      hideUntil: hideUntil ?? this.hideUntil,
+      amortized: amortized ?? this.amortized,
+    );
+  }
 }
 
 @JsonSerializable()
@@ -75,8 +98,7 @@ class ExpenseWithCategoryData extends Expense {
     super.amortized,
   });
 
-  factory ExpenseWithCategoryData.fromJson(Map<String, dynamic> json) =>
-      _$ExpenseWithCategoryDataFromJson(json);
+  factory ExpenseWithCategoryData.fromJson(Map<String, dynamic> json) => _$ExpenseWithCategoryDataFromJson(json);
   @override
   Map<String, dynamic> toJson() => _$ExpenseWithCategoryDataToJson(this);
 

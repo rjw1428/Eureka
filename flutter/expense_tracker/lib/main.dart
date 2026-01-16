@@ -59,7 +59,7 @@ void main() async {
               backgroundColor: colorScheme.onPrimaryContainer,
               foregroundColor: Colors.white,
             ),
-            cardTheme: const CardTheme().copyWith(
+            cardTheme: const CardThemeData().copyWith(
               color: colorScheme.primaryFixed,
               margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
             ),
@@ -94,7 +94,7 @@ void main() async {
             appBarTheme: const AppBarTheme().copyWith(
               backgroundColor: colorScheme.onPrimaryContainer,
             ),
-            cardTheme: const CardTheme().copyWith(
+            cardTheme: const CardThemeData().copyWith(
               color: darkColorScheme.primaryContainer,
               margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
             ),

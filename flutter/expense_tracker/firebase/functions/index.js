@@ -378,11 +378,10 @@ exports.createAmortizedExpenses = onCall(async (request) => {
         await firstExpenseRef.update({ "amortized.nextId": nextId });
 
         // Create the manifest
-        const manifestRef = db.collection("amortization_series").doc(groupId);
+        const manifestRef = db.collection("ledger").doc(ledgerId).collection("amortization_series").doc(groupId);
         await manifestRef.set({
             expensePaths: expensePaths.reverse(), // Reverse to have them in chronological order
             summaryUpdates,
-            ledgerId,
             createdAt: FieldValue.serverTimestamp(),
         });
 
@@ -402,14 +401,14 @@ exports.deleteAmortizedSeries = onCall(async (request) => {
         throw new functions.https.HttpsError("unauthenticated", "The function must be called while authenticated.");
     }
 
-    const { groupId, ledgerId } = request.data;
+    const { groupId, ledgerId, updateId } = request.data;
     if (!groupId || !ledgerId) {
         logger.error("Missing groupId or ledgerId in payload.", request.data);
         throw new functions.https.HttpsError("invalid-argument", "Missing groupId or ledgerId.");
     }
     
     const db = getFirestore();
-    const manifestRef = db.collection("amortization_series").doc(groupId);
+    const manifestRef = db.collection("ledger").doc(ledgerId).collection("amortization_series").doc(groupId);
 
     try {
         const manifestDoc = await manifestRef.get();
@@ -423,6 +422,9 @@ exports.deleteAmortizedSeries = onCall(async (request) => {
 
         // Delete all expenses in the series
         manifestData.expensePaths.forEach(path => {
+            if (updateId && path.includes(updateId)) {
+                return
+            }
             batch.delete(db.doc(path));
         });
 

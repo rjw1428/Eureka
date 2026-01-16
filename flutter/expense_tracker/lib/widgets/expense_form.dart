@@ -2,8 +2,6 @@ import 'package:collection/collection.dart';
 import 'package:expense_tracker/constants/strings.dart';
 import 'package:expense_tracker/models/expense.dart';
 import 'package:expense_tracker/providers/budget_provider.dart';
-import 'package:expense_tracker/providers/expense_provider.dart';
-import 'package:expense_tracker/providers/expense_stream_provider.dart';
 import 'package:expense_tracker/providers/user_provider.dart';
 import 'package:expense_tracker/services/category_form.provider.dart';
 import 'package:expense_tracker/widgets/show_dialog.dart';
@@ -123,7 +121,12 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
         );
         return;
       }
-      ref.read(expenseModifierProvider.notifier).addAmortizedExpense(newExpense, months);
+      final tempAmortization = AmortizationDetails(
+        groupId: "",
+        over: months,
+        index: 0,
+      );
+      widget.onSubmit(newExpense.copyWith(amortized: tempAmortization));
     }
     // Case 3: Adding a new regular expense.
     else {

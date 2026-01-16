@@ -24,7 +24,7 @@ dependencies:
   cloud_firestore: ^5.5.1
   cloud_functions: ^5.5.0
   firebase_messaging: ^15.2.5
-  rxdart: ^0.27.7
+  rxdart: ^0.28.0
   google_sign_in: ^6.2.1
   sign_in_with_apple: ^6.1.0
   json_annotation: ^4.9.0
