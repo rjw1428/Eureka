@@ -21,8 +21,7 @@ import 'package:uuid/uuid.dart';
 final format = DateFormat('MMM', 'en_US');
 
 class ExpenseNotifier extends StateNotifier<List<ExpenseWithCategoryData>> {
-  ExpenseNotifier({required this.user, required this.firestore})
-      : super(const []);
+  ExpenseNotifier({required this.user, required this.firestore}) : super(const []);
   final ExpenseUser user;
   final FirebaseFirestore firestore;
 
@@ -35,24 +34,17 @@ class ExpenseNotifier extends StateNotifier<List<ExpenseWithCategoryData>> {
     return "${date.year}_${formatter.format(date).toUpperCase()}";
   }
 
-  Future<DocumentReference<Map<String, dynamic>>> _summaryCollection(
-      Expense expense) async {
+  Future<DocumentReference<Map<String, dynamic>>> _summaryCollection(Expense expense) async {
     final docId = _summaryId(expense);
-    return firestore
-        .collection('ledger')
-        .doc(user.ledgerId)
-        .collection('summaries')
-        .doc(docId);
+    return firestore.collection('ledger').doc(user.ledgerId).collection('summaries').doc(docId);
   }
 
-  Future<CollectionReference<Map<String, dynamic>>> _expenseCollection(
-      DateTime date) async {
+  Future<CollectionReference<Map<String, dynamic>>> _expenseCollection(DateTime date) async {
     final month = formatMonth(date);
     return firestore.collection('ledger').doc(user.ledgerId).collection(month);
   }
 
-  Future addAmortizedExpense(Expense templateExpense, int months,
-      [String? updateId]) async {
+  Future addAmortizedExpense(Expense templateExpense, int months, [String? updateId]) async {
     final groupId = const Uuid().v4();
     final monthlyAmount = templateExpense.amount / months;
     final amortizedData = AmortizationDetails(
@@ -60,8 +52,8 @@ class ExpenseNotifier extends StateNotifier<List<ExpenseWithCategoryData>> {
       index: 1,
       over: months,
     );
-    final firstExpense = templateExpense.copyWith(
-        amount: monthlyAmount, amortized: amortizedData, submittedBy: user.id);
+    final firstExpense =
+        templateExpense.copyWith(amount: monthlyAmount, amortized: amortizedData, submittedBy: user.id);
 
     try {
       String? id = updateId;
@@ -75,8 +67,7 @@ class ExpenseNotifier extends StateNotifier<List<ExpenseWithCategoryData>> {
       final summaryDoc = await summaryRef.get();
       if (!summaryDoc.exists) {
         await summaryRef.set({
-          'startDate':
-              DateTime(firstExpense.date.year, firstExpense.date.month),
+          'startDate': DateTime(firstExpense.date.year, firstExpense.date.month),
           'categoryId': firstExpense.categoryId
         });
       }
@@ -87,9 +78,7 @@ class ExpenseNotifier extends StateNotifier<List<ExpenseWithCategoryData>> {
           'total': FieldValue.increment(firstExpense.amount),
           'count': FieldValue.increment(1)
         }),
-        FirebaseFunctions.instance
-            .httpsCallable('createAmortizedExpenses')
-            .call({
+        FirebaseFunctions.instance.httpsCallable('createAmortizedExpenses').call({
           'template': templateExpense.toJson(),
           'firstExpenseId': id,
           'groupId': groupId,
@@ -107,18 +96,14 @@ class ExpenseNotifier extends StateNotifier<List<ExpenseWithCategoryData>> {
 
   Future addExpense(Expense expense) async {
     final docId = _summaryId(expense);
-    final collectionRef = firestore
-        .collection('ledger')
-        .doc(user.ledgerId)
-        .collection('summaries');
+    final collectionRef = firestore.collection('ledger').doc(user.ledgerId).collection('summaries');
     final summaryDoc = await collectionRef.doc(docId).get();
 
     // If the summary document does not exist, create it with initial values
     if (!summaryDoc.exists) {
-      await collectionRef.doc(docId).set({
-        'startDate': DateTime(expense.date.year, expense.date.month),
-        'categoryId': expense.categoryId
-      });
+      await collectionRef
+          .doc(docId)
+          .set({'startDate': DateTime(expense.date.year, expense.date.month), 'categoryId': expense.categoryId});
     }
     try {
       return Future.wait([
@@ -155,8 +140,7 @@ class ExpenseNotifier extends StateNotifier<List<ExpenseWithCategoryData>> {
         'ledgerId': user.ledgerId,
         'updateId': updateId,
       }).catchError((e) {
-        debugPrint(
-            'Error deleting amortized expense series in the background: $e');
+        debugPrint('Error deleting amortized expense series in the background: $e');
       });
     } else {
       await Future.wait([
@@ -165,32 +149,27 @@ class ExpenseNotifier extends StateNotifier<List<ExpenseWithCategoryData>> {
               'total': FieldValue.increment(-1 * expense.amount),
               'count': FieldValue.increment(-1),
             })),
-        _expenseCollection(expense.date)
-            .then((ref) => ref.doc(expense.id!).delete()),
+        _expenseCollection(expense.date).then((ref) => ref.doc(expense.id!).delete()),
       ]);
     }
   }
 
   Future<void> updateExpense(Expense expense, Expense previousExpense) async {
     final isSameMonthBucket =
-        expense.date.month == previousExpense.date.month &&
-            expense.date.year == previousExpense.date.year;
+        expense.date.month == previousExpense.date.month && expense.date.year == previousExpense.date.year;
     expense.submittedBy = user.id;
 
     if (isSameMonthBucket) {
       List<Future> actions = [
-        _expenseCollection(previousExpense.date)
-            .then((ref) => ref.doc(previousExpense.id).set(expense.toJson())),
+        _expenseCollection(previousExpense.date).then((ref) => ref.doc(previousExpense.id).set(expense.toJson())),
       ];
       // Skip updating summary if the amount hasn't changed & the category is the same
-      if (expense.amount - previousExpense.amount != 0 &&
-          previousExpense.categoryId == expense.categoryId) {
+      if (expense.amount - previousExpense.amount != 0 && previousExpense.categoryId == expense.categoryId) {
         actions.add(
           _summaryCollection(expense).then(
             (ref) => ref.update({
               'lastUpdate': FieldValue.serverTimestamp(),
-              'total':
-                  FieldValue.increment(expense.amount - previousExpense.amount),
+              'total': FieldValue.increment(expense.amount - previousExpense.amount),
             }),
           ),
         );
@@ -231,25 +210,21 @@ class ExpenseNotifier extends StateNotifier<List<ExpenseWithCategoryData>> {
   Future react(Expense expense, String reaction) {
     final self = AuthService().currentUser!.uid;
     List<Future<void>> futures = [
-      _expenseCollection(expense.date)
-          .then((ref) => ref.doc(expense.id).update({
-                'reactions': [...expense.reactions, reaction],
-              }))
+      _expenseCollection(expense.date).then((ref) => ref.doc(expense.id).update({
+            'reactions': [...expense.reactions, reaction],
+          }))
     ];
     if (self != expense.submittedBy) {
-      futures.add(FirebaseFunctions.instance
-          .httpsCallable("triggerLinkedAccount")
-          .call({
+      futures.add(FirebaseFunctions.instance.httpsCallable("sendReactionNotification").call({
         'id': expense.submittedBy,
+        'reactionEmoji': reaction,
       }));
     }
     return Future.wait(futures);
   }
 }
 
-final expenseModifierProvider =
-    StateNotifierProvider<ExpenseNotifier, List<ExpenseWithCategoryData>>(
-        (ref) {
+final expenseModifierProvider = StateNotifierProvider<ExpenseNotifier, List<ExpenseWithCategoryData>>((ref) {
   final user = ref.read(userProvider).value;
   final firestore = ref.read(backendProvider);
   // HOW TO HANDLE WHEN THERE'S NO USER
@@ -274,28 +249,19 @@ final expenseProvider = StreamProvider<List<ExpenseWithCategoryData>>((ref) {
       .collection(month)
       .orderBy('date', descending: true)
       .snapshots()
-      .map((snapshot) => snapshot.docs
-          .map((doc) => Expense.fromJson({...doc.data(), "id": doc.id}))
-          .toList())
+      .map((snapshot) => snapshot.docs.map((doc) => Expense.fromJson({...doc.data(), "id": doc.id})).toList())
       .doOnData((d) => print('-- Returning expense data: ${d.length}'))
       .handleError((err) => print('Expense Stream: ${err.toString()}'))
       .shareReplay(maxSize: 1)
       .map((expenses) => expenses.map((expense) {
-            final CategoryDataWithId category = budgetCategories
-                .firstWhere((cat) => cat.id == expense.categoryId);
-            return ExpenseWithCategoryData.fromJson(
-                {...expense.toJson(), 'category': category.toJson()});
+            final CategoryDataWithId category = budgetCategories.firstWhere((cat) => cat.id == expense.categoryId);
+            return ExpenseWithCategoryData.fromJson({...expense.toJson(), 'category': category.toJson()});
           }).toList());
 });
 
-typedef SummaryQueryParams = ({
-  String categoryId,
-  DateTime start,
-  DateTime? end
-});
+typedef SummaryQueryParams = ({String categoryId, DateTime start, DateTime? end});
 
-final expenseSummaryProvider = StreamProvider.autoDispose
-    .family<List<SummaryEntry>, SummaryQueryParams>((ref, query) {
+final expenseSummaryProvider = StreamProvider.autoDispose.family<List<SummaryEntry>, SummaryQueryParams>((ref, query) {
   final user = ref.watch(userProvider).valueOrNull;
   final firestore = ref.read(backendProvider);
   final DateTime queryEnd = query.end ?? DateTime.now();
@@ -326,10 +292,7 @@ final expenseSummaryProvider = StreamProvider.autoDispose
                 'lastUpdate': lastUpdate.toIso8601String(),
               });
               // as Map<DateTime, SummaryEntry>
-              return {
-                ...agg,
-                DateTime(startDate.year, startDate.month): summaryPoint
-              };
+              return {...agg, DateTime(startDate.year, startDate.month): summaryPoint};
             },
           ))
       .map((points) {
@@ -348,8 +311,7 @@ final expenseSummaryProvider = StreamProvider.autoDispose
     final slotSize = monthsBetween(dataStartData, queryEnd) + 1;
     final now = DateTime.now();
     final pointsWithZeroFills = List<SummaryEntry>.generate(slotSize, (i) {
-      final expectedTime =
-          DateTime(dataStartData.year, dataStartData.month + i);
+      final expectedTime = DateTime(dataStartData.year, dataStartData.month + i);
       final SummaryEntry? dataPoint = points[expectedTime];
       return dataPoint ??
           SummaryEntry(
@@ -360,8 +322,7 @@ final expenseSummaryProvider = StreamProvider.autoDispose
               startDate: expectedTime,
               categoryId: query.categoryId);
     });
-    return pointsWithZeroFills
-        .sorted((a, b) => b.startDate.compareTo(a.startDate));
+    return pointsWithZeroFills.sorted((a, b) => b.startDate.compareTo(a.startDate));
   });
 });
 
@@ -369,8 +330,7 @@ final currentSummaryProvider = StreamProvider<List<SummaryEntry>>((ref) {
   final user = ref.watch(userProvider).valueOrNull;
   final firestore = ref.read(backendProvider);
   final now = DateTime.now();
-  final DateTime start =
-      DateTime(now.year, now.month).subtract(const Duration(seconds: 1));
+  final DateTime start = DateTime(now.year, now.month).subtract(const Duration(seconds: 1));
 
   if (user == null) {
     return Stream.value([]);

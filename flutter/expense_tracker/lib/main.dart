@@ -1,21 +1,41 @@
-import 'package:cloud_firestore/cloud_firestore.dart' hide Settings;
-import 'package:expense_tracker/models/settings.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:expense_tracker/providers/settings_provider.dart';
 import 'package:expense_tracker/routing.dart';
 import 'package:expense_tracker/services/local_storage.service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:expense_tracker/firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:expense_tracker/widgets/show_dialog.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   print('Handling a background message: ${message.messageId}');
+}
+
+late GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+void _setupForegroundMessageHandler() {
+  FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+    print('Handling a foreground message: ${message.messageId}');
+    print('Message data: ${message.data}');
+    print('Message notification: ${message.notification?.title}, ${message.notification?.body}');
+
+    final context = navigatorKey.currentContext;
+    if (context != null) {
+      final title = message.notification?.title ?? 'Notification';
+      final body = message.notification?.body ?? '';
+      showDialogNotification(
+        title,
+        Text(body),
+        context,
+      );
+    }
+  });
 }
 
 void main() async {
@@ -27,6 +47,7 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  _setupForegroundMessageHandler();
 
   await LocalStorageService().initialize();
   WidgetsFlutterBinding.ensureInitialized();
@@ -43,10 +64,8 @@ void main() async {
   runApp(
     ProviderScope(
       child: Consumer(builder: (context, ref, child) {
-        final seedColor =
-            ref.watch(settingsProvider.select((settings) => settings.color));
-        final theme =
-            ref.watch(settingsProvider.select((settings) => settings.theme));
+        final seedColor = ref.watch(settingsProvider.select((settings) => settings.color));
+        final theme = ref.watch(settingsProvider.select((settings) => settings.theme));
         final colorScheme = ColorScheme.fromSeed(
           seedColor: seedColor,
         );
@@ -71,6 +90,7 @@ void main() async {
 
         return MaterialApp(
           debugShowCheckedModeBanner: false,
+          navigatorKey: navigatorKey,
           theme: ThemeData().copyWith(
             colorScheme: colorScheme,
             appBarTheme: const AppBarTheme().copyWith(

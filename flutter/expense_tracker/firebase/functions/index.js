@@ -3,15 +3,15 @@ const logger = require("firebase-functions/logger");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const { getMessaging } = require("firebase-admin/messaging");
-const { onDocumentCreated, onDocumentWritten } = require("firebase-functions/v2/firestore");
+const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 
 initializeApp();
 
-exports.sendExpenseNotification = onDocumentWritten(
+exports.sendExpenseNotification = onDocumentCreated(
     "ledger/{ledgerId}/{expenseCollectionId}/{expenseId}",
     async (event) => {
         try {
-            const expenseData = event.data.after.data();
+            const expenseData = event.data.data();
             logger.info(expenseData);
 
             if (expenseData.notify !== true) {
@@ -30,21 +30,26 @@ exports.sendExpenseNotification = onDocumentWritten(
                 return;
             }
 
-            const budgetConfig = await getFirestore()
-                .collection("ledget")
-                .doc('budgetConfig')
+            const ledgerDoc = await getFirestore()
+                .collection("ledger")
+                .doc(event.params.ledgerId)
                 .get();
-
-            if (!budgetConfig.exists) {
+            logger.debug(event.params.ledgerId);
+            if (!ledgerDoc.exists) {
                 logger.warn("No budget configured")
                 return;
             }
 
-            const config = budgetConfig.data()
-            const category = config[expenseData.categoryId]
+            const config = ledgerDoc.data()
+            logger.debug(config)
+
+            const category = config.budgetConfig[expenseData.categoryId]
+            logger.debug(category)
             const messageBody = category
-                ? `${submittingUser.data().firstName} added an expense of ${expenseData.amount} to ${category.label}`
-                : `${submittingUser.data().firstName} added an expense of ${expenseData.amount}`
+                ? expenseData.note
+                    ? `${submittingUser.data().firstName} added an expense of \$${expenseData.amount} to ${category.label} for ${expenseData.note}`
+                    : `${submittingUser.data().firstName} added an expense of \$${expenseData.amount} to ${category.label}`
+                : `${submittingUser.data().firstName} added an expense of \$${expenseData.amount}`
             const linkedAccounts = submittingUser.data().linkedAccounts;
 
             if (linkedAccounts && linkedAccounts.length > 0) {
@@ -142,6 +147,8 @@ exports.triggerShareExpenseNotification = onDocumentCreated(
 exports.sendReactionNotification = onCall(async (request) => {
     try {
         const userId = request.data["id"]
+        const reaction = request.data['reactionEmoji']
+        logger.debug(userId)
         const targetSnapshot = await getFirestore()
             .collection("expenseUsers")
             .doc(userId)
@@ -153,21 +160,29 @@ exports.sendReactionNotification = onCall(async (request) => {
             );
             return { success: false, message: 'User does not exist' };
         }
-        const token = targetSnapshot.data().fcmToken
+
+        const data = targetSnapshot.data()
+        const token = data.fcmToken
+        const name = data.firstName
+
+        const body = `${name} reacted to your expense with ${reaction}!`
+        logger.debug(`Sending reaction message ${body} to ${userId}`)
         if (!token) {
+            logger.warn('User does not have a token')
            return { success: false, message: 'User does not have a token saved' }; 
         }
         const message = {
             notification: {
                 title: "New Reaction!",
-                body: `Someone reacted to your expense with ${reactionEmoji}!`,
+                body,
             },
-            tokens: fcmTokens,
+            token: token,
         };
         const resp = await getMessaging().send(message)
         logger.log(`Message Status: ${resp}`)
         return { success: true, message: resp}
     } catch (e) {
+        logger.error(e)
         return { success: false, message: e}
     }
 })
@@ -550,6 +565,7 @@ exports.sendBudgetNotification = onCall(async (request) => {
         let sentCount = 0;
 
         for (const userId of userIds) {
+            logger.debug(userId)
             try {
                 const userSnapshot = await db
                     .collection("expenseUsers")

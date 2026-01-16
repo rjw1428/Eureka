@@ -144,7 +144,7 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
       // If we go from underspent to overspent, notify
       if (spendCategory.delta >= 0 && newDelta < 0) {
         FirebaseFunctions.instance.httpsCallable("sendBudgetNotification").call({
-          'userIds': user.linkedAccounts.map((account) => account.id),
+          'userIds': user.linkedAccounts.map((account) => account.id).toList(),
           'amount': newExpense.amount,
           'categoryLabel': spendCategory.label,
           'notificationType': 'overspendingIndividualBudget'
