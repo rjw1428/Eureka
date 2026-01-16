@@ -113,6 +113,7 @@ class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
             label: 'Undo',
             onPressed: () => _addExpense(expense),
           ),
+          persist: false,
         ),
       );
     }
