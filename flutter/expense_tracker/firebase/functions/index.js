@@ -83,7 +83,7 @@ exports.sendExpenseNotification = onDocumentWritten(
     }
 );
 
-// ... (existing functions remain the same)
+
 
 // On a share request, find the user an create a notification on their account
 exports.triggerShareExpenseNotification = onDocumentCreated(
@@ -522,5 +522,98 @@ exports.deleteAmortizedSeries = onCall(async (request) => {
     } catch (error) {
         logger.error(`Error deleting amortization series ${groupId}:`, error);
         throw new functions.https.HttpsError("internal", "An error occurred while deleting the expense series.");
+    }
+});
+
+exports.sendBudgetNotification = onCall(async (request) => {
+    logger.info("Starting sendBudgetNotification function");
+
+    try {
+        const { userIds, amount, categoryLabel, notificationType } = request.data;
+
+        if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+            throw new functions.https.HttpsError("invalid-argument", "userIds must be a non-empty array.");
+        }
+        if (amount === undefined || amount === null) {
+            throw new functions.https.HttpsError("invalid-argument", "amount is required.");
+        }
+        if (!categoryLabel) {
+            throw new functions.https.HttpsError("invalid-argument", "categoryLabel is required.");
+        }
+        if (!notificationType) {
+            throw new functions.https.HttpsError("invalid-argument", "notificationType is required.");
+        }
+
+        const db = getFirestore();
+        const messaging = getMessaging();
+        const notifications = [];
+        let sentCount = 0;
+
+        for (const userId of userIds) {
+            try {
+                const userSnapshot = await db
+                    .collection("expenseUsers")
+                    .doc(userId)
+                    .get();
+
+                if (!userSnapshot.exists) {
+                    logger.warn(`User ${userId} not found`);
+                    continue;
+                }
+
+                const userData = userSnapshot.data();
+                const userSettings = userData.userSettings || {};
+                const notificationSettings = userSettings.notification || {};
+
+                // Check if notifications are enabled for this type
+                if (!userSettings[`notification.${notificationType}`]) {
+                    logger.info(`Notification type ${notificationType} disabled for user ${userId}`);
+                    continue;
+                }
+
+                const token = userData.fcmToken;
+                if (!token) {
+                    logger.warn(`User ${userId} does not have an FCM token`);
+                    continue;
+                }
+
+                let title, body;
+                if (notificationType === "overspendingIndividualBudget") {
+                    title = `Oh no, the budget for ${categoryLabel} as been exceeded`;
+                    body = `An expense has been added for ${amount}, making you overbudget in ${categoryLabel}`;
+                } else if (notificationType === "overspendingTotalBudget") {
+                    title = "Uh oh, the monthly budget has been blown!";
+                    body = `An expense has been added for ${amount} to ${categoryLabel} making you over budget for the month`;
+                } else {
+                    logger.warn(`Unknown notification type: ${notificationType}`);
+                    continue;
+                }
+
+                const message = {
+                    notification: {
+                        title,
+                        body,
+                    },
+                    token,
+                };
+
+                notifications.push(
+                    messaging.send(message).then(() => {
+                        sentCount++;
+                    }).catch((err) => {
+                        logger.error(`Failed to send notification to user ${userId}:`, err);
+                    })
+                );
+            } catch (error) {
+                logger.error(`Error processing user ${userId}:`, error);
+            }
+        }
+
+        await Promise.all(notifications);
+        logger.info(`Successfully sent ${sentCount} budget notifications`);
+        return { success: true, sentCount };
+    } catch (e) {
+        logger.error("Error in sendBudgetNotification:", e);
+        throw new functions.https.HttpsError("internal", "An error occurred while sending notifications");
     }
 });
