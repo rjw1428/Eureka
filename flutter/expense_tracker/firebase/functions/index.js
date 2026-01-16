@@ -30,6 +30,21 @@ exports.sendExpenseNotification = onDocumentWritten(
                 return;
             }
 
+            const budgetConfig = await getFirestore()
+                .collection("ledget")
+                .doc('budgetConfig')
+                .get();
+
+            if (!budgetConfig.exists) {
+                logger.warn("No budget configured")
+                return;
+            }
+
+            const config = budgetConfig.data()
+            const category = config[expenseData.categoryId]
+            const messageBody = category
+                ? `${submittingUser.data().firstName} added an expense of ${expenseData.amount} to ${category.label}`
+                : `${submittingUser.data().firstName} added an expense of ${expenseData.amount}`
             const linkedAccounts = submittingUser.data().linkedAccounts;
 
             if (linkedAccounts && linkedAccounts.length > 0) {
@@ -53,8 +68,7 @@ exports.sendExpenseNotification = onDocumentWritten(
                     const message = {
                         notification: {
                             title: "New Expense Added",
-                            body: `${submittingUser.data().firstName
-                                } added an expense of ${expenseData.amount}`,
+                            body: messageBody,
                         },
                         token: token,
                     };
