@@ -21,10 +21,12 @@ class _TotalRowState extends ConsumerState<TotalRow> {
 
   @override
   Widget build(BuildContext context) {
-    final categoryConfigs = ref.watch(activeBudgetCategoryProvider).valueOrNull ?? [];
+    final categoryConfigs =
+        ref.watch(activeBudgetCategoryProvider).valueOrNull ?? [];
     final expenses = ref.watch(filteredExpensesProvider).valueOrNull ?? [];
     final List<String> usedCategoryIds = ref.watch(usedCategoryIdsProvider);
-    final selectedCategories = ref.watch(selectedFiltersProvider) ?? usedCategoryIds.toList();
+    final selectedCategories =
+        ref.watch(selectedFiltersProvider) ?? usedCategoryIds.toList();
     final isAllSelected = ref.watch(areAllCategoriesSelectedProvider);
 
     final double totalExpenses = expenses
@@ -37,7 +39,8 @@ class _TotalRowState extends ConsumerState<TotalRow> {
             .fold(0, (sum, config) => sum! + config.budget)
         : null;
 
-    final double? delta = totalBudget == null ? totalBudget : totalBudget - totalExpenses;
+    final double? delta =
+        totalBudget == null ? totalBudget : totalBudget - totalExpenses;
 
     return GestureDetector(
       onLongPress: () => setState(() {
@@ -51,14 +54,19 @@ class _TotalRowState extends ConsumerState<TotalRow> {
           Text(
             showValues
                 ? currency.format(totalExpenses)
-                : currency.format(totalExpenses).replaceAll(RegExp(r'[0-9]'), maskCharacter),
-            style: TextStyle(fontSize: 24, color: Theme.of(context).textTheme.titleLarge?.color),
+                : currency
+                    .format(totalExpenses)
+                    .replaceAll(RegExp(r'[0-9]'), maskCharacter),
+            style: TextStyle(
+                fontSize: 24,
+                color: Theme.of(context).textTheme.titleLarge?.color),
             textAlign: TextAlign.center,
           ),
           if (delta != null)
             Text(
               '${delta >= 0 ? '+' : ''} ${showValues ? currency.format(delta) : currency.format(delta).replaceAll(RegExp(r'[0-9]'), maskCharacter)}',
-              style: TextStyle(fontSize: 16, color: delta >= 0 ? Colors.green : Colors.red),
+              style: TextStyle(
+                  fontSize: 16, color: delta >= 0 ? Colors.green : Colors.red),
               textAlign: TextAlign.center,
             ),
         ],

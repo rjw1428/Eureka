@@ -50,12 +50,16 @@ class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
     ScaffoldMessenger.of(context).clearSnackBars();
     final resp = expense.amortized?.over == null
         ? await ref.read(expenseModifierProvider.notifier).addExpense(expense)
-        : await ref.read(expenseModifierProvider.notifier).addAmortizedExpense(expense, expense.amortized!.over);
+        : await ref
+            .read(expenseModifierProvider.notifier)
+            .addAmortizedExpense(expense, expense.amortized!.over);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           duration: const Duration(seconds: 3),
-          content: Text(resp == null ? 'An error occurred while adding expense' : 'Expense added!'),
+          content: Text(resp == null
+              ? 'An error occurred while adding expense'
+              : 'Expense added!'),
         ),
       );
     }
@@ -63,7 +67,8 @@ class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
 
   void _updateExpense(Expense expense) async {
     final currentExpenses = ref.read(expenseProvider).value ?? [];
-    final previousExpense = currentExpenses.firstWhere((e) => e.id == expense.id);
+    final previousExpense =
+        currentExpenses.firstWhere((e) => e.id == expense.id);
 
     if (previousExpense.amortized != null) {
       final expenseNotifier = ref.read(expenseModifierProvider.notifier);
@@ -73,7 +78,8 @@ class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
       // The amount in the form is per-month, but the template needs the total.
       final totalAmount = expense.amount * previousExpense.amortized!.over;
       final templateExpense = expense.copyWith(amount: totalAmount);
-      await expenseNotifier.addAmortizedExpense(templateExpense, previousExpense.amortized!.over, expense.id);
+      await expenseNotifier.addAmortizedExpense(
+          templateExpense, previousExpense.amortized!.over, expense.id);
 
       if (mounted) {
         ScaffoldMessenger.of(context).clearSnackBars();
@@ -85,7 +91,9 @@ class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
         );
       }
     } else {
-      await ref.read(expenseModifierProvider.notifier).updateExpense(expense, previousExpense);
+      await ref
+          .read(expenseModifierProvider.notifier)
+          .updateExpense(expense, previousExpense);
       if (mounted) {
         ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
@@ -119,8 +127,10 @@ class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
     }
   }
 
-  void _handlePendingRequest(String userId, AccountNotification notification) async {
-    final request = await AccountLinkService().getPendingRequest(notification.data!['requestId']);
+  void _handlePendingRequest(
+      String userId, AccountNotification notification) async {
+    final request = await AccountLinkService()
+        .getPendingRequest(notification.data!['requestId']);
     if (mounted) {
       showDialogNotification(
         'Link Account',
@@ -153,7 +163,8 @@ class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
     return;
   }
 
-  void _handlePrimaryUnlinkRequest(String userId, AccountNotification notification) async {
+  void _handlePrimaryUnlinkRequest(
+      String userId, AccountNotification notification) async {
     final String sourceEmail = notification.data!['email'];
 
     showDialogNotification(
@@ -165,7 +176,8 @@ class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
     return;
   }
 
-  void _handleSecondaryUnlinkRequest(String userId, AccountNotification notification) async {
+  void _handleSecondaryUnlinkRequest(
+      String userId, AccountNotification notification) async {
     final String sourceEmail = notification.data!['email'];
 
     showDialogNotification(
@@ -279,7 +291,9 @@ class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
       ),
       body: LayoutBuilder(
         builder: (ctx, constraints) {
-          return constraints.maxWidth < 600 ? columnOrientationLayout() : rowOrientationLayout();
+          return constraints.maxWidth < 600
+              ? columnOrientationLayout()
+              : rowOrientationLayout();
         },
       ),
       floatingActionButton: IconButton.filled(

@@ -29,7 +29,8 @@ class ExpenseItem extends ConsumerWidget {
       if (expense.submittedBy == null) {
         return null;
       }
-      return linkedUsers.firstWhereOrNull((linkedUser) => linkedUser.id == expense.submittedBy);
+      return linkedUsers.firstWhereOrNull(
+          (linkedUser) => linkedUser.id == expense.submittedBy);
     }));
 
     final isHidden = expense.hideUntil?.isAfter(DateTime.now()) ?? false;
@@ -58,7 +59,8 @@ class ExpenseItem extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.start,
                     children: [
-                      Text(expense.formattedDate, style: Theme.of(context).textTheme.titleSmall),
+                      Text(expense.formattedDate,
+                          style: Theme.of(context).textTheme.titleSmall),
                       Text(
                         isHidden ? "Lorem ipsum dolor sit amet" : expense.title,
                         maxLines: 1,
@@ -102,12 +104,16 @@ class ExpenseItem extends ConsumerWidget {
               horizontal: 8,
               vertical: 5,
             ),
-            color: isHidden ? Colors.transparent : Theme.of(context).cardTheme.color,
+            color: isHidden
+                ? Colors.transparent
+                : Theme.of(context).cardTheme.color,
             clipBehavior: Clip.none,
             child: DottedBorder(
               strokeWidth: 2,
               dashPattern: const [6, 3],
-              color: isHidden ? Theme.of(context).cardTheme.color! : Colors.transparent,
+              color: isHidden
+                  ? Theme.of(context).cardTheme.color!
+                  : Colors.transparent,
               borderType: BorderType.RRect,
               radius: const Radius.circular(12),
               child: Padding(
@@ -123,7 +129,8 @@ class ExpenseItem extends ConsumerWidget {
                       child: isHidden
                           ? ClipRect(
                               child: ImageFiltered(
-                                imageFilter: ImageFilter.blur(sigmaX: 2.0, sigmaY: 2.0),
+                                imageFilter:
+                                    ImageFilter.blur(sigmaX: 2.0, sigmaY: 2.0),
                                 child: createCardContent(),
                               ),
                             )
@@ -193,7 +200,12 @@ class ExpenseItem extends ConsumerWidget {
               const PopupMenuItem(
                   value: "EDIT",
                   child: Row(
-                    children: [Icon(Icons.edit), Padding(padding: EdgeInsets.only(left: 8), child: Text('Edit'))],
+                    children: [
+                      Icon(Icons.edit),
+                      Padding(
+                          padding: EdgeInsets.only(left: 8),
+                          child: Text('Edit'))
+                    ],
                   )),
               if (kIsWeb)
                 const PopupMenuItem(
@@ -201,14 +213,21 @@ class ExpenseItem extends ConsumerWidget {
                     child: Row(
                       children: [
                         Icon(Icons.emoji_emotions),
-                        Padding(padding: EdgeInsets.only(left: 8), child: Text('React'))
+                        Padding(
+                            padding: EdgeInsets.only(left: 8),
+                            child: Text('React'))
                       ],
                     )),
               // // ON PUSH TASK
               const PopupMenuItem(
                   value: "REMOVE",
                   child: Row(
-                    children: [Icon(Icons.delete), Padding(padding: EdgeInsets.only(left: 8), child: Text('Remove'))],
+                    children: [
+                      Icon(Icons.delete),
+                      Padding(
+                          padding: EdgeInsets.only(left: 8),
+                          child: Text('Remove'))
+                    ],
                   ))
             ]);
   }

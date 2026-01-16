@@ -9,7 +9,8 @@ class LoginLogo extends StatefulWidget {
   }
 }
 
-class _LoginLogoState extends State<LoginLogo> with SingleTickerProviderStateMixin {
+class _LoginLogoState extends State<LoginLogo>
+    with SingleTickerProviderStateMixin {
   bool visible = false;
   final slideDuration = const Duration(milliseconds: 1000);
   final fadeDuration = const Duration(milliseconds: 500);

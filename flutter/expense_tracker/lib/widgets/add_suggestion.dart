@@ -40,7 +40,11 @@ class _SuggestionFormState extends ConsumerState<SuggestionFom> {
           builder: (ctx) => CupertinoAlertDialog(
                 title: Text(title),
                 content: Text(content),
-                actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Okay'))],
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('Okay'))
+                ],
               ));
     } else {
       showDialog(
@@ -48,7 +52,11 @@ class _SuggestionFormState extends ConsumerState<SuggestionFom> {
           builder: (ctx) => AlertDialog(
                 title: Text(title),
                 content: Text(content),
-                actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Okay'))],
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('Okay'))
+                ],
               ));
     }
   }
@@ -92,7 +100,8 @@ class _SuggestionFormState extends ConsumerState<SuggestionFom> {
 
   @override
   Widget build(BuildContext context) {
-    final categories = ref.watch(activeBudgetCategoriesWithSpend).valueOrNull ?? [];
+    final categories =
+        ref.watch(activeBudgetCategoriesWithSpend).valueOrNull ?? [];
     final keyboardSpace = MediaQuery.of(context).viewInsets.bottom;
     return SingleChildScrollView(
       child: Padding(

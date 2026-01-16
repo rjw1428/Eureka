@@ -11,7 +11,8 @@ class SelectedTimeNotifier extends StateNotifier<DateTime> {
   }
 }
 
-final selectedTimeProvider = StateNotifierProvider<SelectedTimeNotifier, DateTime>(
+final selectedTimeProvider =
+    StateNotifierProvider<SelectedTimeNotifier, DateTime>(
   (ref) => SelectedTimeNotifier(),
 );
 
@@ -26,13 +27,16 @@ class SelectedFiltersNotifier extends StateNotifier<List<String>?> {
   }
 }
 
-final selectedFiltersProvider = StateNotifierProvider<SelectedFiltersNotifier, List<String>?>(
-    (ref) => SelectedFiltersNotifier());
+final selectedFiltersProvider =
+    StateNotifierProvider<SelectedFiltersNotifier, List<String>?>(
+        (ref) => SelectedFiltersNotifier());
 
 final defaultFilterOptions = Provider<List<CategoryDataWithId>>((ref) {
   final budgetConfigs = ref.watch(budgetProvider).valueOrNull ?? [];
-  final usedCategoryIds = ref.watch(expenseProvider.select(
-      (expenses) => (expenses.valueOrNull ?? []).map((expense) => expense.categoryId).toSet()));
+  final usedCategoryIds = ref.watch(expenseProvider.select((expenses) =>
+      (expenses.valueOrNull ?? [])
+          .map((expense) => expense.categoryId)
+          .toSet()));
 
   final filterList = usedCategoryIds
       .toList()

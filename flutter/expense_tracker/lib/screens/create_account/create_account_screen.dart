@@ -19,7 +19,8 @@ class CreateAccountScreen extends ConsumerStatefulWidget {
   final AppleUserProfile? appleProfile;
 
   @override
-  ConsumerState<CreateAccountScreen> createState() => _CreateAccountScreenState();
+  ConsumerState<CreateAccountScreen> createState() =>
+      _CreateAccountScreenState();
 }
 
 class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
@@ -49,7 +50,8 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
     super.dispose();
   }
 
-  Future<String> createUserBudget(String userId, List<CategoryDataWithId> categories) async {
+  Future<String> createUserBudget(
+      String userId, List<CategoryDataWithId> categories) async {
     final budgetMap = {
       for (var category in categories) category.id: category.toJson(),
     };
@@ -65,7 +67,8 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
     }
   }
 
-  Future<void> _saveUserProfile(String userId, List<CategoryDataWithId> categories) async {
+  Future<void> _saveUserProfile(
+      String userId, List<CategoryDataWithId> categories) async {
     final isValid = _formKey2.currentState?.validate() ?? false;
     if (isValid) {
       try {
@@ -144,7 +147,8 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
                 final resp = await AccountLinkService().deleteFirebaseAccount();
                 print('Account deletion response: $resp');
                 ref.read(userCreationStateProvider.notifier).loggedOut();
-                Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
+                Navigator.pushNamedAndRemoveUntil(
+                    context, '/', (route) => false);
               }
               _pageController.previousPage(
                 duration: const Duration(milliseconds: 300),

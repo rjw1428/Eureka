@@ -41,6 +41,7 @@ Expense _$ExpenseFromJson(Map<String, dynamic> json) => Expense(
           ? null
           : AmortizationDetails.fromJson(
               json['amortized'] as Map<String, dynamic>),
+      notify: json['notify'] as bool?,
     );
 
 Map<String, dynamic> _$ExpenseToJson(Expense instance) => <String, dynamic>{
@@ -53,6 +54,7 @@ Map<String, dynamic> _$ExpenseToJson(Expense instance) => <String, dynamic>{
       'reactions': instance.reactions,
       'hideUntil': instance.hideUntil?.toIso8601String(),
       'amortized': instance.amortized?.toJson(),
+      'notify': instance.notify,
     };
 
 ExpenseWithCategoryData _$ExpenseWithCategoryDataFromJson(
@@ -75,7 +77,8 @@ ExpenseWithCategoryData _$ExpenseWithCategoryDataFromJson(
           (json['reactions'] as List<dynamic>).map((e) => e as String).toList()
       ..hideUntil = json['hideUntil'] == null
           ? null
-          : DateTime.parse(json['hideUntil'] as String);
+          : DateTime.parse(json['hideUntil'] as String)
+      ..notify = json['notify'] as bool?;
 
 Map<String, dynamic> _$ExpenseWithCategoryDataToJson(
         ExpenseWithCategoryData instance) =>
@@ -89,5 +92,6 @@ Map<String, dynamic> _$ExpenseWithCategoryDataToJson(
       'reactions': instance.reactions,
       'hideUntil': instance.hideUntil?.toIso8601String(),
       'amortized': instance.amortized,
+      'notify': instance.notify,
       'category': instance.category,
     };

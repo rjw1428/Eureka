@@ -20,7 +20,8 @@ class SummaryEntry {
     required this.categoryId,
   });
 
-  factory SummaryEntry.fromJson(Map<String, dynamic> json) => _$SummaryEntryFromJson(json);
+  factory SummaryEntry.fromJson(Map<String, dynamic> json) =>
+      _$SummaryEntryFromJson(json);
 
   Map<String, dynamic> toJson() => _$SummaryEntryToJson(this);
 }

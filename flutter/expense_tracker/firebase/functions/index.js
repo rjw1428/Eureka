@@ -3,9 +3,71 @@ const logger = require("firebase-functions/logger");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const { getMessaging } = require("firebase-admin/messaging");
-const { onDocumentCreated } = require("firebase-functions/firestore");
+const { onDocumentCreated, onDocumentWritten } = require("firebase-functions/v2/firestore");
 
 initializeApp();
+
+exports.sendExpenseNotification = onDocumentWritten(
+    "ledger/{ledgerId}/{expenseCollectionId}/{expenseId}",
+    async (event) => {
+        try {
+            const expenseData = event.data.after.data();
+            logger.info(expenseData);
+
+            if (expenseData.notify !== true) {
+                logger.info("Notify is not true, exiting.");
+                return;
+            }
+
+            const submittedBy = expenseData.submittedBy;
+            const submittingUser = await getFirestore()
+                .collection("expenseUsers")
+                .doc(submittedBy)
+                .get();
+
+            if (!submittingUser.exists) {
+                logger.warn("Submitting user not found");
+                return;
+            }
+
+            const linkedAccounts = submittingUser.data().linkedAccounts;
+
+            if (linkedAccounts && linkedAccounts.length > 0) {
+                const notifications = linkedAccounts.map(async (user) => {
+                    const linkedUser = await getFirestore()
+                        .collection("expenseUsers")
+                        .doc(user.id)
+                        .get();
+
+                    if (!linkedUser.exists) {
+                        logger.warn(`Linked user ${user.id} not found.`);
+                        return;
+                    }
+
+                    const token = linkedUser.data().fcmToken;
+                    if (!token) {
+                        logger.warn(`User ${user.id} does not have a token.`);
+                        return;
+                    }
+
+                    const message = {
+                        notification: {
+                            title: "New Expense Added",
+                            body: `${submittingUser.data().firstName
+                                } added an expense of ${expenseData.amount}`,
+                        },
+                        token: token,
+                    };
+                    return getMessaging().send(message);
+                });
+
+                await Promise.all(notifications);
+            }
+        } catch (e) {
+            logger.error(e);
+        }
+    }
+);
 
 // ... (existing functions remain the same)
 

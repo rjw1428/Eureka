@@ -22,13 +22,16 @@ class BarChart extends ConsumerStatefulWidget {
   ConsumerState<BarChart> createState() => _BarChartState();
 }
 
-class _BarChartState extends ConsumerState<BarChart> with SingleTickerProviderStateMixin {
+class _BarChartState extends ConsumerState<BarChart>
+    with SingleTickerProviderStateMixin {
   final double _barColumnWidth = 64.0;
   final ScrollController _scrollController = ScrollController();
 
   double getMaxTotalExpense(List<ExpenseBucket> buckets) {
     return buckets.fold(
-        0, (total, bucket) => bucket.totalExpenses > total ? bucket.totalExpenses : total);
+        0,
+        (total, bucket) =>
+            bucket.totalExpenses > total ? bucket.totalExpenses : total);
   }
 
   void _openAnnualReport(ExpenseBucket bucket) {
@@ -50,7 +53,8 @@ class _BarChartState extends ConsumerState<BarChart> with SingleTickerProviderSt
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = MediaQuery.of(context).platformBrightness == Brightness.dark;
+    final isDarkMode =
+        MediaQuery.of(context).platformBrightness == Brightness.dark;
 
     final buckets$ = ref.watch(barColumnProvider);
 
@@ -82,7 +86,8 @@ class _BarChartState extends ConsumerState<BarChart> with SingleTickerProviderSt
                   PointerDeviceKind.touch,
                   PointerDeviceKind.mouse,
                 },
-                platform: TargetPlatform.linux, // This enables mouse drag scrolling
+                platform:
+                    TargetPlatform.linux, // This enables mouse drag scrolling
               ),
               child: Scrollbar(
                 controller: _scrollController,
@@ -93,7 +98,9 @@ class _BarChartState extends ConsumerState<BarChart> with SingleTickerProviderSt
                   controller: _scrollController,
                   scrollDirection: Axis.horizontal,
                   child: SizedBox(
-                    width: widget.screenWidth > chartWidth ? widget.screenWidth - 32 : chartWidth,
+                    width: widget.screenWidth > chartWidth
+                        ? widget.screenWidth - 32
+                        : chartWidth,
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(8, 25, 8, 16),
                       child: Column(
@@ -118,28 +125,40 @@ class _BarChartState extends ConsumerState<BarChart> with SingleTickerProviderSt
                                 .map(
                                   (bucket) => Expanded(
                                     child: Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 4),
                                       child: GestureDetector(
                                         onTap: () => _openAnnualReport(bucket),
                                         child: SizedBox(
                                           height: 80,
                                           child: Column(
-                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
                                             children: [
                                               Text(
-                                                currency.format(bucket.totalExpenses).length > 7
-                                                    ? thousandsCurrency.format(bucket.totalExpenses)
-                                                    : currency.format(bucket.totalExpenses),
+                                                currency
+                                                            .format(bucket
+                                                                .totalExpenses)
+                                                            .length >
+                                                        7
+                                                    ? thousandsCurrency.format(
+                                                        bucket.totalExpenses)
+                                                    : currency.format(
+                                                        bucket.totalExpenses),
                                                 textAlign: TextAlign.center,
                                               ),
                                               Text(bucket.category.label,
                                                   textAlign: TextAlign.center,
                                                   maxLines: 2,
-                                                  style: Theme.of(context).textTheme.labelSmall),
+                                                  style: Theme.of(context)
+                                                      .textTheme
+                                                      .labelSmall),
                                               Icon(
                                                 bucket.category.iconData,
                                                 color: isDarkMode
-                                                    ? Theme.of(context).colorScheme.secondary
+                                                    ? Theme.of(context)
+                                                        .colorScheme
+                                                        .secondary
                                                     : Theme.of(context)
                                                         .colorScheme
                                                         .primary
@@ -183,7 +202,8 @@ class ChartBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = MediaQuery.of(context).platformBrightness == Brightness.dark;
+    final isDarkMode =
+        MediaQuery.of(context).platformBrightness == Brightness.dark;
     final size = max == 0 ? 0 : limitedAmount / max;
     final threshold = limit > 0 && limit <= max ? limit / max : null;
     final remaining = limit - amount;
@@ -206,10 +226,14 @@ class ChartBar extends StatelessWidget {
                   child: Container(
                     decoration: BoxDecoration(
                       shape: BoxShape.rectangle,
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+                      borderRadius:
+                          const BorderRadius.vertical(top: Radius.circular(8)),
                       color: isDarkMode
                           ? Theme.of(context).colorScheme.secondary
-                          : Theme.of(context).colorScheme.primary.withOpacity(0.65),
+                          : Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withOpacity(0.65),
                     ),
                   ),
                 ),
@@ -223,7 +247,8 @@ class ChartBar extends StatelessWidget {
                   customPath: (size) {
                     return Path()
                       ..moveTo(overspendIndicatorPadding, 1)
-                      ..lineTo(constraints.maxWidth - overspendIndicatorPadding, 1)
+                      ..lineTo(
+                          constraints.maxWidth - overspendIndicatorPadding, 1)
                       ..close();
                   },
                   child: FractionallySizedBox(

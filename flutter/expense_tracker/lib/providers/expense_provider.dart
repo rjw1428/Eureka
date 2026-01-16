@@ -13,10 +13,12 @@ String formatMonth(DateTime date) {
   return "${date.year}_${formatter.format(date).toUpperCase()}";
 }
 
-final expenseProvider = FutureProvider<List<ExpenseWithCategoryData>>((ref) async {
+final expenseProvider =
+    FutureProvider<List<ExpenseWithCategoryData>>((ref) async {
   final firestore = ref.read(backendProvider);
   final user = ref.watch(userProvider).valueOrNull;
-  final lastDoc = ref.watch(paginationProvider.select((state) => state.lastDoc));
+  final lastDoc =
+      ref.watch(paginationProvider.select((state) => state.lastDoc));
   final budgetCategories = ref.watch(budgetProvider).value ?? [];
 
   if (user == null) {
@@ -31,7 +33,8 @@ final expenseProvider = FutureProvider<List<ExpenseWithCategoryData>>((ref) asyn
       .limit(3)
       .orderBy('date', descending: true);
 
-  final paginationQuery = lastDoc == null ? query : query.startAfterDocument(lastDoc);
+  final paginationQuery =
+      lastDoc == null ? query : query.startAfterDocument(lastDoc);
 
   final snapshots = await paginationQuery.get();
   final docs = snapshots.docs as List<DocumentSnapshot>;
@@ -43,7 +46,8 @@ final expenseProvider = FutureProvider<List<ExpenseWithCategoryData>>((ref) asyn
   final newData = expenses.map((expense) {
     final CategoryDataWithId category =
         budgetCategories.firstWhere((cat) => cat.id == expense.categoryId);
-    return ExpenseWithCategoryData.fromJson({...expense.toJson(), 'category': category.toJson()});
+    return ExpenseWithCategoryData.fromJson(
+        {...expense.toJson(), 'category': category.toJson()});
   }).toList();
 
   return newData;
@@ -102,4 +106,5 @@ class PaginationNotifier extends StateNotifier<PaginationState> {
 }
 
 final paginationProvider =
-    StateNotifierProvider<PaginationNotifier, PaginationState>((ref) => PaginationNotifier());
+    StateNotifierProvider<PaginationNotifier, PaginationState>(
+        (ref) => PaginationNotifier());

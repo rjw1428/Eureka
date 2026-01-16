@@ -12,6 +12,7 @@ class FilterRowStateNotifier extends StateNotifier<bool> {
   }
 }
 
-final filterRowStateProvider = StateNotifierProvider<FilterRowStateNotifier, bool>((ref) {
+final filterRowStateProvider =
+    StateNotifierProvider<FilterRowStateNotifier, bool>((ref) {
   return FilterRowStateNotifier();
 });

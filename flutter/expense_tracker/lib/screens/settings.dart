@@ -1,6 +1,7 @@
 import 'package:expense_tracker/models/expense_user.dart';
 import 'package:expense_tracker/models/linked_user.dart';
 import 'package:expense_tracker/models/pending_request.dart';
+import 'package:expense_tracker/models/settings.dart';
 import 'package:expense_tracker/providers/settings_provider.dart';
 import 'package:expense_tracker/providers/user_provider.dart';
 import 'package:expense_tracker/services/account_link.service.dart';
@@ -26,7 +27,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   final _lastNameField = TextEditingController();
 
   void _showColorSelector(BuildContext context, ExpenseUser user) {
-    Color selectedColor = ref.read(settingsProvider.select((settings) => settings.color));
+    Color selectedColor =
+        ref.read(settingsProvider.select((settings) => settings.color));
     showDialogNotification(
       'Select a color',
       HueRingPicker(
@@ -46,7 +48,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  void _openUnlinkConfirmationDialog(LinkedUser linkedAccount, ExpenseUser user) {
+  void _openUnlinkConfirmationDialog(
+      LinkedUser linkedAccount, ExpenseUser user) {
     showDialogNotification(
       'Are you sure you want to unlink?',
       Text(
@@ -88,7 +91,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               );
               return;
             }
-            Navigator.pushNamedAndRemoveUntil(context, '/', (Route<dynamic> route) => false);
+            Navigator.pushNamedAndRemoveUntil(
+                context, '/', (Route<dynamic> route) => false);
           }
         },
         child: const Text('I am sure'),
@@ -120,7 +124,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       return const Text("Oh Shit");
     }
 
-    final List<PendingRequest> requestList = userSettings.pendingRequestList;
+    final List<PendingRequest> requestList = [];
     _firstNameField.text = user.firstName;
     _lastNameField.text = user.lastName;
 
@@ -211,7 +215,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               child: Text(link.email),
                             ),
                             TextButton(
-                                onPressed: () => _openUnlinkConfirmationDialog(link, user),
+                                onPressed: () =>
+                                    _openUnlinkConfirmationDialog(link, user),
                                 child: const Icon(Icons.link_off_outlined)),
                           ],
                         ),
@@ -219,7 +224,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     );
                   }).toList(),
                 ),
-                RequestList(requestList: requestList, onRemove: AccountLinkService().removeRequest),
+                RequestList(
+                    requestList: requestList,
+                    onRemove: AccountLinkService().removeRequest),
                 if (!showLinkForm)
                   Center(
                     child: Padding(
@@ -258,8 +265,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             return;
                           }
 
-                          final RegExp emailRegex =
-                              RegExp(r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+");
+                          final RegExp emailRegex = RegExp(
+                              r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+");
                           if (!emailRegex.hasMatch(_emailField.text.trim())) {
                             showDialogNotification(
                               'Invalid Email',
@@ -269,15 +276,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             return;
                           }
 
-                          if (requestList.map((req) => req.targetEmail).contains(_emailField.text.trim())) {
+                          if (requestList
+                              .map((req) => req.targetEmail)
+                              .contains(_emailField.text.trim())) {
                             showDialogNotification(
                               'Already Requested',
-                              const Text('The email address provided has already been requested'),
+                              const Text(
+                                  'The email address provided has already been requested'),
                               context,
                             );
                             return;
                           }
-                          final response = await AccountLinkService().sendLinkRequest(
+                          final response =
+                              await AccountLinkService().sendLinkRequest(
                             _emailField.text,
                             user.id,
                           );
@@ -322,6 +333,60 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                 const SizedBox(height: 16),
                 Text(
+                  'Notification Settings',
+                  style: Theme.of(context).textTheme.titleMedium,
+                  textAlign: TextAlign.start,
+                ),
+                SwitchListTile(
+                  title: const Text('Overspending Individual Category'),
+                  value: userSettings
+                      .notificationSettings.overspendingIndividualBudget,
+                  onChanged: (value) {
+                    ref
+                        .read(settingsProvider.notifier)
+                        .toggleOverspendingIndividualBudget(value);
+                  },
+                ),
+                SwitchListTile(
+                  title: const Text('Overspending Total Budget'),
+                  value:
+                      userSettings.notificationSettings.overspendingTotalBudget,
+                  onChanged: (value) {
+                    ref
+                        .read(settingsProvider.notifier)
+                        .toggleOverspendingTotalBudget(value);
+                  },
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Theme',
+                  style: Theme.of(context).textTheme.titleMedium,
+                  textAlign: TextAlign.start,
+                ),
+                Center(
+                  child: SegmentedButton<String>(
+                    segments: const [
+                      ButtonSegment(
+                        value: 'light',
+                        label: Text('Light'),
+                      ),
+                      ButtonSegment(
+                        value: 'dark',
+                        label: Text('Dark'),
+                      ),
+                      ButtonSegment(
+                        value: 'auto',
+                        label: Text('Auto'),
+                      ),
+                    ],
+                    selected: {userSettings.theme},
+                    onSelectionChanged: (value) {
+                      ref.read(settingsProvider.notifier).setTheme(value.first);
+                    },
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
                   'Color Theme',
                   style: Theme.of(context).textTheme.titleMedium,
                   textAlign: TextAlign.start,
@@ -337,7 +402,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                 ),
                 Divider(
-                    height: 48, thickness: 2, indent: 5, endIndent: 5, color: Theme.of(context).colorScheme.secondary),
+                    height: 48,
+                    thickness: 2,
+                    indent: 5,
+                    endIndent: 5,
+                    color: Theme.of(context).colorScheme.secondary),
                 Center(
                   child: ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
@@ -349,7 +418,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       size: 20,
                     ),
                     onPressed: () => onDeleteAccount(user),
-                    label: const Text("Delete Account", textAlign: TextAlign.center),
+                    label: const Text("Delete Account",
+                        textAlign: TextAlign.center),
                   ),
                 ),
               ],
@@ -362,7 +432,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 }
 
 class RequestList extends StatelessWidget {
-  const RequestList({super.key, required this.requestList, required this.onRemove});
+  const RequestList(
+      {super.key, required this.requestList, required this.onRemove});
 
   final List<PendingRequest> requestList;
   final void Function(PendingRequest) onRemove;
@@ -387,7 +458,9 @@ class RequestList extends StatelessWidget {
                     ),
                     Row(
                       children: [
-                        TextButton(onPressed: () => onRemove(request), child: const Icon(Icons.delete_outline)),
+                        TextButton(
+                            onPressed: () => onRemove(request),
+                            child: const Icon(Icons.delete_outline)),
                       ],
                     )
                   ],

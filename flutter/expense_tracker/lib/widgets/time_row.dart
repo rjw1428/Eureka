@@ -30,10 +30,12 @@ class _TimeRowState extends ConsumerState<TimeRow> {
     final lastYear = DateTime(now.year - 1, now.month);
     final count = widget.initialTime.isBefore(lastYear)
         ? 13 // Go back only for the last year
-        : monthsBetween(widget.initialTime, now) + 1; // go back as far back as the user started
+        : monthsBetween(widget.initialTime, now) +
+            1; // go back as far back as the user started
     timeFilterOptions = List<TimeFilterOption>.generate(count, (i) {
       final d = DateTime(now.year, now.month - i, 1);
-      return TimeFilterOption(id: d, label: '${d.year} ${DateFormat('MMMM').format(d)}');
+      return TimeFilterOption(
+          id: d, label: '${d.year} ${DateFormat('MMMM').format(d)}');
     });
 
     super.initState();
@@ -44,15 +46,18 @@ class _TimeRowState extends ConsumerState<TimeRow> {
     final selectedTime = ref.read(selectedTimeProvider);
     return DropdownMenu<TimeFilterOption>(
       width: double.infinity,
-      initialSelection: timeFilterOptions.firstWhere(
-          (opt) => opt.id.month == selectedTime.month && opt.id.year == selectedTime.year),
+      initialSelection: timeFilterOptions.firstWhere((opt) =>
+          opt.id.month == selectedTime.month &&
+          opt.id.year == selectedTime.year),
       controller: timeController,
       requestFocusOnTap: false,
       label: const Text('Select Month'),
       onSelected: (selectedDate) {
         // shouldn't ever be null, but just in case
         if (selectedDate != null) {
-          ref.read(selectedTimeProvider.notifier).setSelectedTime(selectedDate.id);
+          ref
+              .read(selectedTimeProvider.notifier)
+              .setSelectedTime(selectedDate.id);
         }
       },
       menuHeight: 200,

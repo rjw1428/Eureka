@@ -18,7 +18,9 @@ final barColumnProvider = Provider<AsyncValue<List<ExpenseBucket>>>((ref) {
             return AsyncValue.data(configs
                 .where((config) => config.deleted == false)
                 .map((config) => ExpenseBucket(
-                    expenses: expenses.where((expense) => expense.categoryId == config.id).toList(),
+                    expenses: expenses
+                        .where((expense) => expense.categoryId == config.id)
+                        .toList(),
                     category: config))
                 .toList());
           },

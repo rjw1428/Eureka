@@ -30,7 +30,9 @@ class _BudgetConfigScreenState extends ConsumerState<BudgetConfigScreen> {
       builder: (ctx) {
         return SuggestionFom(
             onSubmit: (text, category) {
-              ref.read(noteSuggestionProvider.notifier).addSuggestion(text, category);
+              ref
+                  .read(noteSuggestionProvider.notifier)
+                  .addSuggestion(text, category);
             },
             categoryId: categoryId);
       },
@@ -40,13 +42,15 @@ class _BudgetConfigScreenState extends ConsumerState<BudgetConfigScreen> {
   @override
   Widget build(BuildContext context) {
     // final keyboardSpace = MediaQuery.of(context).viewInsets.bottom;
-    final AsyncValue<List<CategoryDataWithId>> budgetConfig$ = ref.watch(activeBudgetCategoryProvider);
+    final AsyncValue<List<CategoryDataWithId>> budgetConfig$ =
+        ref.watch(activeBudgetCategoryProvider);
     final user = ref.read(userProvider).valueOrNull!;
     return budgetConfig$.when(
         error: (error, stack) => Text(error.toString()),
         loading: () => const Loading(),
         data: (configs) {
-          final double totalBudget = configs.fold(0, (sum, val) => sum + val.budget);
+          final double totalBudget =
+              configs.fold(0, (sum, val) => sum + val.budget);
           return Scaffold(
             resizeToAvoidBottomInset: true,
             body: SafeArea(
@@ -86,14 +90,16 @@ class _BudgetConfigScreenState extends ConsumerState<BudgetConfigScreen> {
                       child: CategoryList(
                         categoryList: configs,
                         onAddShortcut: _showNoteEntryForm,
-                        onEdit: (id) => openAddCategoryOverlay(context, user.ledgerId, id),
+                        onEdit: (id) =>
+                            openAddCategoryOverlay(context, user.ledgerId, id),
                       ),
                     ),
                     Center(
                       child: Padding(
                         padding: const EdgeInsets.symmetric(vertical: 8.0),
                         child: OutlinedButton.icon(
-                          onPressed: () => openAddCategoryOverlay(context, user.ledgerId),
+                          onPressed: () =>
+                              openAddCategoryOverlay(context, user.ledgerId),
                           label: const Text('Add a spending category'),
                           icon: const Icon(Icons.playlist_add),
                         ),

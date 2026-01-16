@@ -22,8 +22,8 @@ class FilterRow extends ConsumerStatefulWidget {
 class _FilterState extends ConsumerState<FilterRow> {
   @override
   Widget build(BuildContext context) {
-    final selectedFilters =
-        ref.watch(selectedFiltersProvider) ?? widget.options.map((opt) => opt.id);
+    final selectedFilters = ref.watch(selectedFiltersProvider) ??
+        widget.options.map((opt) => opt.id);
     final bool showFilter = ref.watch(filterRowStateProvider);
 
     print("selectedFitler: ${selectedFilters.length}");
@@ -54,13 +54,17 @@ class _FilterState extends ConsumerState<FilterRow> {
           ),
           fieldDecoration: FieldDecoration(
             hintText: 'Categories',
-            hintStyle: TextStyle(color: Theme.of(context).textTheme.labelSmall?.color),
+            hintStyle:
+                TextStyle(color: Theme.of(context).textTheme.labelSmall?.color),
             prefixIcon: const Icon(Icons.filter_list_alt),
             showClearIcon: false,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(4),
-              borderSide:
-                  BorderSide(color: Theme.of(context).buttonTheme.colorScheme!.secondaryContainer),
+              borderSide: BorderSide(
+                  color: Theme.of(context)
+                      .buttonTheme
+                      .colorScheme!
+                      .secondaryContainer),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(4),
@@ -75,12 +79,14 @@ class _FilterState extends ConsumerState<FilterRow> {
           ),
           dropdownItemDecoration: DropdownItemDecoration(
             selectedBackgroundColor: Theme.of(context).cardTheme.color,
-            selectedIcon:
-                Icon(Icons.check_box, color: Theme.of(context).appBarTheme.backgroundColor),
+            selectedIcon: Icon(Icons.check_box,
+                color: Theme.of(context).appBarTheme.backgroundColor),
             disabledIcon: Icon(Icons.lock, color: Colors.grey.shade300),
           ),
           onSelectionChange: (selection) {
-            ref.read(selectedFiltersProvider.notifier).setSelectedFilters(selection);
+            ref
+                .read(selectedFiltersProvider.notifier)
+                .setSelectedFilters(selection);
             controller.closeDropdown();
           },
           closeOnBackButton: true,
@@ -88,8 +94,11 @@ class _FilterState extends ConsumerState<FilterRow> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            TextButton(onPressed: controller.selectAll, child: const Text('SelectAll')),
-            TextButton(onPressed: controller.clearAll, child: const Text('Clear All')),
+            TextButton(
+                onPressed: controller.selectAll,
+                child: const Text('SelectAll')),
+            TextButton(
+                onPressed: controller.clearAll, child: const Text('Clear All')),
           ],
         )
       ],

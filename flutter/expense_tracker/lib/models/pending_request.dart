@@ -22,5 +22,6 @@ class PendingRequest {
     this.requestingUserLedgerId,
   });
 
-  factory PendingRequest.fromJson(Map<String, dynamic> json) => _$PendingRequestFromJson(json);
+  factory PendingRequest.fromJson(Map<String, dynamic> json) =>
+      _$PendingRequestFromJson(json);
 }

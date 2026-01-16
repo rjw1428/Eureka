@@ -55,7 +55,9 @@ class CategoryList extends ConsumerWidget {
                       if (user?.role == 'primary' || isEditable)
                         Row(
                           children: [
-                            TextButton(onPressed: () => onEdit(category), child: const Icon(Icons.edit)),
+                            TextButton(
+                                onPressed: () => onEdit(category),
+                                child: const Icon(Icons.edit)),
                           ],
                         )
                     ],
@@ -83,7 +85,8 @@ class CategoryList extends ConsumerWidget {
                                     deleteIcon: const Icon(Icons.clear),
                                     onDeleted: () => ref
                                         .read(noteSuggestionProvider.notifier)
-                                        .removeSuggestion(shortcut, category.id),
+                                        .removeSuggestion(
+                                            shortcut, category.id),
                                   ))
                               .toList(),
                         ),

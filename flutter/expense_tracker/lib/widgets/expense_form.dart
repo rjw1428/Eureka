@@ -40,17 +40,22 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
   bool _isAmortized = false;
   final _amortizationMonthsController = TextEditingController(text: '2');
   bool _isEditingAmortized = false;
+  bool _notify = false;
+  bool _isHidingExpense = false;
 
   void _showDatePicker() async {
     final now = DateTime.now();
     final firstDate = now.subtract(const Duration(days: 365));
-    final date = await showDatePicker(context: context, firstDate: firstDate, lastDate: now);
+    final date = await showDatePicker(
+        context: context, firstDate: firstDate, lastDate: now);
 
     if (date == null) {
       return;
     }
     // If user selects current date, then make sure the time part of the date is no
-    if (date.year == now.year && date.month == now.month && date.day == now.day) {
+    if (date.year == now.year &&
+        date.month == now.month &&
+        date.day == now.day) {
       setState(() => _selectedDate = now);
       return;
     }
@@ -83,8 +88,12 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
     _evaluateAmountExpression();
     final enteredAmount = double.tryParse(_amount.text);
     if (enteredAmount == null || enteredAmount == 0) {
-      showDialogNotification('Invalid Amount',
-          Text(enteredAmount == 0 ? 'Make sure the amount is not 0' : 'Make sure the amount is a number'), context);
+      showDialogNotification(
+          'Invalid Amount',
+          Text(enteredAmount == 0
+              ? 'Make sure the amount is not 0'
+              : 'Make sure the amount is a number'),
+          context);
       return;
     }
 
@@ -103,6 +112,7 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
       date: _selectedDate,
       categoryId: _selectedCategory!,
       hideUntil: _hideUntilDate,
+      notify: _notify,
     );
 
     // Case 1: Updating an existing expense. Amortization settings are locked.
@@ -160,8 +170,10 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
       if (widget.initialExpense!.amortized != null) {
         _isAmortized = true;
         _isEditingAmortized = true;
-        _amortizationMonthsController.text = widget.initialExpense!.amortized!.over.toString();
+        _amortizationMonthsController.text =
+            widget.initialExpense!.amortized!.over.toString();
       }
+      _isHidingExpense = widget.initialExpense!.hideUntil != null;
     }
     super.initState();
     _amountFocusNode.addListener(_evaluateAmountExpression);
@@ -172,7 +184,9 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
     if (text.contains('-')) {
       var parts = text.split('-');
       var nums = parts.map((el) => double.tryParse(el)).toList();
-      var result = nums.slice(1).fold(nums[0] ?? 0, (result, double? num) => result - (num ?? 0));
+      var result = nums
+          .slice(1)
+          .fold(nums[0] ?? 0, (result, double? num) => result - (num ?? 0));
       _amount.text = result.toString();
     }
   }
@@ -180,7 +194,8 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
   @override
   Widget build(BuildContext context) {
     final keyboardSpace = MediaQuery.of(context).viewInsets.bottom;
-    final categoryConfig = ref.watch(activeBudgetCategoriesWithSpend).valueOrNull ?? [];
+    final categoryConfig =
+        ref.watch(activeBudgetCategoriesWithSpend).valueOrNull ?? [];
     final user = ref.read(userProvider).valueOrNull!;
     return SingleChildScrollView(
       child: Padding(
@@ -224,7 +239,8 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
                             ],
                           )))
                       .toList(),
-                  onChanged: (value) => setState(() => _selectedCategory = value),
+                  onChanged: (value) =>
+                      setState(() => _selectedCategory = value),
                 ),
               ),
               IconButton(
@@ -245,7 +261,8 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
                       prefixText: '\$',
                       label: Text('Amount'),
                     ),
-                    keyboardType: const TextInputType.numberWithOptions(signed: true, decimal: true),
+                    keyboardType: const TextInputType.numberWithOptions(
+                        signed: true, decimal: true),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -289,7 +306,8 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
               Align(
                 alignment: Alignment.centerLeft,
                 child: SuggestionsRow(
-                  onClick: (suggestion) => _note.text = '${_note.text} $suggestion',
+                  onClick: (suggestion) =>
+                      _note.text = '${_note.text} $suggestion',
                   categoryId: _selectedCategory!,
                 ),
               ),
@@ -298,8 +316,20 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
               controlAffinity: ListTileControlAffinity.leading,
               children: [
                 SwitchListTile(
+                  title: const Text('Notify linked users'),
+                  subtitle: const Text(
+                      'Send a push notification to linked users about this expense.'),
+                  value: _notify,
+                  onChanged: (bool value) {
+                    setState(() {
+                      _notify = value;
+                    });
+                  },
+                ),
+                SwitchListTile(
                   title: const Text('Amortize expense'),
-                  subtitle: const Text('Split this expense over multiple months.'),
+                  subtitle:
+                      const Text('Split this expense over multiple months.'),
                   value: _isAmortized,
                   onChanged: _isEditingAmortized
                       ? null
@@ -311,33 +341,48 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
                 ),
                 if (_isAmortized)
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16.0, vertical: 8.0),
                     child: TextField(
                       controller: _amortizationMonthsController,
                       decoration: const InputDecoration(
                         label: Text('Number of Months (2-24)'),
-                        helperText: 'The total amount will be divided over these months.',
+                        helperText:
+                            'The total amount will be divided over these months.',
                       ),
                       keyboardType: TextInputType.number,
                       enabled: !_isEditingAmortized,
                     ),
                   ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      flex: 0,
-                      child: TextButton.icon(
-                        onPressed: _showHideUntilDatePicker,
-                        icon: const Icon(Icons.visibility_off),
-                        iconAlignment: IconAlignment.start,
-                        label: Text(
-                          'Hide Until: ${_hideUntilDate != null ? dateFormatter.format(_hideUntilDate!) : 'None'}',
-                        ),
-                      ),
-                    ),
-                    Row(
+                SwitchListTile(
+                  title: const Text('Hide until date'),
+                  subtitle: const Text('Hide this expense from the main list until a specific date.'),
+                  value: _isHidingExpense,
+                  onChanged: (bool value) {
+                    setState(() {
+                      _isHidingExpense = value;
+                      if (!value) {
+                        _hideUntilDate = null; // Clear date if hiding is turned off
+                      }
+                    });
+                  },
+                ),
+                if (_isHidingExpense) // Conditionally show the date picker and clear button
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
+                        Expanded(
+                          child: TextButton.icon(
+                            onPressed: _showHideUntilDatePicker,
+                            icon: const Icon(Icons.calendar_month),
+                            iconAlignment: IconAlignment.start,
+                            label: Text(
+                              'Date: ${_hideUntilDate != null ? dateFormatter.format(_hideUntilDate!) : 'Select Date'}',
+                            ),
+                          ),
+                        ),
                         IconButton(
                           icon: const Icon(Icons.clear),
                           onPressed: () => setState(() => _hideUntilDate = null),
@@ -355,9 +400,9 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
                                   children: <Widget>[
                                     Center(
                                         child: Text(
-                                      'Hide Until',
-                                      style: Theme.of(context).textTheme.headlineMedium,
-                                    )),
+                                          'Hide Until',
+                                          style: Theme.of(context).textTheme.headlineMedium,
+                                        )),
                                     const SizedBox(height: 15),
                                     const Text(
                                         'Let\'s say it\'s your significant other\'s birthday and you want to get them a gift, and actually be ahead of the game for once.'),
@@ -383,9 +428,8 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
                           ),
                         ),
                       ],
-                    )
-                  ],
-                ),
+                    ),
+                  ),
               ],
             ),
             const SizedBox(height: 8),

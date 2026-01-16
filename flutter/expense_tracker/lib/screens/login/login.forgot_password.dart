@@ -22,7 +22,9 @@ class ForgotPassword extends StatelessWidget {
         final response = await AuthService().forgotPassword(emailAddress.text);
 
         showDialogNotification(
-          response.success ? 'Password Reset Email Sent' : 'An error has occurred',
+          response.success
+              ? 'Password Reset Email Sent'
+              : 'An error has occurred',
           Text(response.message!),
           context,
         );

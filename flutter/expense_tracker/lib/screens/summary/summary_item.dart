@@ -20,8 +20,12 @@ class SummaryItem extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return GestureDetector(
       onTap: () {
-        ref.read(selectedTimeProvider.notifier).setSelectedTime(reportData.startDate);
-        ref.read(selectedFiltersProvider.notifier).setSelectedFilters([reportData.categoryId]);
+        ref
+            .read(selectedTimeProvider.notifier)
+            .setSelectedTime(reportData.startDate);
+        ref
+            .read(selectedFiltersProvider.notifier)
+            .setSelectedFilters([reportData.categoryId]);
         ref.read(filterRowStateProvider.notifier).openRow();
         Navigator.pop(context);
       },
@@ -44,7 +48,8 @@ class SummaryItem extends ConsumerWidget {
                 children: [
                   Text(
                     '${delta >= 0 ? "+" : ""}${currency.format(delta)}',
-                    style: TextStyle(color: delta >= 0 ? Colors.green : Colors.red),
+                    style: TextStyle(
+                        color: delta >= 0 ? Colors.green : Colors.red),
                   ),
                   const SizedBox(
                     width: 16,

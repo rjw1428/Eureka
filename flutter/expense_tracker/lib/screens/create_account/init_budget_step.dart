@@ -24,10 +24,12 @@ class CreateInitialBudgetStep extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<CreateInitialBudgetStep> createState() => _CreateInitialBudgetStepState();
+  ConsumerState<CreateInitialBudgetStep> createState() =>
+      _CreateInitialBudgetStepState();
 }
 
-class _CreateInitialBudgetStepState extends ConsumerState<CreateInitialBudgetStep> {
+class _CreateInitialBudgetStepState
+    extends ConsumerState<CreateInitialBudgetStep> {
   openAddCategoryOverlay(BuildContext context, [CategoryDataWithId? category]) {
     showModalBottomSheet(
       useSafeArea: true,
@@ -35,8 +37,9 @@ class _CreateInitialBudgetStepState extends ConsumerState<CreateInitialBudgetSte
       context: context,
       builder: (ctx) {
         return CategoryForm(
-          onSubmit: (newCategory) =>
-              category == null ? _addCategory(context, newCategory) : _updateCategory(context, newCategory),
+          onSubmit: (newCategory) => category == null
+              ? _addCategory(context, newCategory)
+              : _updateCategory(context, newCategory),
           initialCategory: category,
           onRemove: (category) => _removeCategory(context, category),
         );
@@ -74,7 +77,9 @@ class _CreateInitialBudgetStepState extends ConsumerState<CreateInitialBudgetSte
       builder: (ctx) {
         return SuggestionFom(
             onSubmit: (text, category) {
-              ref.read(noteSuggestionProvider.notifier).addSuggestion(text, category);
+              ref
+                  .read(noteSuggestionProvider.notifier)
+                  .addSuggestion(text, category);
             },
             categoryId: categoryId);
       },
@@ -94,14 +99,16 @@ class _CreateInitialBudgetStepState extends ConsumerState<CreateInitialBudgetSte
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 20),
-            Text('Hi ${widget.firstName}!, Now let\'s setup a budget to get you started.'),
+            Text(
+                'Hi ${widget.firstName}!, Now let\'s setup a budget to get you started.'),
             const SizedBox(height: 20),
             FormField<List<CategoryDataWithId>>(
               validator: (value) => null,
               builder: (FormFieldState<List<CategoryDataWithId>> state) {
                 return CategoryList(
                   categoryList: widget.categories,
-                  onEdit: (category) => openAddCategoryOverlay(context, category),
+                  onEdit: (category) =>
+                      openAddCategoryOverlay(context, category),
                   onAddShortcut: _showNoteEntryForm,
                   isEditable: true,
                 );
@@ -112,8 +119,9 @@ class _CreateInitialBudgetStepState extends ConsumerState<CreateInitialBudgetSte
                 padding: const EdgeInsets.symmetric(vertical: 8.0),
                 child: OutlinedButton.icon(
                   onPressed: () => openAddCategoryOverlay(context),
-                  label: Text(
-                      widget.categories.isEmpty ? 'Add your first budget category' : 'Add another budget category'),
+                  label: Text(widget.categories.isEmpty
+                      ? 'Add your first budget category'
+                      : 'Add another budget category'),
                   icon: const Icon(Icons.playlist_add),
                 ),
               ),

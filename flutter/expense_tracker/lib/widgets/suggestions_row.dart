@@ -6,7 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class SuggestionsRow extends ConsumerStatefulWidget {
-  const SuggestionsRow({super.key, required this.onClick, required this.categoryId});
+  const SuggestionsRow(
+      {super.key, required this.onClick, required this.categoryId});
 
   final void Function(String?) onClick;
   final String categoryId;

@@ -47,7 +47,9 @@ class _CategoryFormState extends State<CategoryForm> {
                 title: Text(title),
                 content: Text(content),
                 actions: [
-                  TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Okay'))
+                  TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('Okay'))
                 ],
               ));
     } else {
@@ -57,7 +59,9 @@ class _CategoryFormState extends State<CategoryForm> {
                 title: Text(title),
                 content: Text(content),
                 actions: [
-                  TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Okay'))
+                  TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('Okay'))
                 ],
               ));
     }
@@ -170,8 +174,8 @@ class _CategoryFormState extends State<CategoryForm> {
                         prefixText: '\$',
                         label: Text('Monthly Budget'),
                       ),
-                      keyboardType:
-                          const TextInputType.numberWithOptions(signed: true, decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                          signed: true, decimal: true),
                     ),
                   ),
                 ],

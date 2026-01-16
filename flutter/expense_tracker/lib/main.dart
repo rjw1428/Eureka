@@ -1,4 +1,5 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart' hide Settings;
+import 'package:expense_tracker/models/settings.dart';
 import 'package:expense_tracker/providers/settings_provider.dart';
 import 'package:expense_tracker/routing.dart';
 import 'package:expense_tracker/services/local_storage.service.dart';
@@ -42,7 +43,10 @@ void main() async {
   runApp(
     ProviderScope(
       child: Consumer(builder: (context, ref, child) {
-        final seedColor = ref.watch(settingsProvider.select((settings) => settings.color));
+        final seedColor =
+            ref.watch(settingsProvider.select((settings) => settings.color));
+        final theme =
+            ref.watch(settingsProvider.select((settings) => settings.theme));
         final colorScheme = ColorScheme.fromSeed(
           seedColor: seedColor,
         );
@@ -51,6 +55,20 @@ void main() async {
           seedColor: seedColor,
           brightness: Brightness.dark,
         );
+
+        final ThemeMode themeMode;
+        switch (theme) {
+          case 'light':
+            themeMode = ThemeMode.light;
+            break;
+          case 'dark':
+            themeMode = ThemeMode.dark;
+            break;
+          default:
+            themeMode = ThemeMode.system;
+            break;
+        }
+
         return MaterialApp(
           debugShowCheckedModeBanner: false,
           theme: ThemeData().copyWith(
@@ -113,7 +131,7 @@ void main() async {
           ),
           routes: appRoutes,
           initialRoute: '/',
-          themeMode: ThemeMode.dark,
+          themeMode: themeMode,
         );
       }),
     ),

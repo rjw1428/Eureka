@@ -21,7 +21,8 @@ class AmortizationDetails {
   final int index;
   final int over;
 
-  factory AmortizationDetails.fromJson(Map<String, dynamic> json) => _$AmortizationDetailsFromJson(json);
+  factory AmortizationDetails.fromJson(Map<String, dynamic> json) =>
+      _$AmortizationDetailsFromJson(json);
   Map<String, dynamic> toJson() => _$AmortizationDetailsToJson(this);
 }
 
@@ -37,6 +38,7 @@ class Expense {
     this.reactions = const [],
     this.hideUntil,
     this.amortized,
+    this.notify,
   });
 
   String categoryId;
@@ -48,8 +50,10 @@ class Expense {
   List<String> reactions;
   DateTime? hideUntil;
   AmortizationDetails? amortized;
+  bool? notify;
 
-  factory Expense.fromJson(Map<String, dynamic> json) => _$ExpenseFromJson(json);
+  factory Expense.fromJson(Map<String, dynamic> json) =>
+      _$ExpenseFromJson(json);
   Map<String, dynamic> toJson() => _$ExpenseToJson(this);
 
   String get formattedDate {
@@ -70,6 +74,7 @@ class Expense {
     List<String>? reactions,
     DateTime? hideUntil,
     AmortizationDetails? amortized,
+    bool? notify,
   }) {
     return Expense(
       amount: amount ?? this.amount,
@@ -81,6 +86,7 @@ class Expense {
       reactions: reactions ?? List.from(this.reactions),
       hideUntil: hideUntil ?? this.hideUntil,
       amortized: amortized ?? this.amortized,
+      notify: notify ?? this.notify,
     );
   }
 }
@@ -98,7 +104,8 @@ class ExpenseWithCategoryData extends Expense {
     super.amortized,
   });
 
-  factory ExpenseWithCategoryData.fromJson(Map<String, dynamic> json) => _$ExpenseWithCategoryDataFromJson(json);
+  factory ExpenseWithCategoryData.fromJson(Map<String, dynamic> json) =>
+      _$ExpenseWithCategoryDataFromJson(json);
   @override
   Map<String, dynamic> toJson() => _$ExpenseWithCategoryDataToJson(this);
 

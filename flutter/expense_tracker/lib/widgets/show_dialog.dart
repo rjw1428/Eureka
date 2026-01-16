@@ -25,11 +25,17 @@ void showDialogNotification(
         title: Text(title),
         content: content,
         actions: callback == null
-            ? [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Okay'))]
+            ? [
+                TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('Okay'))
+              ]
             : reject == null
                 ? [
                     callback,
-                    TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel'))
+                    TextButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        child: const Text('Cancel'))
                   ]
                 : [callback, reject],
       ),
