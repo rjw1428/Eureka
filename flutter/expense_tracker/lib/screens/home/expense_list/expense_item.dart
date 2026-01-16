@@ -39,31 +39,36 @@ class ExpenseItem extends ConsumerWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         mainAxisSize: MainAxisSize.max,
         children: [
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: Opacity(
-                  opacity: isHidden ? 0.4 : 1.0,
-                  child: Icon(
-                    expense.icon,
-                    color: Theme.of(context).iconTheme.color,
+          Expanded(
+            child: Row(
+              mainAxisSize: MainAxisSize.max,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: Opacity(
+                    opacity: isHidden ? 0.4 : 1.0,
+                    child: Icon(
+                      expense.icon,
+                      color: Theme.of(context).iconTheme.color,
+                    ),
                   ),
                 ),
-              ),
-              Flexible(
-                fit: FlexFit.loose,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  children: [
-                    Text(expense.formattedDate, style: Theme.of(context).textTheme.titleSmall),
-                    Text(isHidden ? "Lorem ipsum dolor sit amet" : expense.title),
-                  ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: [
+                      Text(expense.formattedDate, style: Theme.of(context).textTheme.titleSmall),
+                      Text(
+                        isHidden ? "Lorem ipsum dolor sit amet" : expense.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
           const SizedBox(width: 8),
           Row(

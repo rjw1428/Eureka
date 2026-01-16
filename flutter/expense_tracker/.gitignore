@@ -46,3 +46,6 @@ key.properties
 /android/app/profile
 /android/app/release
 *.keystore
+public
+
+.firebase

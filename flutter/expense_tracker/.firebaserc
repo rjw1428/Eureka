@@ -1,0 +1,18 @@
+{
+  "projects": {
+    "default": "taskr-1428"
+  },
+  "targets": {
+    "taskr-1428": {
+      "hosting": {
+        "app": [
+          "taskr-1428"
+        ],
+        "expenses": [
+          "expenses-1428"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}
