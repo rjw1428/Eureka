@@ -7,6 +7,7 @@ import 'package:expense_tracker/providers/expense_stream_provider.dart';
 import 'package:expense_tracker/providers/user_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rxdart/rxdart.dart';
+import 'package:flutter/foundation.dart';
 
 final budgetProvider = StreamProvider<List<CategoryDataWithId>>((ref) {
   final user = ref.watch(userProvider).valueOrNull;
@@ -22,23 +23,20 @@ final budgetProvider = StreamProvider<List<CategoryDataWithId>>((ref) {
       .snapshots()
       .map(
         (snapshot) {
-          final data =
-              snapshot.get('budgetConfig') as LinkedHashMap<String, dynamic>;
+          final data = snapshot.get('budgetConfig') as LinkedHashMap<String, dynamic>;
           List<CategoryDataWithId> configs = data.entries.map((element) {
-            return CategoryDataWithId.fromJson(
-                {...element.value, 'id': element.key});
+            return CategoryDataWithId.fromJson({...element.value, 'id': element.key});
           }).toList();
           configs.sort((a, b) => a.label.compareTo(b.label));
           return configs;
         },
       )
-      .doOnData((d) => print('-- Returning budget data: ${d.length}'))
-      .handleError((err) => print('Category Stream: ${err.toString()}'))
+      .doOnData((d) => debugPrint('-- Returning budget data: ${d.length}'))
+      .handleError((err) => debugPrint('Category Stream: ${err.toString()}'))
       .shareReplay(maxSize: 1);
 });
 
-final activeBudgetCategoryProvider =
-    Provider<AsyncValue<List<CategoryDataWithId>>>((ref) {
+final activeBudgetCategoryProvider = Provider<AsyncValue<List<CategoryDataWithId>>>((ref) {
   return ref.watch(budgetProvider).when(
       data: (categories) => AsyncData(
             categories.where((category) => category.deleted == false).toList(),
@@ -47,8 +45,7 @@ final activeBudgetCategoryProvider =
       loading: () => const AsyncLoading());
 });
 
-final activeBudgetCategoriesWithSpend =
-    Provider<AsyncValue<List<CategoryDataWithIdAndDelta>>>((ref) {
+final activeBudgetCategoriesWithSpend = Provider<AsyncValue<List<CategoryDataWithIdAndDelta>>>((ref) {
   final activeCategories = ref.watch(activeBudgetCategoryProvider);
   final summaries = ref.watch(currentSummaryProvider);
   return activeCategories.when(
@@ -61,8 +58,7 @@ final activeBudgetCategoriesWithSpend =
           return categories.map((category) {
             SummaryEntry? matchingSummary;
             // May be null if the category hasn't been spent in yet (there won't be a summary for an unspent category)
-            matchingSummary = summaries.firstWhereOrNull(
-                (summary) => summary.categoryId == category.id);
+            matchingSummary = summaries.firstWhereOrNull((summary) => summary.categoryId == category.id);
             return CategoryDataWithIdAndDelta(
               delta: category.budget - (matchingSummary?.total ?? 0),
               id: category.id,

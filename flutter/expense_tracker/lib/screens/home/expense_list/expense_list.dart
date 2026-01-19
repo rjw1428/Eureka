@@ -30,8 +30,7 @@ class ExpenseList extends ConsumerStatefulWidget {
 class _ExpenseListState extends ConsumerState<ExpenseList> {
   final List<OverlayEntry> _overlayEntry = [];
 
-  void _showReactionMenu(
-      ExpenseWithCategoryData expense, double dy, int index) {
+  void _showReactionMenu(ExpenseWithCategoryData expense, double dy, int index) {
     _removeOverlay();
 
     final OverlayEntry backgroundOverlay = OverlayEntry(
@@ -59,9 +58,9 @@ class _ExpenseListState extends ConsumerState<ExpenseList> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(25),
-              boxShadow: [
+              boxShadow: const [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.2),
+                  color: Colors.black12,
                   blurRadius: 8,
                   spreadRadius: 1,
                 ),
@@ -72,9 +71,7 @@ class _ExpenseListState extends ConsumerState<ExpenseList> {
               children: widget.reactions.map((reaction) {
                 return InkWell(
                   onTap: () {
-                    ref
-                        .read(expenseModifierProvider.notifier)
-                        .react(expense, reaction);
+                    ref.read(expenseModifierProvider.notifier).react(expense, reaction);
                     _removeOverlay();
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
@@ -105,7 +102,9 @@ class _ExpenseListState extends ConsumerState<ExpenseList> {
 
   void _removeOverlay() {
     if (_overlayEntry.isNotEmpty) {
-      _overlayEntry.forEach((overlay) => overlay.remove());
+      for (var overlay in _overlayEntry) {
+        overlay.remove();
+      }
     }
     _overlayEntry.clear();
   }
@@ -119,11 +118,8 @@ class _ExpenseListState extends ConsumerState<ExpenseList> {
         error: (error, stackTrace) => Text(error.toString()),
         loading: () => const Loading(),
         data: (expenses) {
-          final List<ExpenseWithCategoryData> filteredList = filters == null
-              ? expenses
-              : expenses
-                  .where((expense) => filters.contains(expense.category.id))
-                  .toList();
+          final List<ExpenseWithCategoryData> filteredList =
+              filters == null ? expenses : expenses.where((expense) => filters.contains(expense.category.id)).toList();
 
           if (filteredList.isEmpty) {
             if (filters != null && filters.isEmpty) {
@@ -154,8 +150,7 @@ class _ExpenseListState extends ConsumerState<ExpenseList> {
                           key: ValueKey(expenses[i].id),
                           onLongPressStart: (details) {
                             HapticFeedback.lightImpact();
-                            _showReactionMenu(
-                                filteredList[i], details.globalPosition.dy, i);
+                            _showReactionMenu(filteredList[i], details.globalPosition.dy, i);
                           },
                           child: ExpenseItem(
                             expense: filteredList[i],

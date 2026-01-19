@@ -26,7 +26,7 @@ class _FilterState extends ConsumerState<FilterRow> {
         widget.options.map((opt) => opt.id);
     final bool showFilter = ref.watch(filterRowStateProvider);
 
-    print("selectedFitler: ${selectedFilters.length}");
+    debugPrint("selectedFitler: ${selectedFilters.length}");
     final controller = MultiSelectController<String>();
 
     final defaultOptions = widget.options

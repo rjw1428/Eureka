@@ -3,6 +3,7 @@ import 'package:expense_tracker/providers/backend_provider.dart';
 import 'package:expense_tracker/providers/fcm_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rxdart/rxdart.dart';
+import 'package:flutter/foundation.dart';
 
 class UserState {
   bool isAuthenticated;
@@ -48,7 +49,7 @@ final collectionExists = FutureProvider<bool>((ref) async {
 final userProvider = StreamProvider<ExpenseUser?>((ref) {
   final firestore = ref.read(backendProvider);
   final uid = ref.watch(userIdProvider).valueOrNull;
-  print("UID: $uid");
+  debugPrint("UID: $uid");
   if (uid == null) {
     return Stream.value(null);
   }
@@ -63,10 +64,9 @@ final userProvider = StreamProvider<ExpenseUser?>((ref) {
           ...event.data()!,
         }),
       )
-      .handleError((err) =>
-          print('WARN: expenseUserFetch stream errored ${err.toString()}'))
+      .handleError((err) => debugPrint('WARN: expenseUserFetch stream errored ${err.toString()}'))
       .onErrorReturn(null)
-      .doOnDone(() => print('CLOSED: expenseUserFetch stream'));
+      .doOnDone(() => debugPrint('CLOSED: expenseUserFetch stream'));
 });
 
 class UserCreationState extends StateNotifier<UserState?> {
@@ -93,11 +93,11 @@ class UserCreationState extends StateNotifier<UserState?> {
         await fcmService.initialize(uid);
       }
     }, error: (error, stack) {
-      print('Error fetching user ID: $error');
+      debugPrint('Error fetching user ID: $error');
       state = null;
       return;
     }, loading: () {
-      print('Loading user ID...');
+      debugPrint('Loading user ID...');
       state = null;
       return;
     });
@@ -116,8 +116,7 @@ class UserCreationState extends StateNotifier<UserState?> {
   }
 }
 
-final userCreationStateProvider =
-    StateNotifierProvider<UserCreationState, UserState?>((ref) {
+final userCreationStateProvider = StateNotifierProvider<UserCreationState, UserState?>((ref) {
   return UserCreationState(ref);
 });
 
@@ -143,7 +142,6 @@ class AppleBullshitState extends StateNotifier<AppleUserProfile?> {
   }
 }
 
-final appleBullshitStateProvider =
-    StateNotifierProvider<AppleBullshitState, AppleUserProfile?>((ref) {
+final appleBullshitStateProvider = StateNotifierProvider<AppleBullshitState, AppleUserProfile?>((ref) {
   return AppleBullshitState(ref);
 });

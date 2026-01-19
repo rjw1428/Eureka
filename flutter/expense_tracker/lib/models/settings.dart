@@ -22,7 +22,8 @@ class Settings {
   Map<String, String> toMap() {
     return {
       'theme': theme,
-      'color': '${color.alpha},${color.red},${color.green},${color.blue}',
+      'color':
+          '${(color.a * 255).round().clamp(0, 255)},${(color.r * 255).round().clamp(0, 255)},${(color.g * 255).round().clamp(0, 255)},${(color.b * 255).round().clamp(0, 255)}',
       ...notificationSettings.toMap(),
     };
   }
@@ -60,19 +61,15 @@ class NotificationSettings {
 
   factory NotificationSettings.fromMap(Map<String, String> map) {
     return NotificationSettings(
-      overspendingIndividualBudget:
-          map['notification.overspendingIndividualBudget'] == 'true',
-      overspendingTotalBudget:
-          map['notification.overspendingTotalBudget'] == 'true',
+      overspendingIndividualBudget: map['notification.overspendingIndividualBudget'] == 'true',
+      overspendingTotalBudget: map['notification.overspendingTotalBudget'] == 'true',
     );
   }
 
   Map<String, String> toMap() {
     return {
-      'notification.overspendingIndividualBudget':
-          overspendingIndividualBudget.toString(),
-      'notification.overspendingTotalBudget':
-          overspendingTotalBudget.toString(),
+      'notification.overspendingIndividualBudget': overspendingIndividualBudget.toString(),
+      'notification.overspendingTotalBudget': overspendingTotalBudget.toString(),
     };
   }
 }

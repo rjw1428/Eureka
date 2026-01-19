@@ -70,39 +70,18 @@ class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
     final previousExpense =
         currentExpenses.firstWhere((e) => e.id == expense.id);
 
-    if (previousExpense.amortized != null) {
-      final expenseNotifier = ref.read(expenseModifierProvider.notifier);
-      await expenseNotifier.updateExpense(expense, previousExpense);
-      await expenseNotifier.removeExpense(previousExpense, expense.id);
-
-      // The amount in the form is per-month, but the template needs the total.
-      final totalAmount = expense.amount * previousExpense.amortized!.over;
-      final templateExpense = expense.copyWith(amount: totalAmount);
-      await expenseNotifier.addAmortizedExpense(
-          templateExpense, previousExpense.amortized!.over, expense.id);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).clearSnackBars();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            duration: Duration(seconds: 3),
-            content: Text('Amortized expense series updated!'),
-          ),
-        );
-      }
-    } else {
-      await ref
-          .read(expenseModifierProvider.notifier)
-          .updateExpense(expense, previousExpense);
-      if (mounted) {
-        ScaffoldMessenger.of(context).clearSnackBars();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            duration: Duration(seconds: 3),
-            content: Text('Expense updated!'),
-          ),
-        );
-      }
+    await ref
+        .read(expenseModifierProvider.notifier)
+        .updateExpense(expense, previousExpense);
+        
+    if (mounted) {
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          duration: Duration(seconds: 3),
+          content: Text('Expense updated!'),
+        ),
+      );
     }
   }
 

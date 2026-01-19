@@ -110,7 +110,10 @@ class ExpenseWithCategoryData extends Expense {
   Map<String, dynamic> toJson() => _$ExpenseWithCategoryDataToJson(this);
 
   String get title {
-    return '${category.label}${note == null ? '' : ':'} ${note ?? ''}';
+    final amortizedString = amortized != null
+        ? '(${amortized!.index}/${amortized!.over})'
+        : '';
+    return '${category.label}${note == null && amortized == null ? '' : ':'} $amortizedString ${note ?? ''}';
   }
 
   IconData get icon {

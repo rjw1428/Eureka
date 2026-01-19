@@ -12,6 +12,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 // ignore: non_constant_identifier_names
 final WEB_CLIENT_ID = dotenv.env['WEB_CLIENT_ID'];
@@ -28,8 +29,7 @@ class AuthService {
   User? get currentUser => FirebaseAuth.instance.currentUser;
   Future<Response> createUser(String email, String password) async {
     try {
-      final userCredential =
-          await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      final userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
@@ -50,8 +50,7 @@ class AuthService {
     } catch (e) {
       return const Response(
         success: false,
-        message:
-            'Something went wrong, unable to create an account, please try again.',
+        message: 'Something went wrong, unable to create an account, please try again.',
       );
     }
     return const Response(success: false, message: 'Unknown error occurred.');
@@ -60,13 +59,12 @@ class AuthService {
   Future<void> createUserProfile(ExpenseUser userProfile) async {
     try {
       final id = userProfile.toJson()['id'];
-      final docRef =
-          FirebaseFirestore.instance.collection('expenseUsers').doc(id);
+      final docRef = FirebaseFirestore.instance.collection('expenseUsers').doc(id);
       final profile = userProfile.toJson();
       profile.remove('id');
       await docRef.set(profile);
     } catch (e) {
-      print('Error creating user profile: $e');
+      debugPrint('Error creating user profile: $e');
       rethrow;
     }
   }
@@ -82,8 +80,7 @@ class AuthService {
         return await _userProfileExists();
       } else {
         final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
-        final GoogleSignInAuthentication? googleAuth =
-            await googleUser?.authentication;
+        final GoogleSignInAuthentication? googleAuth = await googleUser?.authentication;
 
         if (googleAuth != null) {
           final credential = GoogleAuthProvider.credential(
@@ -95,7 +92,7 @@ class AuthService {
         return await _userProfileExists();
       }
     } on FirebaseAuthException catch (e) {
-      print('googleLogin exception: $e');
+      debugPrint('googleLogin exception: $e');
       rethrow;
     }
   }
@@ -123,27 +120,26 @@ class AuthService {
       await FirebaseAuth.instance.signInWithCredential(firebaseCredential);
 
       //If it's the first time, return the apple user profile
-      if (appleCredential.givenName != null &&
-          appleCredential.familyName != null) {
+      if (appleCredential.givenName != null && appleCredential.familyName != null) {
         return AppleUserProfile(
-            givenName: appleCredential.givenName!,
-            familyName: appleCredential.familyName!);
+          givenName: appleCredential.givenName!,
+          familyName: appleCredential.familyName!,
+        );
       } else {
         return null;
       }
     } catch (e) {
-      print('Error signing in with Apple: $e');
+      debugPrint('Error signing in with Apple: $e');
       rethrow;
     }
   }
 
   Future<Response> emailLogin(String email, String password) async {
     try {
-      await FirebaseAuth.instance
-          .signInWithEmailAndPassword(email: email, password: password);
+      await FirebaseAuth.instance.signInWithEmailAndPassword(email: email, password: password);
       return const Response(success: true);
     } on FirebaseAuthException catch (e) {
-      print('Login error: ${e.code}: ${e.message}');
+      debugPrint('Login error: ${e.code}: ${e.message}');
       return const Response(
         success: false,
         message: 'Incorrect username or password.',
@@ -173,18 +169,15 @@ class AuthService {
     }
   }
 
-  Future<void> logOut() async {
+  Future<void> logOut(WidgetRef ref) async {
     await FirebaseAuth.instance.signOut();
-    await LocalStorageService().onLogout();
+    await LocalStorageService().onLogout(ref);
   }
 
   Future<bool> _userProfileExists() async {
     if (currentUserId == null) return false;
 
-    final doc = await FirebaseFirestore.instance
-        .collection('expenseUsers')
-        .doc(currentUserId)
-        .get();
+    final doc = await FirebaseFirestore.instance.collection('expenseUsers').doc(currentUserId).get();
     return doc.exists;
   }
 }

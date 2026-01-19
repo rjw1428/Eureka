@@ -181,17 +181,29 @@ class ExpenseNotifier extends StateNotifier<List<ExpenseWithCategoryData>> {
             (ref) => ref.update({
               'lastUpdate': FieldValue.serverTimestamp(),
               'total': FieldValue.increment(-1 * previousExpense.amount),
+              'count': FieldValue.increment(-1),
             }),
           ),
         );
 
         actions.add(
-          _summaryCollection(expense).then(
-            (ref) => ref.update({
-              'lastUpdate': FieldValue.serverTimestamp(),
-              'total': FieldValue.increment(-1 * expense.amount),
-            }),
-          ),
+          _summaryCollection(expense).then((ref) async {
+            final doc = await ref.get();
+            if (doc.exists) {
+              return ref.update({
+                'lastUpdate': FieldValue.serverTimestamp(),
+                'total': FieldValue.increment(expense.amount),
+                'count': FieldValue.increment(1),
+              });
+            } else {
+              return ref.set({
+                'startDate': DateTime(expense.date.year, expense.date.month),
+                'categoryId': expense.categoryId,
+                'total': expense.amount,
+                'count': 1,
+              });
+            }
+          }),
         );
       }
 
@@ -250,8 +262,8 @@ final expenseProvider = StreamProvider<List<ExpenseWithCategoryData>>((ref) {
       .orderBy('date', descending: true)
       .snapshots()
       .map((snapshot) => snapshot.docs.map((doc) => Expense.fromJson({...doc.data(), "id": doc.id})).toList())
-      .doOnData((d) => print('-- Returning expense data: ${d.length}'))
-      .handleError((err) => print('Expense Stream: ${err.toString()}'))
+      .doOnData((d) => debugPrint('-- Returning expense data: ${d.length}'))
+      .handleError((err) => debugPrint('Expense Stream: ${err.toString()}'))
       .shareReplay(maxSize: 1)
       .map((expenses) => expenses.map((expense) {
             final CategoryDataWithId category = budgetCategories.firstWhere((cat) => cat.id == expense.categoryId);
@@ -278,10 +290,10 @@ final expenseSummaryProvider = StreamProvider.autoDispose.family<List<SummaryEnt
       .where('startDate', isLessThanOrEqualTo: queryEnd)
       .where('categoryId', isEqualTo: query.categoryId)
       .snapshots()
-      .doOnError((e, s) => print(e))
+      .doOnError((e, s) => debugPrint(e.toString()))
       .map((snapshot) => snapshot.docs.fold(
-            {},
-            (agg, doc) {
+            <DateTime, SummaryEntry>{},
+            (Map<DateTime, SummaryEntry> agg, doc) {
               final data = doc.data();
               final startDate = data['startDate'].toDate() as DateTime;
               final lastUpdate = data['lastUpdate'].toDate() as DateTime;
@@ -291,26 +303,21 @@ final expenseSummaryProvider = StreamProvider.autoDispose.family<List<SummaryEnt
                 'startDate': startDate.toIso8601String(),
                 'lastUpdate': lastUpdate.toIso8601String(),
               });
-              // as Map<DateTime, SummaryEntry>
               return {...agg, DateTime(startDate.year, startDate.month): summaryPoint};
             },
           ))
-      .map((points) {
+      .map<List<SummaryEntry>>((points) {
     if (points.entries.isEmpty) {
       return [];
     }
     // We need to fill any of the in between time with 0's
-    final DateTime? dataStartData = points.keys.reduce(
+    final DateTime dataStartData = points.keys.reduce(
       (minDate, date) => minDate.isBefore(date) ? minDate : date,
     );
 
-    if (dataStartData == null) {
-      return [];
-    }
-
     final slotSize = monthsBetween(dataStartData, queryEnd) + 1;
     final now = DateTime.now();
-    final pointsWithZeroFills = List<SummaryEntry>.generate(slotSize, (i) {
+    final List<SummaryEntry> pointsWithZeroFills = List<SummaryEntry>.generate(slotSize, (i) {
       final expectedTime = DateTime(dataStartData.year, dataStartData.month + i);
       final SummaryEntry? dataPoint = points[expectedTime];
       return dataPoint ??
@@ -323,7 +330,8 @@ final expenseSummaryProvider = StreamProvider.autoDispose.family<List<SummaryEnt
               categoryId: query.categoryId);
     });
     return pointsWithZeroFills.sorted((a, b) => b.startDate.compareTo(a.startDate));
-  });
+  })
+  .doOnError((e, s) => debugPrint(e.toString()));
 });
 
 final currentSummaryProvider = StreamProvider<List<SummaryEntry>>((ref) {
@@ -342,7 +350,7 @@ final currentSummaryProvider = StreamProvider<List<SummaryEntry>>((ref) {
       .collection('summaries')
       .where('startDate', isGreaterThanOrEqualTo: start)
       .snapshots()
-      .doOnError((e, s) => print(e))
+      .doOnError((e, s) => debugPrint(e.toString()))
       .map((snapshot) => snapshot.docs.map((doc) {
             final data = doc.data();
             final startDate = data['startDate'].toDate() as DateTime;

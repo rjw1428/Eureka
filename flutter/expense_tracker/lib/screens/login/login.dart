@@ -62,13 +62,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ref.read(userCreationStateProvider.notifier).loggedIn();
                     } catch (e) {
                       // Handle error
-                      print("Error during Google login: $e");
-                      showDialogNotification(
-                          "Something went wrong", Text(e.toString()), context);
+                      debugPrint("Error during Google login: $e");
+                      showDialogNotification("Something went wrong", Text(e.toString()), context);
                     }
                   },
-                  label: const Text("Login with Google",
-                      textAlign: TextAlign.center),
+                  label: const Text("Login with Google", textAlign: TextAlign.center),
                 ),
                 if (!kIsWeb && Platform.isIOS) const SizedBox(height: 16),
                 if (!kIsWeb && Platform.isIOS)
@@ -85,19 +83,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       try {
                         final appleProfile = await AuthService().appleLogin();
                         if (appleProfile != null) {
-                          ref
-                              .read(appleBullshitStateProvider.notifier)
-                              .setAppleBullshit(appleProfile.givenName,
-                                  appleProfile.familyName);
+                          ref.read(appleBullshitStateProvider.notifier).setAppleBullshit(
+                                appleProfile.givenName,
+                                appleProfile.familyName,
+                              );
                         }
                         ref.read(userCreationStateProvider.notifier).loggedIn();
                       } catch (e) {
                         // Handle error
-                        print("Error during Apple login: $e");
+                        debugPrint("Error during Apple login: $e");
                       }
                     },
-                    label: const Text("Login with Apple",
-                        textAlign: TextAlign.center),
+                    label: const Text(
+                      "Login with Apple",
+                      textAlign: TextAlign.center,
+                    ),
                   ),
                 const SizedBox(height: 16),
                 if (!_showLoginForm)
@@ -115,8 +115,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       textAlign: TextAlign.center,
                     ),
                   ),
-                if (_showLoginForm && !_showCreateAccountForm)
-                  const LoginWithEmailForm(),
+                if (_showLoginForm && !_showCreateAccountForm) const LoginWithEmailForm(),
                 const Padding(
                   padding: EdgeInsets.only(top: 8.0),
                   child: Text('or'),
@@ -133,8 +132,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     },
                     child: const Text("Click here to create an account"),
                   ),
-                if (_showCreateAccountForm && !_showLoginForm)
-                  const CreateAccountForm(),
+                if (_showCreateAccountForm && !_showLoginForm) const CreateAccountForm(),
               ],
             ),
           )),

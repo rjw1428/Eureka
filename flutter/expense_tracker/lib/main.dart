@@ -14,16 +14,16 @@ import 'package:expense_tracker/widgets/show_dialog.dart';
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  print('Handling a background message: ${message.messageId}');
+  debugPrint('Handling a background message: ${message.messageId}');
 }
 
-late GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void _setupForegroundMessageHandler() {
   FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-    print('Handling a foreground message: ${message.messageId}');
-    print('Message data: ${message.data}');
-    print('Message notification: ${message.notification?.title}, ${message.notification?.body}');
+    debugPrint('Handling a foreground message: ${message.messageId}');
+    debugPrint('Message data: ${message.data}');
+    debugPrint('Message notification: ${message.notification?.title}, ${message.notification?.body}');
 
     final context = navigatorKey.currentContext;
     if (context != null) {

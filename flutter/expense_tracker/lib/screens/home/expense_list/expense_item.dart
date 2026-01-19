@@ -73,24 +73,34 @@ class ExpenseItem extends ConsumerWidget {
             ),
           ),
           const SizedBox(width: 8),
-          Row(
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(
-                isHidden ? "\$0.00" : '\$${expense.amount.toStringAsFixed(2)}',
+              SizedBox(
+                height: Theme.of(context).textTheme.titleSmall!.fontSize,
               ),
-              if (user != null)
-                Padding(
-                  padding: const EdgeInsets.only(left: 8),
-                  child: Opacity(
-                    opacity: 0.7,
-                    child: UserIcon(
-                      user: user,
-                      size: 36,
-                    ),
+              Row(
+                children: [
+                  Text(
+                    isHidden
+                        ? "\$0.00"
+                        : '\$${expense.amount.toStringAsFixed(2)}',
                   ),
-                ),
+                  if (user != null)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 8),
+                      child: Opacity(
+                        opacity: 0.7,
+                        child: UserIcon(
+                          user: user,
+                          size: 36,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ],
-          ),
+          )
         ],
       );
     }
@@ -118,7 +128,7 @@ class ExpenseItem extends ConsumerWidget {
               radius: const Radius.circular(12),
               child: Padding(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
+                  horizontal: 4,
                   vertical: 8,
                 ),
                 child: Row(

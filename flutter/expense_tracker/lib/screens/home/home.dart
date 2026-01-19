@@ -32,7 +32,7 @@ class HomeScreen extends ConsumerWidget {
     }
     final user = ref.read(userProvider).valueOrNull;
     if (user == null) {
-      print("User is undefined");
+      debugPrint("User is undefined");
       return const Loading();
     }
     return ExpenseScreen(user: user);

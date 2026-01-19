@@ -73,8 +73,8 @@ class _BarChartState extends ConsumerState<BarChart>
               borderRadius: BorderRadius.circular(8),
               gradient: LinearGradient(
                 colors: [
-                  Theme.of(context).cardTheme.color!.withOpacity(.7),
-                  Theme.of(context).cardTheme.color!.withOpacity(0)
+                  Theme.of(context).cardTheme.color!.withAlpha((255 * .7).round()),
+                  Theme.of(context).cardTheme.color!.withAlpha(0)
                 ],
                 begin: Alignment.bottomCenter,
                 end: Alignment.topCenter,
@@ -162,7 +162,7 @@ class _BarChartState extends ConsumerState<BarChart>
                                                     : Theme.of(context)
                                                         .colorScheme
                                                         .primary
-                                                        .withOpacity(0.7),
+                                                        .withAlpha((255 * 0.7).round()),
                                               ),
                                             ],
                                           ),
@@ -233,7 +233,7 @@ class ChartBar extends StatelessWidget {
                           : Theme.of(context)
                               .colorScheme
                               .primary
-                              .withOpacity(0.65),
+                              .withAlpha((255 * 0.65).round()),
                     ),
                   ),
                 ),

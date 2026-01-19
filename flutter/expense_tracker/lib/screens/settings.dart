@@ -65,7 +65,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  void onDeleteAccount(ExpenseUser user) {
+  void onDeleteAccount(ExpenseUser user, WidgetRef ref) {
     showDialogNotification(
       'Are you sure you want delete your accounut?',
       Text(
@@ -76,7 +76,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       context,
       TextButton(
         onPressed: () async {
-          final result = await AccountLinkService().onDeleteAccount(user);
+          final result = await AccountLinkService().onDeleteAccount(user, ref);
           ref.read(userCreationStateProvider.notifier).loggedOut();
           if (mounted) {
             if (result != 'success') {
@@ -396,7 +396,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       Icons.delete_outline,
                       size: 20,
                     ),
-                    onPressed: () => onDeleteAccount(user),
+                    onPressed: () => onDeleteAccount(user, ref),
                     label: const Text("Delete Account", textAlign: TextAlign.center),
                   ),
                 ),

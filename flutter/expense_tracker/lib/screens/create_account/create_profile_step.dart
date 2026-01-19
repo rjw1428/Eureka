@@ -72,8 +72,8 @@ class CreateProfileStep extends ConsumerWidget {
             const SizedBox(height: 20),
             TextButton(
               onPressed: () async {
-                final resp = await AccountLinkService().deleteFirebaseAccount();
-                print('Account deletion response: $resp');
+                final resp = await AccountLinkService().deleteFirebaseAccount(ref);
+                debugPrint('Account deletion response: $resp');
                 ref.read(userCreationStateProvider.notifier).loggedOut();
                 Navigator.pushNamedAndRemoveUntil(
                     context, '/', (route) => false);

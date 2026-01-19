@@ -1,6 +1,5 @@
 import 'package:expense_tracker/models/category.dart';
 import 'package:expense_tracker/models/summary_entry.dart';
-import 'package:expense_tracker/models/settings.dart';
 import 'package:expense_tracker/providers/settings_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -105,8 +104,8 @@ class ReportChart extends ConsumerWidget {
         borderRadius: BorderRadius.circular(8),
         gradient: LinearGradient(
           colors: [
-            Theme.of(context).cardTheme.color!.withOpacity(.7),
-            Theme.of(context).cardTheme.color!.withOpacity(0)
+            Theme.of(context).cardTheme.color!.withAlpha((255 * .7).round()),
+            Theme.of(context).cardTheme.color!.withAlpha(0)
           ],
           begin: Alignment.bottomCenter,
           end: Alignment.topCenter,
@@ -120,7 +119,7 @@ class ReportChart extends ConsumerWidget {
               fitInsideHorizontally: true,
               fitInsideVertically: true,
               getTooltipColor: (touchedSpot) =>
-                  Colors.blueGrey.withOpacity(0.8),
+                  Colors.blueGrey.withAlpha((255 * 0.8).round()),
               getTooltipItems: (data) => data.map((spot) {
                 // print(spot.toString());
                 return LineTooltipItem(

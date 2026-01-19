@@ -55,14 +55,14 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
     final budgetMap = {
       for (var category in categories) category.id: category.toJson(),
     };
-    print(budgetMap);
+    debugPrint(budgetMap.toString());
     try {
       final doc = await ref.read(backendProvider).collection('ledger').add({
         'budgetConfig': budgetMap,
       });
       return doc.id;
     } catch (e) {
-      print('Error creating user budget: $e');
+      debugPrint('Error creating user budget: $e');
       return '';
     }
   }
@@ -73,7 +73,7 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
     if (isValid) {
       try {
         final ledgerId = await createUserBudget(userId, categories);
-        print('Created ledger with ID: $ledgerId');
+        debugPrint('Created ledger with ID: $ledgerId');
         if (ledgerId.isEmpty) {
           throw Exception('Failed to create ledger');
         }
@@ -113,7 +113,7 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Welcome to ${APP_TITLE}!'),
+        title: const Text('Welcome to $APP_TITLE!'),
       ),
       body: PageView(
         controller: _pageController,
@@ -144,8 +144,8 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
             },
             onBack: () async {
               if (widget.appleProfile != null) {
-                final resp = await AccountLinkService().deleteFirebaseAccount();
-                print('Account deletion response: $resp');
+                final resp = await AccountLinkService().deleteFirebaseAccount(ref);
+                debugPrint('Account deletion response: $resp');
                 ref.read(userCreationStateProvider.notifier).loggedOut();
                 Navigator.pushNamedAndRemoveUntil(
                     context, '/', (route) => false);

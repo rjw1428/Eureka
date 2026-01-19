@@ -1,4 +1,6 @@
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:expense_tracker/providers/filter_provider.dart';
 
 class LocalStorageService {
   late SharedPreferences _preferences;
@@ -23,7 +25,9 @@ class LocalStorageService {
     await _preferences.setString('themeColor', color);
   }
 
-  Future<void> onLogout() async {
+  Future<void> onLogout(WidgetRef ref) async {
     await _preferences.clear();
+    ref.read(selectedFiltersProvider.notifier).setSelectedFilters(null);
   }
 }
+

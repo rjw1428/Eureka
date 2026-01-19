@@ -81,7 +81,7 @@ class AppBarActionMenu extends ConsumerWidget {
                 return;
               }
               if (value == "LOGOUT") {
-                AuthService().logOut();
+                AuthService().logOut(ref);
                 ref.read(userCreationStateProvider.notifier).loggedOut();
                 return;
               }

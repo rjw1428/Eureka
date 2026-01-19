@@ -26,20 +26,20 @@
         },
         {
             "name": "expense_tracker",
-            "cwd": "flutter\\expense_tracker",
+            "cwd": "flutter/expense_tracker",
             "request": "launch",
             "type": "dart"
         },
         {
             "name": "expense_tracker (profile mode)",
-            "cwd": "flutter\\expense_tracker",
+            "cwd": "flutter/expense_tracker",
             "request": "launch",
             "type": "dart",
             "flutterMode": "profile"
         },
         {
             "name": "expense_tracker (release mode)",
-            "cwd": "flutter\\expense_tracker",
+            "cwd": "flutter/expense_tracker",
             "request": "launch",
             "type": "dart",
             "flutterMode": "release"
