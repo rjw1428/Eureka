@@ -16,8 +16,13 @@ class ReportScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(userProvider).value!;
+    final now = DateTime.now();
+    final twelveMonthsAgo = DateTime(now.year, now.month - 11, 1);
+    final start = user.initialized.isAfter(twelveMonthsAgo)
+        ? user.initialized
+        : twelveMonthsAgo;
     final summary$ = ref.watch(expenseSummaryProvider(
-        (categoryId: categoryId, start: user.initialized, end: null)));
+        (categoryId: categoryId, start: start, end: null)));
     final budgetConfig = ref.watch(budgetProvider.select((configs) =>
         configs.value!.firstWhere((config) => config.id == categoryId)));
     return summary$.when(

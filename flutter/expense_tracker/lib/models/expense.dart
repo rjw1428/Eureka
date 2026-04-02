@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:expense_tracker/constants/icons.dart';
 import 'package:expense_tracker/models/category.dart';
 import 'package:flutter/material.dart';
@@ -6,6 +7,16 @@ import 'package:json_annotation/json_annotation.dart';
 part 'expense.g.dart';
 
 final dateFormatter = DateFormat.yMd();
+
+DateTime _dateFromJson(dynamic json) {
+  if (json is Timestamp) {
+    return json.toDate();
+  }
+  if (json is String) {
+    return DateTime.parse(json);
+  }
+  throw ArgumentError('Invalid date format: $json');
+}
 
 @JsonSerializable()
 class AmortizationDetails {
@@ -46,6 +57,7 @@ class Expense {
   String? note;
   String? submittedBy;
   double amount;
+  @JsonKey(fromJson: _dateFromJson)
   DateTime date;
   List<String> reactions;
   DateTime? hideUntil;

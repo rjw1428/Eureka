@@ -1,5 +1,6 @@
 import 'package:expense_tracker/constants/utils.dart';
 import 'package:expense_tracker/models/time_filter_option.dart';
+import 'package:expense_tracker/providers/expense_stream_provider.dart';
 import 'package:expense_tracker/providers/filter_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -20,30 +21,44 @@ class TimeRow extends ConsumerStatefulWidget {
 }
 
 class _TimeRowState extends ConsumerState<TimeRow> {
-  final now = DateTime.now();
-  List<TimeFilterOption> timeFilterOptions = [];
   final TextEditingController timeController = TextEditingController();
 
-  @override
-  void initState() {
-    // Make the available time options.
+  List<TimeFilterOption> _buildTimeFilterOptions(DateTime? latestDate) {
+    final now = DateTime.now();
+    // Use the later of now or latestDate as the upper bound
+    final upperBound = latestDate != null && latestDate.isAfter(now)
+        ? latestDate
+        : now;
+
     final lastYear = DateTime(now.year - 1, now.month);
-    final count = widget.initialTime.isBefore(lastYear)
-        ? 13 // Go back only for the last year
-        : monthsBetween(widget.initialTime, now) +
-            1; // go back as far back as the user started
-    timeFilterOptions = List<TimeFilterOption>.generate(count, (i) {
+    final pastCount = widget.initialTime.isBefore(lastYear)
+        ? 13
+        : monthsBetween(widget.initialTime, now) + 1;
+
+    final futureCount = monthsBetween(now, upperBound);
+
+    // Generate future months (excluding current month) + past months
+    final futureOptions = List<TimeFilterOption>.generate(futureCount, (i) {
+      final d = DateTime(now.year, now.month + i + 1, 1);
+      return TimeFilterOption(
+          id: d, label: '${d.year} ${DateFormat('MMMM').format(d)}');
+    });
+
+    final pastOptions = List<TimeFilterOption>.generate(pastCount, (i) {
       final d = DateTime(now.year, now.month - i, 1);
       return TimeFilterOption(
           id: d, label: '${d.year} ${DateFormat('MMMM').format(d)}');
     });
 
-    super.initState();
+    return [...futureOptions, ...pastOptions];
   }
 
   @override
   Widget build(BuildContext context) {
     final selectedTime = ref.read(selectedTimeProvider);
+    final latestDate = ref.watch(latestSummaryDateProvider).value;
+    final timeFilterOptions = _buildTimeFilterOptions(latestDate);
+
     return DropdownMenu<TimeFilterOption>(
       width: double.infinity,
       initialSelection: timeFilterOptions.firstWhere((opt) =>

@@ -15,83 +15,85 @@ AmortizationDetails _$AmortizationDetailsFromJson(Map<String, dynamic> json) =>
     );
 
 Map<String, dynamic> _$AmortizationDetailsToJson(
-        AmortizationDetails instance) =>
-    <String, dynamic>{
-      'groupId': instance.groupId,
-      'nextId': instance.nextId,
-      'index': instance.index,
-      'over': instance.over,
-    };
+  AmortizationDetails instance,
+) => <String, dynamic>{
+  'groupId': instance.groupId,
+  'nextId': instance.nextId,
+  'index': instance.index,
+  'over': instance.over,
+};
 
 Expense _$ExpenseFromJson(Map<String, dynamic> json) => Expense(
-      amount: (json['amount'] as num).toDouble(),
-      date: DateTime.parse(json['date'] as String),
-      categoryId: json['categoryId'] as String,
-      submittedBy: json['submittedBy'] as String?,
-      note: json['note'] as String?,
-      id: json['id'] as String?,
-      reactions: (json['reactions'] as List<dynamic>?)
-              ?.map((e) => e as String)
-              .toList() ??
-          const [],
-      hideUntil: json['hideUntil'] == null
-          ? null
-          : DateTime.parse(json['hideUntil'] as String),
-      amortized: json['amortized'] == null
-          ? null
-          : AmortizationDetails.fromJson(
-              json['amortized'] as Map<String, dynamic>),
-      notify: json['notify'] as bool?,
-    );
+  amount: (json['amount'] as num).toDouble(),
+  date: _dateFromJson(json['date']),
+  categoryId: json['categoryId'] as String,
+  submittedBy: json['submittedBy'] as String?,
+  note: json['note'] as String?,
+  id: json['id'] as String?,
+  reactions:
+      (json['reactions'] as List<dynamic>?)?.map((e) => e as String).toList() ??
+      const [],
+  hideUntil: json['hideUntil'] == null
+      ? null
+      : DateTime.parse(json['hideUntil'] as String),
+  amortized: json['amortized'] == null
+      ? null
+      : AmortizationDetails.fromJson(json['amortized'] as Map<String, dynamic>),
+  notify: json['notify'] as bool?,
+);
 
 Map<String, dynamic> _$ExpenseToJson(Expense instance) => <String, dynamic>{
-      'categoryId': instance.categoryId,
-      'id': instance.id,
-      'note': instance.note,
-      'submittedBy': instance.submittedBy,
-      'amount': instance.amount,
-      'date': instance.date.toIso8601String(),
-      'reactions': instance.reactions,
-      'hideUntil': instance.hideUntil?.toIso8601String(),
-      'amortized': instance.amortized?.toJson(),
-      'notify': instance.notify,
-    };
+  'categoryId': instance.categoryId,
+  'id': instance.id,
+  'note': instance.note,
+  'submittedBy': instance.submittedBy,
+  'amount': instance.amount,
+  'date': instance.date.toIso8601String(),
+  'reactions': instance.reactions,
+  'hideUntil': instance.hideUntil?.toIso8601String(),
+  'amortized': instance.amortized?.toJson(),
+  'notify': instance.notify,
+};
 
 ExpenseWithCategoryData _$ExpenseWithCategoryDataFromJson(
-        Map<String, dynamic> json) =>
+  Map<String, dynamic> json,
+) =>
     ExpenseWithCategoryData(
-      amount: (json['amount'] as num).toDouble(),
-      date: DateTime.parse(json['date'] as String),
-      categoryId: json['categoryId'] as String,
-      submittedBy: json['submittedBy'] as String?,
-      category:
-          CategoryDataWithId.fromJson(json['category'] as Map<String, dynamic>),
-      amortized: json['amortized'] == null
-          ? null
-          : AmortizationDetails.fromJson(
-              json['amortized'] as Map<String, dynamic>),
-    )
+        amount: (json['amount'] as num).toDouble(),
+        date: _dateFromJson(json['date']),
+        categoryId: json['categoryId'] as String,
+        submittedBy: json['submittedBy'] as String?,
+        category: CategoryDataWithId.fromJson(
+          json['category'] as Map<String, dynamic>,
+        ),
+        amortized: json['amortized'] == null
+            ? null
+            : AmortizationDetails.fromJson(
+                json['amortized'] as Map<String, dynamic>,
+              ),
+      )
       ..id = json['id'] as String?
       ..note = json['note'] as String?
-      ..reactions =
-          (json['reactions'] as List<dynamic>).map((e) => e as String).toList()
+      ..reactions = (json['reactions'] as List<dynamic>)
+          .map((e) => e as String)
+          .toList()
       ..hideUntil = json['hideUntil'] == null
           ? null
           : DateTime.parse(json['hideUntil'] as String)
       ..notify = json['notify'] as bool?;
 
 Map<String, dynamic> _$ExpenseWithCategoryDataToJson(
-        ExpenseWithCategoryData instance) =>
-    <String, dynamic>{
-      'categoryId': instance.categoryId,
-      'id': instance.id,
-      'note': instance.note,
-      'submittedBy': instance.submittedBy,
-      'amount': instance.amount,
-      'date': instance.date.toIso8601String(),
-      'reactions': instance.reactions,
-      'hideUntil': instance.hideUntil?.toIso8601String(),
-      'amortized': instance.amortized,
-      'notify': instance.notify,
-      'category': instance.category,
-    };
+  ExpenseWithCategoryData instance,
+) => <String, dynamic>{
+  'categoryId': instance.categoryId,
+  'id': instance.id,
+  'note': instance.note,
+  'submittedBy': instance.submittedBy,
+  'amount': instance.amount,
+  'date': instance.date.toIso8601String(),
+  'reactions': instance.reactions,
+  'hideUntil': instance.hideUntil?.toIso8601String(),
+  'amortized': instance.amortized,
+  'notify': instance.notify,
+  'category': instance.category,
+};

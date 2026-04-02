@@ -20,10 +20,16 @@ import 'package:uuid/uuid.dart';
 
 final format = DateFormat('MMM', 'en_US');
 
-class ExpenseNotifier extends StateNotifier<List<ExpenseWithCategoryData>> {
-  ExpenseNotifier({required this.user, required this.firestore}) : super(const []);
-  final ExpenseUser user;
-  final FirebaseFirestore firestore;
+class ExpenseNotifier extends Notifier<List<ExpenseWithCategoryData>> {
+  late final ExpenseUser user;
+  late final FirebaseFirestore firestore;
+
+  @override
+  List<ExpenseWithCategoryData> build() {
+    user = ref.read(userProvider).value!;
+    firestore = ref.read(backendProvider);
+    return const [];
+  }
 
   String _summaryId(Expense expense) {
     final yearMonth = _formatMonth(expense.date);
@@ -57,10 +63,12 @@ class ExpenseNotifier extends StateNotifier<List<ExpenseWithCategoryData>> {
 
     try {
       String? id = updateId;
+      final collectionRef = await _expenseCollection(firstExpense.date);
       if (updateId == null) {
-        final collectionRef = await _expenseCollection(firstExpense.date);
         final docRef = await collectionRef.add(firstExpense.toJson());
         id = docRef.id;
+      } else {
+        await collectionRef.doc(updateId).set(firstExpense.toJson());
       }
       // Also update the summary for the first expense
       final summaryRef = await _summaryCollection(firstExpense);
@@ -88,22 +96,30 @@ class ExpenseNotifier extends StateNotifier<List<ExpenseWithCategoryData>> {
       ]);
       return id;
     } catch (e) {
-      print('Error adding amortized expense: $e');
+      debugPrint('Error adding amortized expense: $e');
       // Optionally rethrow or handle the error in the UI
       return null;
     }
   }
 
   Future addExpense(Expense expense) async {
+    if (expense.amortized != null) {
+      return addAmortizedExpense(expense, expense.amortized!.over);
+    }
     final docId = _summaryId(expense);
     final collectionRef = firestore.collection('ledger').doc(user.ledgerId).collection('summaries');
     final summaryDoc = await collectionRef.doc(docId).get();
 
     // If the summary document does not exist, create it with initial values
     if (!summaryDoc.exists) {
+      // Add timezoneOffset here just to offset the server time, so the write is for the hour 00:00
+      final startDate = DateTime(expense.date.year, expense.date.month).add(DateTime.now().timeZoneOffset);
       await collectionRef
           .doc(docId)
-          .set({'startDate': DateTime(expense.date.year, expense.date.month), 'categoryId': expense.categoryId});
+          .set({
+            'startDate': startDate,
+            'categoryId': expense.categoryId,
+          });
     }
     try {
       return Future.wait([
@@ -128,6 +144,12 @@ class ExpenseNotifier extends StateNotifier<List<ExpenseWithCategoryData>> {
   }
 
   Future<void> removeExpense(Expense expense, [String? updateId]) async {
+    final now = DateTime.now();
+    if (expense.hideUntil != null && expense.hideUntil!.isAfter(now) && expense.submittedBy != user.id) {
+      debugPrint('Attempted to delete a hidden expense not submitted by current user. Deletion prevented.');
+      // Optionally throw an exception or return a specific error code
+      return;
+    }
     if (expense.amortized != null) {
       // Immediately delete the selected expense to update the UI
       if (updateId == null) {
@@ -139,8 +161,6 @@ class ExpenseNotifier extends StateNotifier<List<ExpenseWithCategoryData>> {
         'groupId': expense.amortized!.groupId,
         'ledgerId': user.ledgerId,
         'updateId': updateId,
-      }).catchError((e) {
-        debugPrint('Error deleting amortized expense series in the background: $e');
       });
     } else {
       await Future.wait([
@@ -155,6 +175,36 @@ class ExpenseNotifier extends StateNotifier<List<ExpenseWithCategoryData>> {
   }
 
   Future<void> updateExpense(Expense expense, Expense previousExpense) async {
+    final now = DateTime.now();
+    if (previousExpense.hideUntil != null && previousExpense.hideUntil!.isAfter(now) && previousExpense.submittedBy != user.id) {
+      debugPrint('Attempted to update a hidden expense not submitted by current user. Update prevented.');
+      // Optionally throw an exception or return a specific error code
+      return;
+    }
+    final wasAmortized = previousExpense.amortized != null;
+    final isAmortized = expense.amortized != null;
+
+    // Transitioning from amortized to non-amortized
+    if (wasAmortized && !isAmortized) {
+      await removeExpense(previousExpense);
+      await addExpense(expense);
+      return;
+    }
+
+    // UPDATING an amortized expense
+    if (wasAmortized && isAmortized) {
+      await removeExpense(previousExpense, previousExpense.id);
+      await addAmortizedExpense(expense, expense.amortized!.over, previousExpense.id);
+      return;
+    }
+
+    // Transitioning from non-amortized to amortized
+    if (!wasAmortized && isAmortized) {
+      await removeExpense(previousExpense);
+      await addAmortizedExpense(expense, expense.amortized!.over, previousExpense.id);
+      return;
+    }
+
     final isSameMonthBucket =
         expense.date.month == previousExpense.date.month && expense.date.year == previousExpense.date.year;
     expense.submittedBy = user.id;
@@ -224,16 +274,11 @@ class ExpenseNotifier extends StateNotifier<List<ExpenseWithCategoryData>> {
   }
 }
 
-final expenseModifierProvider = StateNotifierProvider<ExpenseNotifier, List<ExpenseWithCategoryData>>((ref) {
-  final user = ref.read(userProvider).value;
-  final firestore = ref.read(backendProvider);
-  // HOW TO HANDLE WHEN THERE'S NO USER
-  return ExpenseNotifier(user: user!, firestore: firestore);
-});
+final expenseModifierProvider = NotifierProvider<ExpenseNotifier, List<ExpenseWithCategoryData>>(ExpenseNotifier.new);
 
 final expenseProvider = StreamProvider<List<ExpenseWithCategoryData>>((ref) {
   final firestore = ref.read(backendProvider);
-  final user = ref.watch(userProvider).valueOrNull;
+  final user = ref.watch(userProvider).value;
   final budgetCategories = ref.watch(budgetProvider).value ?? [];
   final selectedDate = ref.watch(selectedTimeProvider);
 
@@ -262,7 +307,7 @@ final expenseProvider = StreamProvider<List<ExpenseWithCategoryData>>((ref) {
 typedef SummaryQueryParams = ({String categoryId, DateTime start, DateTime? end});
 
 final expenseSummaryProvider = StreamProvider.autoDispose.family<List<SummaryEntry>, SummaryQueryParams>((ref, query) {
-  final user = ref.watch(userProvider).valueOrNull;
+  final user = ref.watch(userProvider).value;
   final firestore = ref.read(backendProvider);
   final DateTime queryEnd = query.end ?? DateTime.now();
 
@@ -323,11 +368,33 @@ final expenseSummaryProvider = StreamProvider.autoDispose.family<List<SummaryEnt
               categoryId: query.categoryId);
     });
     return pointsWithZeroFills.sorted((a, b) => b.startDate.compareTo(a.startDate));
+  }).doOnError((e, s) => print(e));
+});
+
+final latestSummaryDateProvider = StreamProvider<DateTime?>((ref) {
+  final user = ref.watch(userProvider).value;
+  final firestore = ref.read(backendProvider);
+
+  if (user == null) {
+    return Stream.value(null);
+  }
+
+  return firestore
+      .collection('ledger')
+      .doc(user.ledgerId)
+      .collection('summaries')
+      .orderBy('startDate', descending: true)
+      .limit(1)
+      .snapshots()
+      .map((snapshot) {
+    if (snapshot.docs.isEmpty) return null;
+    final data = snapshot.docs.first.data();
+    return (data['startDate'] as Timestamp).toDate();
   });
 });
 
 final currentSummaryProvider = StreamProvider<List<SummaryEntry>>((ref) {
-  final user = ref.watch(userProvider).valueOrNull;
+  final user = ref.watch(userProvider).value;
   final firestore = ref.read(backendProvider);
   final now = DateTime.now();
   final DateTime start = DateTime(now.year, now.month).subtract(const Duration(seconds: 1));

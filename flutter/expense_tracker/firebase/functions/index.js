@@ -7,6 +7,84 @@ const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 
 initializeApp();
 
+/**
+ * Creates a new notification document for a user.
+ * @param {string} userId The ID of the user to create the notification for.
+ * @param {string} title The title of the notification.
+ * @param {string} body The body/content of the notification.
+ * @param {object} actions A map of actions associated with the notification.
+ */
+async function createNotification(userId, title, body, actions = {}) {
+    try {
+        const db = getFirestore();
+        const notificationRef = db
+            .collection("expenseUsers")
+            .doc(userId)
+            .collection("notifications")
+            .doc(); // Let Firestore generate the ID
+
+        await notificationRef.set({
+            id: notificationRef.id,
+            title: title,
+            body: body,
+            actions: actions,
+            timestamp: FieldValue.serverTimestamp(),
+            isRead: false,
+        });
+        logger.info(`Notification created for user ${userId}: ${title}`);
+    } catch (error) {
+        logger.error(`Error creating notification for user ${userId}:`, error);
+    }
+}
+
+// Cloud Function to handle sending FCM when a new notification document is created
+exports.onNotificationCreated = onDocumentCreated(
+    "expenseUsers/{userId}/notifications/{notificationId}",
+    async (event) => {
+        try {
+            const notificationData = event.data.data();
+            const userId = event.params.userId;
+            logger.info(`Processing new notification for user ${userId}: ${notificationData.title}`);
+
+            const userSnapshot = await getFirestore()
+                .collection("expenseUsers")
+                .doc(userId)
+                .get();
+
+            if (!userSnapshot.exists) {
+                logger.warn(`User ${userId} not found, cannot send FCM.`);
+                return;
+            }
+
+            const userData = userSnapshot.data();
+            const token = userData.fcmToken;
+
+            if (!token) {
+                logger.warn(`User ${userId} does not have an FCM token, skipping FCM.`);
+                return;
+            }
+
+            const message = {
+                notification: {
+                    title: notificationData.title,
+                    body: notificationData.body,
+                },
+                token: token,
+                data: {
+                    notificationId: notificationData.id,
+                    ...notificationData.actions
+                }
+            };
+
+            await getMessaging().send(message);
+            logger.info(`FCM sent for notification ${notificationData.id} to user ${userId}.`);
+        } catch (e) {
+            logger.error("Error in onNotificationCreated:", e);
+        }
+    }
+);
+
+
 exports.sendExpenseNotification = onDocumentCreated(
     "ledger/{ledgerId}/{expenseCollectionId}/{expenseId}",
     async (event) => {
@@ -54,30 +132,12 @@ exports.sendExpenseNotification = onDocumentCreated(
 
             if (linkedAccounts && linkedAccounts.length > 0) {
                 const notifications = linkedAccounts.map(async (user) => {
-                    const linkedUser = await getFirestore()
-                        .collection("expenseUsers")
-                        .doc(user.id)
-                        .get();
-
-                    if (!linkedUser.exists) {
-                        logger.warn(`Linked user ${user.id} not found.`);
-                        return;
-                    }
-
-                    const token = linkedUser.data().fcmToken;
-                    if (!token) {
-                        logger.warn(`User ${user.id} does not have a token.`);
-                        return;
-                    }
-
-                    const message = {
-                        notification: {
-                            title: "New Expense Added",
-                            body: messageBody,
-                        },
-                        token: token,
-                    };
-                    return getMessaging().send(message);
+                    await createNotification(
+                        user.id,
+                        "New Expense Added",
+                        messageBody,
+                        { type: "newExpense", expenseId: event.params.expenseId, ledgerId: event.params.ledgerId }
+                    );
                 });
 
                 await Promise.all(notifications);
@@ -162,25 +222,18 @@ exports.sendReactionNotification = onCall(async (request) => {
         }
 
         const data = targetSnapshot.data()
-        const token = data.fcmToken
         const name = data.firstName
 
         const body = `${name} reacted to your expense with ${reaction}!`
-        logger.debug(`Sending reaction message ${body} to ${userId}`)
-        if (!token) {
-            logger.warn('User does not have a token')
-           return { success: false, message: 'User does not have a token saved' }; 
-        }
-        const message = {
-            notification: {
-                title: "New Reaction!",
-                body,
-            },
-            token: token,
-        };
-        const resp = await getMessaging().send(message)
-        logger.log(`Message Status: ${resp}`)
-        return { success: true, message: resp}
+        
+        await createNotification(
+            userId,
+            "New Reaction!",
+            body,
+            { type: "newReaction", reaction: reaction }
+        );
+
+        return { success: true, message: "Reaction notification created" }
     } catch (e) {
         logger.error(e)
         return { success: false, message: e}
@@ -400,7 +453,10 @@ exports.createAmortizedExpenses = onCall(async (request) => {
     }
 
     const monthlyAmount = template.amount / months;
-    const originalDate = new Date(template.date);
+    const templateDate = template.date && template.date._seconds
+        ? new Date(template.date._seconds * 1000)
+        : new Date(template.date);
+    const originalDate = templateDate;
     let nextId = null;
     
     const expensePaths = [];
@@ -427,7 +483,7 @@ exports.createAmortizedExpenses = onCall(async (request) => {
             const expenseData = {
                 ...template,
                 amount: monthlyAmount,
-                date: expenseDate,
+                date: expenseDate.toISOString(),
                 amortized: {
                     groupId: groupId,
                     index: i,
@@ -560,10 +616,7 @@ exports.sendBudgetNotification = onCall(async (request) => {
         }
 
         const db = getFirestore();
-        const messaging = getMessaging();
-        const notifications = [];
-        let sentCount = 0;
-
+        
         for (const userId of userIds) {
             logger.debug(userId)
             try {
@@ -582,7 +635,7 @@ exports.sendBudgetNotification = onCall(async (request) => {
                 const notificationSettings = userSettings.notification || {};
 
                 // Check if notifications are enabled for this type
-                if (!userSettings[`notification.${notificationType}`]) {
+                if (!notificationSettings[notificationType]) {
                     logger.info(`Notification type ${notificationType} disabled for user ${userId}`);
                     continue;
                 }
@@ -604,30 +657,21 @@ exports.sendBudgetNotification = onCall(async (request) => {
                     logger.warn(`Unknown notification type: ${notificationType}`);
                     continue;
                 }
-
-                const message = {
-                    notification: {
-                        title,
-                        body,
-                    },
-                    token,
-                };
-
-                notifications.push(
-                    messaging.send(message).then(() => {
-                        sentCount++;
-                    }).catch((err) => {
-                        logger.error(`Failed to send notification to user ${userId}:`, err);
-                    })
+                
+                await createNotification(
+                    userId,
+                    title,
+                    body,
+                    { type: notificationType, category: categoryLabel, amount: amount }
                 );
+
             } catch (error) {
                 logger.error(`Error processing user ${userId}:`, error);
             }
         }
 
-        await Promise.all(notifications);
-        logger.info(`Successfully sent ${sentCount} budget notifications`);
-        return { success: true, sentCount };
+        logger.info(`Successfully processed budget notifications`);
+        return { success: true };
     } catch (e) {
         logger.error("Error in sendBudgetNotification:", e);
         throw new functions.https.HttpsError("internal", "An error occurred while sending notifications");
