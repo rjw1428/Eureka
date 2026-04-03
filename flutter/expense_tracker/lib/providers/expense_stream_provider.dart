@@ -324,7 +324,7 @@ final expenseSummaryProvider = StreamProvider.autoDispose.family<List<SummaryEnt
       .where('categoryId', isEqualTo: query.categoryId)
       .snapshots()
       .doOnError((e, s) => print(e))
-      .map((snapshot) => snapshot.docs.fold(
+      .map((snapshot) => snapshot.docs.fold<Map<DateTime, SummaryEntry>>(
             {},
             (agg, doc) {
               final data = doc.data();
@@ -342,7 +342,7 @@ final expenseSummaryProvider = StreamProvider.autoDispose.family<List<SummaryEnt
           ))
       .map((points) {
     if (points.entries.isEmpty) {
-      return [];
+      return <SummaryEntry>[];
     }
     // We need to fill any of the in between time with 0's
     final DateTime? dataStartData = points.keys.reduce(
@@ -350,7 +350,7 @@ final expenseSummaryProvider = StreamProvider.autoDispose.family<List<SummaryEnt
     );
 
     if (dataStartData == null) {
-      return [];
+      return <SummaryEntry>[];
     }
 
     final slotSize = monthsBetween(dataStartData, queryEnd) + 1;
