@@ -113,7 +113,7 @@ class ExpenseNotifier extends Notifier<List<ExpenseWithCategoryData>> {
     // If the summary document does not exist, create it with initial values
     if (!summaryDoc.exists) {
       // Add timezoneOffset here just to offset the server time, so the write is for the hour 00:00
-      final startDate = DateTime(expense.date.year, expense.date.month).add(DateTime.now().timeZoneOffset);
+      final startDate = DateTime(expense.date.year, expense.date.month);
       await collectionRef
           .doc(docId)
           .set({
@@ -397,7 +397,7 @@ final currentSummaryProvider = StreamProvider<List<SummaryEntry>>((ref) {
   final user = ref.watch(userProvider).value;
   final firestore = ref.read(backendProvider);
   final now = DateTime.now();
-  final DateTime start = DateTime(now.year, now.month).subtract(const Duration(seconds: 1));
+  final DateTime start = DateTime(now.year, now.month).subtract(const Duration(hours: 24));
 
   if (user == null) {
     return Stream.value([]);
