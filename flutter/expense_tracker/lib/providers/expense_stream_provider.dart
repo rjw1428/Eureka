@@ -31,18 +31,33 @@ class ExpenseNotifier extends Notifier<List<ExpenseWithCategoryData>> {
     return const [];
   }
 
-  String _summaryId(Expense expense) {
-    final yearMonth = _formatMonth(expense.date);
-    return "${yearMonth}_${expense.categoryId}";
-  }
-
   String _formatMonth(DateTime date) {
     return "${date.year}_${formatter.format(date).toUpperCase()}";
   }
 
-  Future<DocumentReference<Map<String, dynamic>>> _summaryCollection(Expense expense) async {
-    final docId = _summaryId(expense);
+  DocumentReference<Map<String, dynamic>> _summaryRefFor(String categoryId, DateTime date) {
+    final docId = "${_formatMonth(date)}_$categoryId";
     return firestore.collection('ledger').doc(user.ledgerId).collection('summaries').doc(docId);
+  }
+
+  /// Atomically creates-or-increments a category-month summary in a single
+  /// write. Using `set(merge: true)` with `FieldValue.increment` means the doc
+  /// is created if missing, concurrent increments never overwrite each other,
+  /// and a decrement against a missing summary does not throw.
+  Future<void> _applySummaryDelta({
+    required String categoryId,
+    required DateTime date,
+    int countDelta = 0,
+    double totalDelta = 0,
+  }) {
+    final startDate = DateTime(date.year, date.month);
+    return _summaryRefFor(categoryId, date).set({
+      'startDate': startDate,
+      'categoryId': categoryId,
+      'lastUpdate': FieldValue.serverTimestamp(),
+      'total': FieldValue.increment(totalDelta),
+      'count': FieldValue.increment(countDelta),
+    }, SetOptions(merge: true));
   }
 
   Future<CollectionReference<Map<String, dynamic>>> _expenseCollection(DateTime date) async {
@@ -70,22 +85,15 @@ class ExpenseNotifier extends Notifier<List<ExpenseWithCategoryData>> {
       } else {
         await collectionRef.doc(updateId).set(firstExpense.toJson());
       }
-      // Also update the summary for the first expense
-      final summaryRef = await _summaryCollection(firstExpense);
-      final summaryDoc = await summaryRef.get();
-      if (!summaryDoc.exists) {
-        await summaryRef.set({
-          'startDate': DateTime(firstExpense.date.year, firstExpense.date.month),
-          'categoryId': firstExpense.categoryId
-        });
-      }
-
+      // Also update the summary for the first expense (months 2..N are handled
+      // by the createAmortizedExpenses Cloud Function). Atomic create-or-increment.
       await Future.wait([
-        summaryRef.update({
-          'lastUpdate': FieldValue.serverTimestamp(),
-          'total': FieldValue.increment(firstExpense.amount),
-          'count': FieldValue.increment(1)
-        }),
+        _applySummaryDelta(
+          categoryId: firstExpense.categoryId,
+          date: firstExpense.date,
+          countDelta: 1,
+          totalDelta: firstExpense.amount,
+        ),
         FirebaseFunctions.instance.httpsCallable('createAmortizedExpenses').call({
           'template': templateExpense.toJson(),
           'firstExpenseId': id,
@@ -106,28 +114,16 @@ class ExpenseNotifier extends Notifier<List<ExpenseWithCategoryData>> {
     if (expense.amortized != null) {
       return addAmortizedExpense(expense, expense.amortized!.over);
     }
-    final docId = _summaryId(expense);
-    final collectionRef = firestore.collection('ledger').doc(user.ledgerId).collection('summaries');
-    final summaryDoc = await collectionRef.doc(docId).get();
-
-    // If the summary document does not exist, create it with initial values
-    if (!summaryDoc.exists) {
-      // Add timezoneOffset here just to offset the server time, so the write is for the hour 00:00
-      final startDate = DateTime(expense.date.year, expense.date.month);
-      await collectionRef
-          .doc(docId)
-          .set({
-            'startDate': startDate,
-            'categoryId': expense.categoryId,
-          });
-    }
     try {
       return Future.wait([
-        collectionRef.doc(docId).update({
-          'lastUpdate': FieldValue.serverTimestamp(),
-          'total': FieldValue.increment(expense.amount),
-          'count': FieldValue.increment(1)
-        }),
+        // Atomic create-or-increment: no read-then-write, so concurrent adds
+        // to a brand-new bucket can no longer overwrite each other.
+        _applySummaryDelta(
+          categoryId: expense.categoryId,
+          date: expense.date,
+          countDelta: 1,
+          totalDelta: expense.amount,
+        ),
         _expenseCollection(expense.date).then((collectionRef) {
           expense.submittedBy = user.id;
           final newExpenseData = expense.toJson();
@@ -164,11 +160,14 @@ class ExpenseNotifier extends Notifier<List<ExpenseWithCategoryData>> {
       });
     } else {
       await Future.wait([
-        _summaryCollection(expense).then((ref) => ref.update({
-              'lastUpdate': FieldValue.serverTimestamp(),
-              'total': FieldValue.increment(-1 * expense.amount),
-              'count': FieldValue.increment(-1),
-            })),
+        // Merge-increment tolerates a missing summary: the raw doc is still
+        // deleted and no error aborts the operation.
+        _applySummaryDelta(
+          categoryId: expense.categoryId,
+          date: expense.date,
+          countDelta: -1,
+          totalDelta: -expense.amount,
+        ),
         _expenseCollection(expense.date).then((ref) => ref.doc(expense.id!).delete()),
       ]);
     }
@@ -213,36 +212,33 @@ class ExpenseNotifier extends Notifier<List<ExpenseWithCategoryData>> {
       List<Future> actions = [
         _expenseCollection(previousExpense.date).then((ref) => ref.doc(previousExpense.id).set(expense.toJson())),
       ];
-      // Skip updating summary if the amount hasn't changed & the category is the same
-      if (expense.amount - previousExpense.amount != 0 && previousExpense.categoryId == expense.categoryId) {
-        actions.add(
-          _summaryCollection(expense).then(
-            (ref) => ref.update({
-              'lastUpdate': FieldValue.serverTimestamp(),
-              'total': FieldValue.increment(expense.amount - previousExpense.amount),
-            }),
-          ),
-        );
-      }
-
-      if (previousExpense.categoryId != expense.categoryId) {
-        actions.add(
-          _summaryCollection(previousExpense).then(
-            (ref) => ref.update({
-              'lastUpdate': FieldValue.serverTimestamp(),
-              'total': FieldValue.increment(-1 * previousExpense.amount),
-            }),
-          ),
-        );
-
-        actions.add(
-          _summaryCollection(expense).then(
-            (ref) => ref.update({
-              'lastUpdate': FieldValue.serverTimestamp(),
-              'total': FieldValue.increment(-1 * expense.amount),
-            }),
-          ),
-        );
+      if (previousExpense.categoryId == expense.categoryId) {
+        // Same category: adjust the bucket total by the amount delta only.
+        // The count is unchanged (still one transaction in the same bucket).
+        final totalDelta = expense.amount - previousExpense.amount;
+        if (totalDelta != 0) {
+          actions.add(_applySummaryDelta(
+            categoryId: expense.categoryId,
+            date: expense.date,
+            totalDelta: totalDelta,
+          ));
+        }
+      } else {
+        // Category changed within the month: move the transaction between
+        // buckets. Decrement the old category and increment the new one,
+        // both in count and total. The new bucket is created if missing.
+        actions.add(_applySummaryDelta(
+          categoryId: previousExpense.categoryId,
+          date: previousExpense.date,
+          countDelta: -1,
+          totalDelta: -previousExpense.amount,
+        ));
+        actions.add(_applySummaryDelta(
+          categoryId: expense.categoryId,
+          date: expense.date,
+          countDelta: 1,
+          totalDelta: expense.amount,
+        ));
       }
 
       await Future.wait(actions);
@@ -397,7 +393,13 @@ final currentSummaryProvider = StreamProvider<List<SummaryEntry>>((ref) {
   final user = ref.watch(userProvider).value;
   final firestore = ref.read(backendProvider);
   final now = DateTime.now();
+  // Bound the query to the current month only. The 24h buffer on each side
+  // absorbs the timezone skew in how `startDate` is written (local midnight of
+  // the 1st, stored as a UTC instant). Without the upper bound, future-month
+  // summaries (e.g. amortized expenses spread across months) leak in and the
+  // form's per-category "Remaining" reflects an arbitrary month's total.
   final DateTime start = DateTime(now.year, now.month).subtract(const Duration(hours: 24));
+  final DateTime end = DateTime(now.year, now.month + 1).subtract(const Duration(hours: 24));
 
   if (user == null) {
     return Stream.value([]);
@@ -408,6 +410,7 @@ final currentSummaryProvider = StreamProvider<List<SummaryEntry>>((ref) {
       .doc(user.ledgerId)
       .collection('summaries')
       .where('startDate', isGreaterThanOrEqualTo: start)
+      .where('startDate', isLessThan: end)
       .snapshots()
       .doOnError((e, s) => print(e))
       .map((snapshot) => snapshot.docs.map((doc) {

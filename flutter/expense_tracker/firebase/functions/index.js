@@ -1,9 +1,10 @@
-const { onCall } = require("firebase-functions/v2/https");
+const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const logger = require("firebase-functions/logger");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const { getMessaging } = require("firebase-admin/messaging");
 const { onDocumentCreated } = require("firebase-functions/v2/firestore");
+const { MONTH_COLLECTION_RE, monthKey, toDate } = require("./dateKey");
 
 initializeApp();
 
@@ -464,8 +465,7 @@ exports.createAmortizedExpenses = onCall(async (request) => {
 
     try {
         // Add first expense to the manifest
-        const firstExpenseMonthStr = new Intl.DateTimeFormat('en-US', { month: 'short' }).format(originalDate).toUpperCase();
-        const firstExpenseCollectionName = `${originalDate.getFullYear()}_${firstExpenseMonthStr}`;
+        const firstExpenseCollectionName = monthKey(originalDate);
         expensePaths.push(`ledger/${ledgerId}/${firstExpenseCollectionName}/${firstExpenseId}`);
         summaryUpdates.push({
             path: `ledger/${ledgerId}/summaries/${firstExpenseCollectionName}_${template.categoryId}`,
@@ -476,9 +476,7 @@ exports.createAmortizedExpenses = onCall(async (request) => {
             const expenseDate = new Date(originalDate);
             expenseDate.setMonth(originalDate.getMonth() + i - 1);
 
-            const monthFormatter = new Intl.DateTimeFormat('en-US', { month: 'short' });
-            const monthStr = monthFormatter.format(expenseDate).toUpperCase();
-            const collectionName = `${expenseDate.getFullYear()}_${monthStr}`;
+            const collectionName = monthKey(expenseDate);
 
             const expenseData = {
                 ...template,
@@ -502,23 +500,15 @@ exports.createAmortizedExpenses = onCall(async (request) => {
             const summaryId = `${collectionName}_${template.categoryId}`;
             const summaryRef = db.collection("ledger").doc(ledgerId).collection("summaries").doc(summaryId);
             summaryUpdates.push({ path: summaryRef.path, amount: monthlyAmount });
-            
-            const summaryDoc = await summaryRef.get();
 
-            if (!summaryDoc.exists) {
-                await summaryRef.set({
-                    startDate: new Date(expenseDate.getFullYear(), expenseDate.getMonth()),
-                    categoryId: template.categoryId,
-                    total: 0,
-                    count: 0,
-                });
-            }
-
-            await summaryRef.update({
+            // Atomic create-or-increment: no read-then-write, no overwrite race.
+            await summaryRef.set({
+                startDate: new Date(expenseDate.getFullYear(), expenseDate.getMonth()),
+                categoryId: template.categoryId,
                 total: FieldValue.increment(monthlyAmount),
                 count: FieldValue.increment(1),
                 lastUpdate: FieldValue.serverTimestamp(),
-            });
+            }, { merge: true });
         }
 
         const firstExpenseRef = db.doc(expensePaths[0]);
@@ -575,12 +565,15 @@ exports.deleteAmortizedSeries = onCall(async (request) => {
             batch.delete(db.doc(path));
         });
 
-        // Decrement all summary documents
+        // Decrement all summary documents. Using set(merge:true) instead of
+        // update() means a missing summary no longer throws and aborts the
+        // whole batch; any resulting drift is repairable by reconciliation.
         manifestData.summaryUpdates.forEach(update => {
-            batch.update(db.doc(update.path), {
+            batch.set(db.doc(update.path), {
                 total: FieldValue.increment(-update.amount),
                 count: FieldValue.increment(-1),
-            });
+                lastUpdate: FieldValue.serverTimestamp(),
+            }, { merge: true });
         });
 
         // Delete the manifest itself
@@ -593,6 +586,211 @@ exports.deleteAmortizedSeries = onCall(async (request) => {
     } catch (error) {
         logger.error(`Error deleting amortization series ${groupId}:`, error);
         throw new functions.https.HttpsError("internal", "An error occurred while deleting the expense series.");
+    }
+});
+
+/**
+ * Recomputes category-month summaries from the raw transaction documents,
+ * writing absolute count/total values (idempotent) and deleting summaries whose
+ * bucket has no raw transactions so no phantom count:0 bucket lingers.
+ *
+ * @param {FirebaseFirestore.Firestore} db Firestore instance.
+ * @param {string} ledgerId The ledger to reconcile.
+ * @param {{month: string, categoryId: string}|null} filter When provided,
+ *   only that single category-month bucket is reconciled; otherwise the whole
+ *   ledger is swept.
+ * @return {Promise<{reconciled: number, deleted: number}>} Counts of buckets
+ *   written and empty summaries removed.
+ */
+async function reconcileLedgerSummaries(db, ledgerId, filter = null) {
+    const ledgerRef = db.collection("ledger").doc(ledgerId);
+
+    // Determine which monthly collections to scan.
+    let monthCollections;
+    if (filter) {
+        monthCollections = [ledgerRef.collection(filter.month)];
+    } else {
+        const all = await ledgerRef.listCollections();
+        monthCollections = all.filter((c) => MONTH_COLLECTION_RE.test(c.id));
+    }
+
+    // buckets: summaryId -> { month, categoryId, count, total, startDate }
+    const buckets = new Map();
+    for (const monthCol of monthCollections) {
+        const snap = await monthCol.get();
+        snap.forEach((doc) => {
+            const data = doc.data();
+            const categoryId = data.categoryId;
+            if (!categoryId) return;
+            if (filter && categoryId !== filter.categoryId) return;
+            const summaryId = `${monthCol.id}_${categoryId}`;
+            const date = toDate(data.date);
+            const startDate = date
+                ? new Date(date.getFullYear(), date.getMonth())
+                : null;
+            const existing = buckets.get(summaryId);
+            if (existing) {
+                existing.count += 1;
+                existing.total += Number(data.amount) || 0;
+                if (!existing.startDate && startDate) existing.startDate = startDate;
+            } else {
+                buckets.set(summaryId, {
+                    month: monthCol.id,
+                    categoryId,
+                    count: 1,
+                    total: Number(data.amount) || 0,
+                    startDate,
+                });
+            }
+        });
+    }
+
+    const summariesRef = ledgerRef.collection("summaries");
+    let reconciled = 0;
+    let deleted = 0;
+
+    // Collect write operations, then commit in chunks to stay under the
+    // 500-operation Firestore batch limit for large/old ledgers.
+    const ops = [];
+
+    // Write absolute values for every bucket that has raw transactions.
+    for (const [summaryId, b] of buckets) {
+        ops.push((batch) =>
+            batch.set(
+                summariesRef.doc(summaryId),
+                {
+                    startDate: b.startDate,
+                    categoryId: b.categoryId,
+                    count: b.count,
+                    total: b.total,
+                    lastUpdate: FieldValue.serverTimestamp(),
+                },
+                { merge: true }
+            )
+        );
+        reconciled += 1;
+    }
+
+    // Delete summaries whose bucket has no raw transactions (empty bucket).
+    if (filter) {
+        if (!buckets.has(`${filter.month}_${filter.categoryId}`)) {
+            const emptyDoc = await summariesRef
+                .doc(`${filter.month}_${filter.categoryId}`)
+                .get();
+            if (emptyDoc.exists) {
+                ops.push((batch) => batch.delete(emptyDoc.ref));
+                deleted += 1;
+            }
+        }
+    } else {
+        const existingSummaries = await summariesRef.get();
+        existingSummaries.forEach((doc) => {
+            if (!buckets.has(doc.id)) {
+                ops.push((batch) => batch.delete(doc.ref));
+                deleted += 1;
+            }
+        });
+    }
+
+    const CHUNK = 450;
+    for (let i = 0; i < ops.length; i += CHUNK) {
+        const batch = db.batch();
+        for (const op of ops.slice(i, i + CHUNK)) op(batch);
+        await batch.commit();
+    }
+
+    return { reconciled, deleted };
+}
+
+/**
+ * Reconciles a single category-month summary from its raw transactions.
+ * Request data: { ledgerId, month ("YYYY_MON"), categoryId }.
+ */
+exports.reconcileSummary = onCall(async (request) => {
+    if (!request.auth) {
+        throw new HttpsError("unauthenticated", "The function must be called while authenticated.");
+    }
+    const { ledgerId, month, categoryId } = request.data || {};
+    if (!ledgerId || !month || !categoryId) {
+        throw new HttpsError("invalid-argument", "ledgerId, month and categoryId are required.");
+    }
+    if (!MONTH_COLLECTION_RE.test(month)) {
+        throw new HttpsError("invalid-argument", `month must look like "YYYY_MON", got "${month}".`);
+    }
+    try {
+        const db = getFirestore();
+        const result = await reconcileLedgerSummaries(db, ledgerId, { month, categoryId });
+        logger.info(`reconcileSummary ${ledgerId}/${month}_${categoryId}:`, result);
+        return { success: true, ...result };
+    } catch (error) {
+        logger.error(`Error reconciling summary ${ledgerId}/${month}_${categoryId}:`, error);
+        throw new HttpsError("internal", "An error occurred while reconciling the summary.");
+    }
+});
+
+/**
+ * Reconciles every category-month summary for a ledger from raw transactions.
+ * Heals ledgers corrupted before the integrity fixes were in place.
+ * Request data: { ledgerId }.
+ */
+exports.reconcileLedger = onCall(async (request) => {
+    if (!request.auth) {
+        throw new HttpsError("unauthenticated", "The function must be called while authenticated.");
+    }
+    const { ledgerId } = request.data || {};
+    if (!ledgerId) {
+        throw new HttpsError("invalid-argument", "ledgerId is required.");
+    }
+    try {
+        const db = getFirestore();
+        const result = await reconcileLedgerSummaries(db, ledgerId);
+        logger.info(`reconcileLedger ${ledgerId}:`, result);
+        return { success: true, ...result };
+    } catch (error) {
+        logger.error(`Error reconciling ledger ${ledgerId}:`, error);
+        throw new HttpsError("internal", "An error occurred while reconciling the ledger.");
+    }
+});
+
+/**
+ * Reconciles a batch of category-month summaries in a single call. Used by the
+ * client to lazily self-heal the buckets a Spending Report is about to show,
+ * so opening a report costs one round trip instead of one per month.
+ * Request data: { ledgerId, buckets: [{ month ("YYYY_MON"), categoryId }] }.
+ */
+exports.reconcileSummaries = onCall(async (request) => {
+    if (!request.auth) {
+        throw new HttpsError("unauthenticated", "The function must be called while authenticated.");
+    }
+    const { ledgerId, buckets } = request.data || {};
+    if (!ledgerId || !Array.isArray(buckets) || buckets.length === 0) {
+        throw new HttpsError("invalid-argument", "ledgerId and a non-empty buckets array are required.");
+    }
+    for (const b of buckets) {
+        if (!b || !b.month || !b.categoryId) {
+            throw new HttpsError("invalid-argument", "each bucket needs month and categoryId.");
+        }
+        if (!MONTH_COLLECTION_RE.test(b.month)) {
+            throw new HttpsError("invalid-argument", `month must look like "YYYY_MON", got "${b.month}".`);
+        }
+    }
+    try {
+        const db = getFirestore();
+        let reconciled = 0;
+        let deleted = 0;
+        for (const b of buckets) {
+            const result = await reconcileLedgerSummaries(db, ledgerId, {
+                month: b.month,
+                categoryId: b.categoryId,
+            });
+            reconciled += result.reconciled;
+            deleted += result.deleted;
+        }
+        logger.info(`reconcileSummaries ${ledgerId}: ${buckets.length} buckets`, { reconciled, deleted });
+        return { success: true, reconciled, deleted };
+    } catch (error) {
+        logger.error(`Error reconciling summaries ${ledgerId}:`, error);
+        throw new HttpsError("internal", "An error occurred while reconciling summaries.");
     }
 });
 

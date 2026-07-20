@@ -140,12 +140,21 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
     }
 
     if (spendCategory != null) {
-      final newDelta = spendCategory.delta - newExpense.amount;
+      // A new amortized expense only charges its monthly portion against this
+      // month's budget (the entered amount is the full, to-be-split total).
+      // A regular expense — and an amortized one being edited, whose amount is
+      // already stored as the monthly portion — charges its amount as-is.
+      final monthsOver = int.tryParse(_amortizationMonthsController.text);
+      final thisMonthCharge =
+          (_isAmortized && widget.initialExpense == null && monthsOver != null && monthsOver > 0)
+              ? newExpense.amount / monthsOver
+              : newExpense.amount;
+      final newDelta = spendCategory.delta - thisMonthCharge;
       // If we go from underspent to overspent, notify
       if (spendCategory.delta >= 0 && newDelta < 0) {
         FirebaseFunctions.instance.httpsCallable("sendBudgetNotification").call({
           'userIds': user.linkedAccounts.map((account) => account.id).toList(),
-          'amount': newExpense.amount,
+          'amount': thisMonthCharge,
           'categoryLabel': spendCategory.label,
           'notificationType': 'overspendingIndividualBudget'
         });
