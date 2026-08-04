@@ -473,8 +473,13 @@ exports.createAmortizedExpenses = onCall(async (request) => {
         });
 
         for (let i = months; i >= 2; i--) {
-            const expenseDate = new Date(originalDate);
-            expenseDate.setMonth(originalDate.getMonth() + i - 1);
+            // Future amortized entries are anchored to the 1st of their month at
+            // midnight rather than inheriting the original day/time. The list is
+            // ordered by date descending, so pinning these to the earliest
+            // instant of the month keeps generated future spend at the bottom of
+            // the list once that month arrives. (The current-month entry, index
+            // 1, is written client-side and keeps its real submitted date/time.)
+            const expenseDate = new Date(originalDate.getFullYear(), originalDate.getMonth() + i - 1, 1);
 
             const collectionName = monthKey(expenseDate);
 
