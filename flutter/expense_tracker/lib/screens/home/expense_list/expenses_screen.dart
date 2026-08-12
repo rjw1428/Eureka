@@ -1,14 +1,17 @@
 import 'dart:async';
+import 'dart:typed_data' show Uint8List;
 import 'package:expense_tracker/constants/strings.dart';
 import 'package:expense_tracker/models/expense.dart';
 import 'package:expense_tracker/models/expense_user.dart';
 import 'package:expense_tracker/models/notification.dart';
+import 'package:expense_tracker/providers/backend_provider.dart';
 import 'package:expense_tracker/providers/expense_stream_provider.dart';
 import 'package:expense_tracker/providers/filter_provider.dart';
 import 'package:expense_tracker/providers/rollover_provider.dart';
 import 'package:expense_tracker/providers/user_provider.dart';
 import 'package:expense_tracker/screens/home/expense_list/expense_list.dart';
 import 'package:expense_tracker/services/account_link.service.dart';
+import 'package:expense_tracker/services/receipt.service.dart';
 import 'package:expense_tracker/widgets/app_bar_action_menu.dart';
 import 'package:expense_tracker/screens/home/expense_list/bar_chart.dart';
 import 'package:expense_tracker/widgets/expense_form.dart';
@@ -48,34 +51,59 @@ class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
     );
   }
 
-  void _addExpense(Expense expense) async {
-    ScaffoldMessenger.of(context).clearSnackBars();
-    final resp = expense.amortized?.over == null
-        ? await ref.read(expenseModifierProvider.notifier).addExpense(expense)
-        : await ref
-            .read(expenseModifierProvider.notifier)
-            .addAmortizedExpense(expense, expense.amortized!.over);
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          duration: const Duration(seconds: 3),
-          content: Text(resp == null
-              ? 'An error occurred while adding expense'
-              : 'Expense added!'),
-        ),
-      );
-    }
+  /// Bytes to attach, or null. Removal is meaningless on a brand-new expense,
+  /// so only [ReceiptReplaced] carries anything here.
+  Uint8List? _bytesFor(ReceiptIntent receipt) =>
+      receipt is ReceiptReplaced ? receipt.bytes : null;
+
+  void _showMessage(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(duration: const Duration(seconds: 3), content: Text(message)),
+    );
   }
 
-  void _updateExpense(Expense expense) async {
+  void _addExpense(Expense expense,
+      [ReceiptIntent receipt = const ReceiptUnchanged()]) async {
+    ScaffoldMessenger.of(context).clearSnackBars();
+    final bytes = _bytesFor(receipt);
+    final notifier = ref.read(expenseModifierProvider.notifier);
+
+    Object? resp;
+    try {
+      resp = expense.amortized?.over == null
+          ? await notifier.addExpense(expense, receiptBytes: bytes)
+          : await notifier.addAmortizedExpense(
+              expense, expense.amortized!.over, null, bytes);
+    } on ReceiptException catch (e) {
+      // A receipt problem is not a generic save failure; say which it was.
+      _showMessage(receiptServiceLabels[e.failure]!);
+      return;
+    }
+
+    _showMessage(
+      resp == null ? 'An error occurred while adding expense' : 'Expense added!',
+    );
+  }
+
+  void _updateExpense(Expense expense,
+      [ReceiptIntent receipt = const ReceiptUnchanged()]) async {
     final currentExpenses = ref.read(expenseProvider).value ?? [];
     final previousExpense =
         currentExpenses.firstWhere((e) => e.id == expense.id);
+    final expenseNotifier = ref.read(expenseModifierProvider.notifier);
 
     if (previousExpense.amortized != null) {
-      final expenseNotifier = ref.read(expenseModifierProvider.notifier);
-      await expenseNotifier.updateExpense(expense, previousExpense);
-      await expenseNotifier.removeExpense(previousExpense, expense.id);
+      try {
+        // Resolves the receipt intent onto `expense`, so the template below
+        // inherits the resulting fields rather than uploading a second time.
+        await expenseNotifier.updateExpense(expense, previousExpense,
+            receipt: receipt);
+      } on ReceiptException catch (e) {
+        _showMessage(receiptServiceLabels[e.failure]!);
+        return;
+      }
+      await expenseNotifier.removeExpense(previousExpense, expense.id, false);
 
       // The amount in the form is per-month, but the template needs the total.
       final totalAmount = expense.amount * previousExpense.amortized!.over;
@@ -85,24 +113,21 @@ class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).clearSnackBars();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            duration: Duration(seconds: 3),
-            content: Text('Amortized expense series updated!'),
-          ),
-        );
+        _showMessage('Amortized expense series updated!');
       }
     } else {
-      await ref
-          .read(expenseModifierProvider.notifier)
-          .updateExpense(expense, previousExpense);
+      bool ok;
+      try {
+        ok = await expenseNotifier.updateExpense(expense, previousExpense,
+            receipt: receipt);
+      } on ReceiptException catch (e) {
+        _showMessage(receiptServiceLabels[e.failure]!);
+        return;
+      }
       if (mounted) {
         ScaffoldMessenger.of(context).clearSnackBars();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            duration: Duration(seconds: 3),
-            content: Text('Expense updated!'),
-          ),
+        _showMessage(
+          ok ? 'Expense updated!' : 'An error occurred while updating expense',
         );
       }
     }
@@ -111,22 +136,43 @@ class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
   void _removeExpense(ExpenseWithCategoryData expense) async {
     ScaffoldMessenger.of(context).clearSnackBars();
 
+    // Releases the receipt rather than deleting it, so the undo below can still
+    // restore a working image.
     await ref.read(expenseModifierProvider.notifier).removeExpense(expense);
 
     final title = expense.title;
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          duration: const Duration(seconds: 3),
-          content: Text('Expense for $title deleted!'),
-          action: SnackBarAction(
-            label: 'Undo',
-            onPressed: () => _addExpense(expense),
-          ),
-          persist: false,
+    if (!mounted) return;
+
+    final controller = ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        duration: const Duration(seconds: 3),
+        content: Text('Expense for $title deleted!'),
+        action: SnackBarAction(
+          label: 'Undo',
+          onPressed: () => _addExpense(expense),
         ),
-      );
-    }
+        persist: false,
+      ),
+    );
+
+    final receiptId = expense.receiptId;
+    if (receiptId == null) return;
+
+    // The undo window is exactly the life of this snackbar. `action` means the
+    // user undid the delete — `_addExpense` clears the marker itself. Every
+    // other reason (timeout, swipe, or being cleared by a later deletion) means
+    // they did not, so the deletion is committed now rather than waiting a day
+    // for the backstop sweep.
+    final reason = await controller.closed;
+    if (reason == SnackBarClosedReason.action) return;
+
+    final ledgerId = ref.read(userProvider).value?.ledgerId;
+    if (ledgerId == null) return;
+
+    await ref.read(receiptServiceProvider).commitDeletion(
+          ledgerId: ledgerId,
+          receiptId: receiptId,
+        );
   }
 
   void _handlePendingRequest(

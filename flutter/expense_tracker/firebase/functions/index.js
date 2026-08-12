@@ -3,9 +3,14 @@ const logger = require("firebase-functions/logger");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const { getMessaging } = require("firebase-admin/messaging");
-const { onDocumentCreated } = require("firebase-functions/v2/firestore");
+const { onDocumentCreated, onDocumentWritten } = require("firebase-functions/v2/firestore");
+const { onSchedule } = require("firebase-functions/v2/scheduler");
+const { getAuth } = require("firebase-admin/auth");
+const { getStorage } = require("firebase-admin/storage");
+const { Timestamp } = require("firebase-admin/firestore");
 const { MONTH_COLLECTION_RE, monthKey, toDate } = require("./dateKey");
 const { recipientsFor, buildMessage } = require("./rolloverNotification");
+const { sweepDueMarkers } = require("./receiptSweep");
 
 initializeApp();
 
@@ -958,4 +963,83 @@ exports.sendRolloverNotification = onCall(async (request) => {
         logger.error("Error in sendRolloverNotification:", e);
         throw new HttpsError("internal", "An error occurred while sending notifications");
     }
+});
+/**
+ * Mirrors a user's ledger membership onto their auth token as a custom
+ * `ledgerId` claim.
+ *
+ * Firebase Storage rules cannot read Firestore — cross-service `get()` is a
+ * Firestore-rules feature — so ledger membership has to travel on the token for
+ * the receipt rules to enforce it. Per-user path scoping would be simpler but
+ * breaks the product: the ledger is shared, and a partner must be able to see
+ * receipts they did not upload.
+ *
+ * Implemented as a document trigger rather than by patching each link/unlink
+ * call site, so every path that can change `ledgerId` — link, unlink in either
+ * direction, promotion, account creation, and any future one — is covered
+ * without having to remember it.
+ */
+exports.syncLedgerClaim = onDocumentWritten(
+    "expenseUsers/{userId}",
+    async (event) => {
+        const userId = event.params.userId;
+        const after = event.data.after.exists ? event.data.after.data() : null;
+        const before = event.data.before.exists ? event.data.before.data() : null;
+
+        if (!after) {
+            logger.info(`User ${userId} deleted; leaving claims alone.`);
+            return;
+        }
+        if (before && before.ledgerId === after.ledgerId) {
+            return; // Nothing ledger-related changed.
+        }
+
+        const ledgerId = after.ledgerId;
+        if (!ledgerId) {
+            logger.warn(`User ${userId} has no ledgerId; cannot set claim.`);
+            return;
+        }
+
+        try {
+            const auth = getAuth();
+            const existing = (await auth.getUser(userId)).customClaims || {};
+            if (existing.ledgerId === ledgerId) {
+                return;
+            }
+            // Merge rather than replace: this function owns `ledgerId` only.
+            await auth.setCustomUserClaims(userId, { ...existing, ledgerId });
+            logger.info(`Set ledgerId claim for ${userId} to ${ledgerId}.`);
+        } catch (e) {
+            logger.error(`Failed to set ledgerId claim for ${userId}:`, e);
+            throw e; // Let the trigger retry; receipts fail closed until it lands.
+        }
+    }
+);
+
+/**
+ * Backstop for receipt objects whose deletion never completed.
+ *
+ * The normal path is prompt: when the undo snackbar closes without being used,
+ * the client deletes the object and its marker immediately. This sweep exists
+ * only for the cases that path misses — the app was killed during the undo
+ * window, the delete failed, or a write failed after an upload and the inline
+ * compensation could not run.
+ *
+ * Because it is an exception path, a healthy system reclaims almost nothing
+ * here. A rising `reclaimed` count is therefore the alarm that the client's
+ * commit path is broken — worth watching, since nothing else would reveal it.
+ */
+exports.sweepReleasedReceipts = onSchedule("every day 03:00", async () => {
+    const { reclaimed, failed, due } = await sweepDueMarkers({
+        db: getFirestore(),
+        bucket: getStorage().bucket(),
+        now: Timestamp.now(),
+        logger,
+    });
+
+    logger.info(
+        `Receipt sweep complete: ${reclaimed} reclaimed, ${failed} failed, ` +
+        `${due} due. A large reclaimed count means the client is not ` +
+        `committing deletions when the undo window closes.`
+    );
 });

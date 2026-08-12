@@ -52,10 +52,14 @@ void main() async {
   await LocalStorageService().initialize();
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Emulator wiring, disabled by default so debug builds still run against the
+  // real project. Uncomment this block (and the firebase_storage import) to
+  // point at the local suite; the Storage emulator port matches firebase.json.
   // if (kDebugMode) {
   //   try {
   //     FirebaseFirestore.instance.useFirestoreEmulator('localhost', 8080);
   //     await FirebaseAuth.instance.useAuthEmulator('localhost', 9099);
+  //     FirebaseStorage.instance.useStorageEmulator('localhost', 9199);
   //   } catch (e) {
   //     print(e);
   //   }

@@ -1,0 +1,55 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// STAGED FOR MANUAL APPLICATION — this file is NOT deployed from the repo.
+//
+// This is a FRAGMENT. Add the block below to the project's existing Firestore
+// rules, alongside the other Expense Tracker matches:
+//   Console → Firestore Database → Rules → (project taskr-1428) → Publish
+//
+// Membership is resolved with get() on expenseUsers, matching the existing
+// /ledger rules rather than using the `ledgerId` auth claim. Firestore rules
+// can read Firestore; Storage rules cannot, which is the only reason the claim
+// exists. Using get() here keeps one membership mechanism in this ruleset and
+// avoids denying a legitimate write whose token predates the claim.
+//
+// ALSO: delete the stray `match /receipts/{fileName}` block from the current
+// ruleset. It is a leftover from the receipts proof-of-concept, allows any
+// signed-in user read/write, and guards a Firestore collection that does not
+// exist — receipts are Storage objects. It does nothing today and becomes a
+// hole the moment anything creates a collection by that name.
+//
+// Contract: specs/receipt-deferred-cleanup/spec.md
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Deletion markers for released receipt objects. A marker here causes the
+// nightly sweep to delete the named object, so it must be writable only by
+// members of the owning ledger — otherwise anyone could schedule the
+// destruction of someone else's receipt.
+match /receipt_deletions/{receiptId} {
+
+  function callerLedgerId() {
+    return get(/databases/$(database)/documents/expenseUsers/$(request.auth.uid)).data.ledgerId;
+  }
+
+  // The release path reads the marker inside a transaction to stay idempotent,
+  // and that read usually finds nothing — so a missing document must be
+  // readable, or releasing would throw and the object would leak.
+  allow get: if request.auth != null
+             && (resource == null || resource.data.ledgerId == callerLedgerId());
+
+  // A client may only ever mark its own ledger's objects. The receiptId in the
+  // body must match the document id, so a marker cannot name a different one.
+  allow create: if request.auth != null
+                && request.resource.data.ledgerId == callerLedgerId()
+                && request.resource.data.receiptId == receiptId;
+
+  allow delete: if request.auth != null
+                && resource.data.ledgerId == callerLedgerId();
+
+  // Nothing legitimately rewrites a marker; allowing it would let a client push
+  // another ledger member's backstop out indefinitely.
+  allow update: if false;
+
+  // The client never queries this collection; only the sweep does, via the
+  // Admin SDK, which bypasses rules.
+  allow list: if false;
+}

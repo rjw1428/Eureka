@@ -1,0 +1,69 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// STAGED FOR MANUAL APPLICATION — this file is NOT deployed from the repo.
+//
+// Paste into the Firebase console:
+//   Console → Storage → Rules → (project taskr-1428) → Publish
+//
+// This mirrors existing practice: the project carries no firestore.rules
+// either. The reference contract these rules must satisfy lives in
+//   openspec/changes/add-expense-receipts/specs/receipt-storage-access/spec.md
+//
+// PREREQUISITE: deploy `syncLedgerClaim` BEFORE publishing this. Without the
+// `ledgerId` custom claim on a user's token these rules deny everything, and
+// receipts fail closed for that user.
+//
+// The claim is minted by a trigger on writes to `expenseUsers/{userId}`, so it
+// lands for every account created or modified from that point on. There is no
+// backfill: any account whose document has not been written since the trigger
+// was deployed will have no claim until it is. If you find such an account,
+// touching its document is enough to mint one.
+//
+// The emulator does not enforce these. Verify by hand against the deployed
+// bucket — see task 10.5.
+// ─────────────────────────────────────────────────────────────────────────────
+
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Receipts are scoped by ledger. Membership travels on the auth token as a
+    // custom claim, because Storage rules cannot read Firestore.
+    match /receipts/{ledgerId}/{receiptId} {
+
+      function isLedgerMember() {
+        return request.auth != null
+            && request.auth.token.ledgerId == ledgerId;
+      }
+
+      function isImage() {
+        return request.resource.contentType.matches('image/.*');
+      }
+
+      // 10 MB is an abuse backstop against a modified client, deliberately far
+      // above anything a conforming client produces — the app compresses to
+      // roughly 780 KB and rejects over 4 MB before uploading, so a real user
+      // never reaches this limit and never sees its opaque error.
+      function isWithinCeiling() {
+        return request.resource.size <= 10 * 1024 * 1024;
+      }
+
+      allow read: if isLedgerMember();
+
+      // Split deliberately rather than using a single `allow write`. On a
+      // delete there is no `request.resource`, so the content-type and size
+      // checks would evaluate false and deny it — silently breaking the
+      // client's prompt deletion when the undo window closes, and leaving every
+      // receipt for the nightly sweep to reclaim a day later.
+      allow create, update: if isLedgerMember()
+                            && isImage()
+                            && isWithinCeiling();
+      allow delete: if isLedgerMember();
+    }
+
+    // Everything else in the bucket is closed.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

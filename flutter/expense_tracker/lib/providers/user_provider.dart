@@ -53,6 +53,13 @@ final userProvider = StreamProvider<ExpenseUser?>((ref) {
     return Stream.value(null);
   }
 
+  // Tracks the ledger this client last saw, so a change can force a token
+  // refresh. The `ledgerId` custom claim gates Storage access to receipts, and
+  // a cached token would otherwise keep the old ledger's claim until it expired
+  // — locking the user out of their new ledger's receipts, or leaving them able
+  // to read the old one's.
+  String? lastSeenLedgerId;
+
   return firestore
       .collection('expenseUsers')
       .doc(uid)
@@ -63,11 +70,28 @@ final userProvider = StreamProvider<ExpenseUser?>((ref) {
           ...event.data()!,
         }),
       )
+      .doOnData((user) {
+        if (user == null) return;
+        if (lastSeenLedgerId != null && lastSeenLedgerId != user.ledgerId) {
+          refreshAuthClaims(ref);
+        }
+        lastSeenLedgerId = user.ledgerId;
+      })
       .handleError((err) =>
           print('WARN: expenseUserFetch stream errored ${err.toString()}'))
       .onErrorReturn(null)
       .doOnDone(() => print('CLOSED: expenseUserFetch stream'));
 });
+
+/// Forces a refresh of the signed-in user's ID token so a newly minted
+/// `ledgerId` claim takes effect without making them sign out and back in.
+Future<void> refreshAuthClaims(Ref ref) async {
+  try {
+    await ref.read(authProvider).currentUser?.getIdToken(true);
+  } catch (e) {
+    print('WARN: could not refresh auth claims: $e');
+  }
+}
 
 class UserCreationState extends StateNotifier<UserState?> {
   UserCreationState(this.ref) : super(null) {

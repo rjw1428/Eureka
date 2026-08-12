@@ -12,6 +12,8 @@ import 'package:expense_tracker/providers/expense_provider.dart';
 import 'package:expense_tracker/providers/filter_provider.dart';
 import 'package:expense_tracker/providers/user_provider.dart';
 import 'package:expense_tracker/services/auth.service.dart';
+import 'package:expense_tracker/services/receipt.service.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -23,11 +25,13 @@ final format = DateFormat('MMM', 'en_US');
 class ExpenseNotifier extends Notifier<List<ExpenseWithCategoryData>> {
   late final ExpenseUser user;
   late final FirebaseFirestore firestore;
+  late final ReceiptService receipts;
 
   @override
   List<ExpenseWithCategoryData> build() {
     user = ref.read(userProvider).value!;
     firestore = ref.read(backendProvider);
+    receipts = ref.read(receiptServiceProvider);
     return const [];
   }
 
@@ -65,7 +69,17 @@ class ExpenseNotifier extends Notifier<List<ExpenseWithCategoryData>> {
     return firestore.collection('ledger').doc(user.ledgerId).collection(month);
   }
 
-  Future addAmortizedExpense(Expense templateExpense, int months, [String? updateId]) async {
+  /// Creates an amortized series. A receipt attached here belongs to the whole
+  /// series: every installment references the same object, and it is released
+  /// only when the series is deleted. `createAmortizedExpenses` builds each
+  /// installment by spreading the template, so the fields propagate to months
+  /// 2..N without any change on the function side.
+  Future<String?> addAmortizedExpense(
+    Expense templateExpense,
+    int months, [
+    String? updateId,
+    Uint8List? receiptBytes,
+  ]) async {
     final groupId = const Uuid().v4();
     final monthlyAmount = templateExpense.amount / months;
     final amortizedData = AmortizationDetails(
@@ -73,6 +87,19 @@ class ExpenseNotifier extends Notifier<List<ExpenseWithCategoryData>> {
       index: 1,
       over: months,
     );
+
+    UploadedReceipt? uploaded;
+    if (receiptBytes != null) {
+      uploaded = await receipts.upload(
+        ledgerId: user.ledgerId,
+        bytes: receiptBytes,
+      );
+      templateExpense.receiptId = uploaded.receiptId;
+      templateExpense.imageUrl = uploaded.imageUrl;
+    } else if (templateExpense.receiptId != null) {
+      await receipts.clearMarker(templateExpense.receiptId!);
+    }
+
     final firstExpense =
         templateExpense.copyWith(amount: monthlyAmount, amortized: amortizedData, submittedBy: user.id);
 
@@ -105,47 +132,131 @@ class ExpenseNotifier extends Notifier<List<ExpenseWithCategoryData>> {
       return id;
     } catch (e) {
       debugPrint('Error adding amortized expense: $e');
-      // Optionally rethrow or handle the error in the UI
+      await _releaseUpload(uploaded);
       return null;
     }
   }
 
-  Future addExpense(Expense expense) async {
+  /// Creates an expense, optionally attaching a receipt from [receiptBytes].
+  ///
+  /// Returns the new document id, or null if the expense could not be saved.
+  /// Throws [ReceiptException] when the failure is receipt-specific, so the UI
+  /// can distinguish a permission problem from a generic save failure.
+  ///
+  /// The receipt is uploaded *before* the document write, and released again if
+  /// that write or the summary update fails: a document must never reference an
+  /// object that does not exist, whereas an unreferenced object is invisible and
+  /// merely costs storage until the sweep collects it.
+  Future<String?> addExpense(Expense expense, {Uint8List? receiptBytes}) async {
     if (expense.amortized != null) {
-      return addAmortizedExpense(expense, expense.amortized!.over);
+      return addAmortizedExpense(
+        expense,
+        expense.amortized!.over,
+        null,
+        receiptBytes,
+      );
     }
+
+    UploadedReceipt? uploaded;
+    if (receiptBytes != null) {
+      // Propagates ReceiptException; no document is written on upload failure.
+      uploaded = await receipts.upload(
+        ledgerId: user.ledgerId,
+        bytes: receiptBytes,
+      );
+      expense.receiptId = uploaded.receiptId;
+      expense.imageUrl = uploaded.imageUrl;
+    } else if (expense.receiptId != null) {
+      // Re-adding an expense that already carries a receipt is the undo-restore
+      // path. Nothing to upload; just cancel the pending deletion so the object
+      // survives the sweep.
+      await receipts.clearMarker(expense.receiptId!);
+    }
+
+    expense.submittedBy = user.id;
+    final newExpenseData = expense.toJson();
+    newExpenseData.remove('id');
+    // Not sure why this property is here when undoing a delete
+    // probably fine, but not looking into it now.
+    newExpenseData.remove('category');
+
+    DocumentReference<Map<String, dynamic>> docRef;
     try {
-      return Future.wait([
-        // Atomic create-or-increment: no read-then-write, so concurrent adds
-        // to a brand-new bucket can no longer overwrite each other.
-        _applySummaryDelta(
-          categoryId: expense.categoryId,
-          date: expense.date,
-          countDelta: 1,
-          totalDelta: expense.amount,
-        ),
-        _expenseCollection(expense.date).then((collectionRef) {
-          expense.submittedBy = user.id;
-          final newExpenseData = expense.toJson();
-          newExpenseData.remove('id');
-          // Not sure why this property is here when undoing a delete
-          // probably fine, but not looking into it now.
-          newExpenseData.remove('category');
-          collectionRef.add(newExpenseData);
-        })
-      ]);
+      final collectionRef = await _expenseCollection(expense.date);
+      // Awaited, unlike the previous implementation which discarded this future
+      // and so reported success even when the write failed.
+      docRef = await collectionRef.add(newExpenseData);
     } catch (e) {
+      debugPrint('Failed to write expense: $e');
+      await _releaseUpload(uploaded);
       return null;
     }
+
+    try {
+      // Atomic create-or-increment: no read-then-write, so concurrent adds
+      // to a brand-new bucket can no longer overwrite each other.
+      await _applySummaryDelta(
+        categoryId: expense.categoryId,
+        date: expense.date,
+        countDelta: 1,
+        totalDelta: expense.amount,
+      );
+    } catch (e) {
+      debugPrint('Failed to update summary; rolling back the expense: $e');
+      try {
+        await docRef.delete();
+      } catch (deleteError) {
+        debugPrint('Could not roll back expense ${docRef.id}: $deleteError');
+      }
+      await _releaseUpload(uploaded);
+      return null;
+    }
+
+    return docRef.id;
   }
 
-  Future<void> removeExpense(Expense expense, [String? updateId]) async {
+  /// Reclaims an object that was uploaded but never ended up referenced.
+  Future<void> _releaseUpload(UploadedReceipt? uploaded) async {
+    if (uploaded == null) return;
+    await receipts.deleteUnreferenced(
+      ledgerId: user.ledgerId,
+      receiptId: uploaded.receiptId,
+    );
+  }
+
+  /// Deletes an expense and *releases* its receipt — marks the object for
+  /// deletion rather than deleting it, so the undo affordance can still restore
+  /// a working receipt. The caller commits or cancels that deletion once the
+  /// undo window closes (see `commitReceiptDeletion` / `ReceiptService`).
+  ///
+  /// Pass [releaseReceipt] as false when the expense document is being moved
+  /// rather than genuinely deleted, as on a cross-month date change: the new
+  /// document carries the same `receiptId`, so the object must not be touched.
+  Future<void> removeExpense(
+    Expense expense, [
+    String? updateId,
+    bool releaseReceipt = true,
+  ]) async {
     final now = DateTime.now();
     if (expense.hideUntil != null && expense.hideUntil!.isAfter(now) && expense.submittedBy != user.id) {
       debugPrint('Attempted to delete a hidden expense not submitted by current user. Deletion prevented.');
       // Optionally throw an exception or return a specific error code
       return;
     }
+
+    if (releaseReceipt && expense.receiptId != null) {
+      try {
+        await receipts.release(
+          ledgerId: user.ledgerId,
+          receiptId: expense.receiptId!,
+        );
+      } catch (e) {
+        // The expense deletion must not be blocked by cleanup bookkeeping.
+        debugPrint('Could not mark receipt ${expense.receiptId} for deletion; '
+            'the object will be orphaned: $e');
+      }
+    }
+
     if (expense.amortized != null) {
       // Immediately delete the selected expense to update the UI
       if (updateId == null) {
@@ -173,35 +284,107 @@ class ExpenseNotifier extends Notifier<List<ExpenseWithCategoryData>> {
     }
   }
 
-  Future<void> updateExpense(Expense expense, Expense previousExpense) async {
+  /// Applies [receipt] to [expense], returning the id of any object the update
+  /// supersedes. The superseded object is released only after the write lands.
+  ///
+  /// Throws [ReceiptException] if a replacement cannot be uploaded, leaving the
+  /// existing receipt untouched.
+  Future<({String? superseded, UploadedReceipt? uploaded})> _applyReceiptIntent(
+    Expense expense,
+    Expense previousExpense,
+    ReceiptIntent receipt,
+  ) async {
+    switch (receipt) {
+      case ReceiptUnchanged():
+        // Carry the existing receipt forward. Note this happens for every edit,
+        // which is why replacement must never be gated on `imageUrl == null`.
+        expense.receiptId = previousExpense.receiptId;
+        expense.imageUrl = previousExpense.imageUrl;
+        return (superseded: null, uploaded: null);
+
+      case ReceiptRemoved():
+        expense.receiptId = null;
+        expense.imageUrl = null;
+        return (superseded: previousExpense.receiptId, uploaded: null);
+
+      case ReceiptReplaced(:final bytes):
+        final uploaded = await receipts.upload(
+          ledgerId: user.ledgerId,
+          bytes: bytes,
+        );
+        expense.receiptId = uploaded.receiptId;
+        expense.imageUrl = uploaded.imageUrl;
+        return (superseded: previousExpense.receiptId, uploaded: uploaded);
+    }
+  }
+
+  /// Updates an expense, applying [receipt] to whatever it had before.
+  ///
+  /// Returns false if the update could not be saved. Throws [ReceiptException]
+  /// for receipt-specific failures.
+  Future<bool> updateExpense(
+    Expense expense,
+    Expense previousExpense, {
+    ReceiptIntent receipt = const ReceiptUnchanged(),
+  }) async {
     final now = DateTime.now();
     if (previousExpense.hideUntil != null && previousExpense.hideUntil!.isAfter(now) && previousExpense.submittedBy != user.id) {
       debugPrint('Attempted to update a hidden expense not submitted by current user. Update prevented.');
       // Optionally throw an exception or return a specific error code
-      return;
+      return false;
     }
     final wasAmortized = previousExpense.amortized != null;
     final isAmortized = expense.amortized != null;
 
-    // Transitioning from amortized to non-amortized
+    final applied = await _applyReceiptIntent(expense, previousExpense, receipt);
+    final superseded = applied.superseded;
+
+    /// Releases the superseded object once the write has landed. Kept to the
+    /// tail of each branch so a failed write leaves the original receipt intact.
+    Future<void> releaseSuperseded() async {
+      if (superseded == null || superseded == expense.receiptId) return;
+      try {
+        await receipts.release(
+          ledgerId: user.ledgerId,
+          receiptId: superseded,
+        );
+      } catch (e) {
+        debugPrint('Update saved, but the superseded receipt $superseded could '
+            'not be marked for deletion: $e');
+      }
+    }
+
+    /// Undoes a replacement upload when the write fails.
+    Future<void> rollbackReplacement() => _releaseUpload(applied.uploaded);
+
+    // Transitioning from amortized to non-amortized. The receipt fields are
+    // already resolved on `expense`, so the re-add carries them without
+    // re-uploading.
     if (wasAmortized && !isAmortized) {
-      await removeExpense(previousExpense);
-      await addExpense(expense);
-      return;
+      await removeExpense(previousExpense, null, false);
+      final id = await addExpense(expense);
+      if (id == null) {
+        await rollbackReplacement();
+        return false;
+      }
+      await releaseSuperseded();
+      return true;
     }
 
     // UPDATING an amortized expense
     if (wasAmortized && isAmortized) {
-      await removeExpense(previousExpense, previousExpense.id);
+      await removeExpense(previousExpense, previousExpense.id, false);
       await addAmortizedExpense(expense, expense.amortized!.over, previousExpense.id);
-      return;
+      await releaseSuperseded();
+      return true;
     }
 
     // Transitioning from non-amortized to amortized
     if (!wasAmortized && isAmortized) {
-      await removeExpense(previousExpense);
+      await removeExpense(previousExpense, null, false);
       await addAmortizedExpense(expense, expense.amortized!.over, previousExpense.id);
-      return;
+      await releaseSuperseded();
+      return true;
     }
 
     final isSameMonthBucket =
@@ -241,16 +424,33 @@ class ExpenseNotifier extends Notifier<List<ExpenseWithCategoryData>> {
         ));
       }
 
-      await Future.wait(actions);
-      return;
+      try {
+        await Future.wait(actions);
+      } catch (e) {
+        debugPrint('Failed to update expense: $e');
+        await rollbackReplacement();
+        return false;
+      }
+      await releaseSuperseded();
+      return true;
     }
 
-    // If the date has changed, remove the previous expense and add the new one
-    await Future.wait([
-      removeExpense(previousExpense),
-      addExpense(expense),
-    ]);
-    return;
+    // The date moved to another month. Under the month-sharded layout that is a
+    // delete plus an add, so the document id changes — but `receiptId` does
+    // not, and Storage is deliberately left alone. Passing releaseReceipt=false
+    // is what stops the old document's deletion from marking an object the new
+    // document still points at.
+    //
+    // Sequenced rather than run through Future.wait: the add must not race the
+    // remove, and a failed add must not leave the expense deleted.
+    await removeExpense(previousExpense, null, false);
+    final movedId = await addExpense(expense);
+    if (movedId == null) {
+      await rollbackReplacement();
+      return false;
+    }
+    await releaseSuperseded();
+    return true;
   }
 
   Future react(Expense expense, String reaction) {

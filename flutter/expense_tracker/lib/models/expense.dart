@@ -50,6 +50,8 @@ class Expense {
     this.hideUntil,
     this.amortized,
     this.notify,
+    this.receiptId,
+    this.imageUrl,
   });
 
   String categoryId;
@@ -63,6 +65,15 @@ class Expense {
   DateTime? hideUntil;
   AmortizationDetails? amortized;
   bool? notify;
+
+  /// Identifies the stored receipt image. Generated when a receipt is attached
+  /// and deliberately independent of this expense's document id, so moving the
+  /// expense between month collections never orphans the stored object.
+  String? receiptId;
+
+  /// Download URL for the receipt named by [receiptId]. Both are set together
+  /// or both are null.
+  String? imageUrl;
 
   factory Expense.fromJson(Map<String, dynamic> json) =>
       _$ExpenseFromJson(json);
@@ -87,6 +98,9 @@ class Expense {
     DateTime? hideUntil,
     AmortizationDetails? amortized,
     bool? notify,
+    String? receiptId,
+    String? imageUrl,
+    bool clearReceipt = false,
   }) {
     return Expense(
       amount: amount ?? this.amount,
@@ -99,6 +113,10 @@ class Expense {
       hideUntil: hideUntil ?? this.hideUntil,
       amortized: amortized ?? this.amortized,
       notify: notify ?? this.notify,
+      // The `??` carry-forward used above cannot express clearing a field, so
+      // receipt removal goes through an explicit flag rather than passing null.
+      receiptId: clearReceipt ? null : (receiptId ?? this.receiptId),
+      imageUrl: clearReceipt ? null : (imageUrl ?? this.imageUrl),
     );
   }
 }

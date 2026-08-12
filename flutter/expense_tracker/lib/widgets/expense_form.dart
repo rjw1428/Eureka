@@ -4,11 +4,14 @@ import 'package:expense_tracker/constants/strings.dart';
 import 'package:expense_tracker/models/category.dart';
 import 'package:expense_tracker/models/expense.dart';
 import 'package:expense_tracker/models/expense_user.dart';
+import 'package:expense_tracker/providers/backend_provider.dart';
 import 'package:expense_tracker/providers/budget_provider.dart';
 import 'package:expense_tracker/providers/user_provider.dart';
 import 'package:expense_tracker/services/category_form.provider.dart';
+import 'package:expense_tracker/services/receipt.service.dart';
 import 'package:expense_tracker/widgets/show_dialog.dart';
 import 'package:expense_tracker/widgets/suggestions_row.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -21,7 +24,7 @@ class ExpenseForm extends ConsumerStatefulWidget {
     this.initialExpense,
   });
 
-  final void Function(Expense) onSubmit;
+  final void Function(Expense, ReceiptIntent receipt) onSubmit;
   final void Function(ExpenseWithCategoryData) onRemove;
   final ExpenseWithCategoryData? initialExpense;
 
@@ -45,6 +48,169 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
   bool _isEditingAmortized = false;
   bool _notify = false;
   bool _isHidingExpense = false;
+
+  /// Pending receipt state: kept, replaced, or removed. Deliberately explicit
+  /// rather than inferred from whether a URL is null.
+  late final ReceiptSelection _receipt = ReceiptSelection(
+    hadExistingReceipt: widget.initialExpense?.imageUrl != null,
+  );
+
+  /// Compression runs off the UI isolate but still takes a beat on a phone, so
+  /// the thumbnail slot shows a spinner rather than nothing.
+  bool _isPreparingReceipt = false;
+
+  /// True when the expense's stored receipt is what should be previewed.
+  bool get _showsStoredReceipt =>
+      widget.initialExpense?.imageUrl != null &&
+      !_receipt.isRemoved &&
+      _receipt.pickedBytes == null;
+
+  /// In-flight pick+compress, awaited by [_submit] so a user who saves while
+  /// compression is still running keeps their receipt instead of losing it.
+  Future<void>? _pendingReceipt;
+
+  Future<void> _pickReceipt(ReceiptSource source) async {
+    HapticFeedback.selectionClick();
+    setState(() => _isPreparingReceipt = true);
+    final work = _runPick(source);
+    _pendingReceipt = work;
+    await work;
+  }
+
+  Future<void> _runPick(ReceiptSource source) async {
+    try {
+      final bytes =
+          await ref.read(receiptServiceProvider).pickAndPrepare(source);
+      if (!mounted) return;
+      // A null result means the user dismissed the picker: leave whatever
+      // receipt state the form already had.
+      if (bytes != null) {
+        setState(() => _receipt.pick(bytes));
+      }
+    } on ReceiptException catch (e) {
+      if (!mounted) return;
+      showDialogNotification(
+        'Receipt',
+        Text(receiptServiceLabels[e.failure]!),
+        context,
+      );
+    } finally {
+      _pendingReceipt = null;
+      if (mounted) setState(() => _isPreparingReceipt = false);
+    }
+  }
+
+  /// The thumbnail slot: a spinner while compressing, then a preview of the
+  /// pending image, or the receipt already on the expense.
+  Widget? _receiptPreview() {
+    if (_isPreparingReceipt) {
+      return const SizedBox(
+        width: 56,
+        height: 56,
+        child: Center(
+          child: SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      );
+    }
+    final picked = _receipt.pickedBytes;
+    if (picked != null) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(4),
+        child:
+            Image.memory(picked, width: 56, height: 56, fit: BoxFit.cover),
+      );
+    }
+    if (_showsStoredReceipt) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(4),
+        child: Image.network(
+          widget.initialExpense!.imageUrl!,
+          width: 56,
+          height: 56,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => const SizedBox(
+            width: 56,
+            height: 56,
+            child: Icon(Icons.broken_image_outlined),
+          ),
+        ),
+      );
+    }
+    return null;
+  }
+
+  Widget _buildReceiptRow() {
+    final preview = _receiptPreview();
+    final hasReceipt = _receipt.hasReceipt;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextButton.icon(
+              onPressed: _isPreparingReceipt ? null : _chooseReceiptSource,
+              icon: Icon(hasReceipt ? Icons.swap_horiz : Icons.receipt_long),
+              iconAlignment: IconAlignment.start,
+              label: Text(hasReceipt ? 'Replace Receipt' : 'Add Receipt'),
+            ),
+          ),
+          if (preview != null) preview,
+          // Offered only when there is actually a receipt to remove.
+          if (hasReceipt && !_isPreparingReceipt)
+            IconButton(
+              icon: const Icon(Icons.clear),
+              tooltip: 'Remove receipt',
+              onPressed: _removeReceipt,
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _chooseReceiptSource() {
+    // Web has no camera source; the picker surfaces gallery as a file dialog,
+    // so there is nothing to choose between.
+    if (kIsWeb) {
+      _pickReceipt(ReceiptSource.gallery);
+      return;
+    }
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Take a photo'),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                _pickReceipt(ReceiptSource.camera);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Choose from library'),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                _pickReceipt(ReceiptSource.gallery);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _removeReceipt() {
+    HapticFeedback.selectionClick();
+    setState(() => _receipt.remove());
+  }
 
   void _showDatePicker() async {
     final now = DateTime.now();
@@ -83,8 +249,15 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
     setState(() => _hideUntilDate = endOfDayDate);
   }
 
-  void _submit(ExpenseUser user, CategoryDataWithIdAndDelta? spendCategory) {
+  Future<void> _submit(ExpenseUser user, CategoryDataWithIdAndDelta? spendCategory) async {
     HapticFeedback.selectionClick();
+
+    // Saving mid-compression must not silently drop the receipt.
+    if (_pendingReceipt != null) {
+      await _pendingReceipt;
+      if (!mounted) return;
+    }
+
     _evaluateAmountExpression();
     final enteredAmount = double.tryParse(_amount.text);
     if (enteredAmount == null || enteredAmount == 0) {
@@ -114,7 +287,7 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
     // Case 1: Updating an existing expense. Amortization settings are locked.
     if (widget.initialExpense != null) {
       newExpense.updateId(widget.initialExpense!.id!);
-      widget.onSubmit(newExpense);
+      widget.onSubmit(newExpense, _receipt.intent);
     }
     // Case 2: Adding a new amortized expense.
     else if (_isAmortized) {
@@ -132,11 +305,11 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
         over: months,
         index: 0,
       );
-      widget.onSubmit(newExpense.copyWith(amortized: tempAmortization));
+      widget.onSubmit(newExpense.copyWith(amortized: tempAmortization), _receipt.intent);
     }
     // Case 3: Adding a new regular expense.
     else {
-      widget.onSubmit(newExpense);
+      widget.onSubmit(newExpense, _receipt.intent);
     }
 
     if (spendCategory != null) {
@@ -437,6 +610,7 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
                       ],
                     ),
                   ),
+                _buildReceiptRow(),
               ],
             ),
             const SizedBox(height: 8),

@@ -26,6 +26,10 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>SpendWatch uses the camera so you can photograph a receipt and attach it to an expense.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>SpendWatch needs access to your photos so you can attach an existing receipt image to an expense.</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>

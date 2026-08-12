@@ -5,6 +5,7 @@ import 'package:dotted_border/dotted_border.dart';
 import 'package:expense_tracker/models/expense.dart';
 import 'package:expense_tracker/providers/linked_accounts_provider.dart';
 import 'package:expense_tracker/widgets/user_icon.dart';
+import 'package:expense_tracker/widgets/receipt_viewer.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -59,8 +60,27 @@ class ExpenseItem extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.start,
                     children: [
-                      Text(expense.formattedDate,
-                          style: Theme.of(context).textTheme.titleSmall),
+                      Row(
+                        children: [
+                          Text(expense.formattedDate,
+                              style: Theme.of(context).textTheme.titleSmall),
+                          // Hidden expenses stay hidden: showing a receipt
+                          // marker would give away that there is something to
+                          // look at, which is the whole point of hideUntil.
+                          if (expense.imageUrl != null && !isHidden)
+                            Padding(
+                              padding: const EdgeInsets.only(left: 6),
+                              child: Icon(
+                                Icons.receipt_long,
+                                size: 13,
+                                color: Theme.of(context)
+                                    .textTheme
+                                    .titleSmall
+                                    ?.color,
+                              ),
+                            ),
+                        ],
+                      ),
                       Text(
                         isHidden ? "Lorem ipsum dolor sit amet" : expense.title,
                         maxLines: 1,
@@ -194,9 +214,23 @@ class ExpenseItem extends ConsumerWidget {
             onRemove(expense);
           } else if (value == "REACT" && onReact != null) {
             onReact(expense, ctx);
+          } else if (value == "VIEW_RECEIPT") {
+            showReceipt(ctx, expense.imageUrl!);
           }
         },
         itemBuilder: (context) => [
+              // Offered only when there is actually a receipt to view.
+              if (expense.imageUrl != null)
+                const PopupMenuItem(
+                    value: "VIEW_RECEIPT",
+                    child: Row(
+                      children: [
+                        Icon(Icons.receipt_long),
+                        Padding(
+                            padding: EdgeInsets.only(left: 8),
+                            child: Text('View Receipt'))
+                      ],
+                    )),
               const PopupMenuItem(
                   value: "EDIT",
                   child: Row(
