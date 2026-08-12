@@ -72,7 +72,7 @@ Plain Dart in `lib/services/rollover_calculator.dart` — no Firebase, Riverpod,
 - [x] 8.2 Add `exports.sendRolloverNotification = onCall(...)` in `firebase/functions/index.js` accepting `{ ledgerId, monthKey, total }`, using the imported `HttpsError` (not `functions.https.HttpsError`)
 - [x] 8.3 Resolve the caller's `linkedAccounts` and fan out via the existing `createNotification` helper; do not notify the caller and do not gate on `userSettings.notification`
 - [x] 8.4 Validate inputs and require authentication; log and continue past individual user failures, matching `sendBudgetNotification`
-- [ ] 8.5 Deploy the function before shipping the client
+- [x] 8.5 Deploy the function before shipping the client
 
 ## 9. Unit tests — pure core
 
