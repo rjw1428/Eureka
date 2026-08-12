@@ -1,11 +1,18 @@
 name: Expense Tracker Build Pipeline
 
 on:
+    # Manual trigger, so the pipeline can be exercised without touching app
+    # code — useful when a run fails for environmental reasons (expired
+    # signing credentials, a runner image change) rather than a code change.
+    workflow_dispatch:
     push:
         branches:
             - main
         paths:
         - 'flutter/expense_tracker/**'
+        # The workflow itself, so changes to the pipeline are self-testing.
+        # Without this, edits here silently do not run.
+        - '.github/workflows/expense_tracker_build.yml'
     # pull_request:
     #     types: [closed]
     #     branches: [main]
