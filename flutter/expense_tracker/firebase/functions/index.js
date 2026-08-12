@@ -5,6 +5,7 @@ const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const { getMessaging } = require("firebase-admin/messaging");
 const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { MONTH_COLLECTION_RE, monthKey, toDate } = require("./dateKey");
+const { recipientsFor, buildMessage } = require("./rolloverNotification");
 
 initializeApp();
 
@@ -878,5 +879,83 @@ exports.sendBudgetNotification = onCall(async (request) => {
     } catch (e) {
         logger.error("Error in sendBudgetNotification:", e);
         throw new functions.https.HttpsError("internal", "An error occurred while sending notifications");
+    }
+});
+
+/**
+ * Tells the other users on a ledger that one of them carried last month's
+ * overspend forward.
+ *
+ * Deliberately not gated on `userSettings.notification`: that gate treats a
+ * missing key as disabled, and this is a coordination event about shared
+ * ledger state rather than an optional nag.
+ */
+exports.sendRolloverNotification = onCall(async (request) => {
+    logger.info("Starting sendRolloverNotification function");
+
+    if (!request.auth) {
+        throw new HttpsError("unauthenticated", "The function must be called while authenticated.");
+    }
+
+    const { ledgerId, monthKey, total } = request.data || {};
+
+    if (!ledgerId) {
+        throw new HttpsError("invalid-argument", "ledgerId is required.");
+    }
+    if (!monthKey) {
+        throw new HttpsError("invalid-argument", "monthKey is required.");
+    }
+    if (total === undefined || total === null) {
+        throw new HttpsError("invalid-argument", "total is required.");
+    }
+
+    try {
+        const submitterId = request.auth.uid;
+        const db = getFirestore();
+
+        const submitterSnapshot = await db
+            .collection("expenseUsers")
+            .doc(submitterId)
+            .get();
+
+        if (!submitterSnapshot.exists) {
+            logger.warn(`Submitting user ${submitterId} not found.`);
+            return { success: false, notified: 0 };
+        }
+
+        const submitterData = submitterSnapshot.data();
+        const recipients = recipientsFor(submitterData.linkedAccounts, submitterId);
+
+        if (recipients.length === 0) {
+            logger.info("No linked accounts to notify.");
+            return { success: true, notified: 0 };
+        }
+
+        const { title, body } = buildMessage({
+            submitterName: submitterData.firstName,
+            total,
+            monthKey,
+        });
+
+        let notified = 0;
+        for (const userId of recipients) {
+            try {
+                await createNotification(userId, title, body, {
+                    type: "rolloverCompleted",
+                    ledgerId,
+                    monthKey,
+                    total: String(total),
+                });
+                notified++;
+            } catch (error) {
+                logger.error(`Error notifying user ${userId} of rollover:`, error);
+            }
+        }
+
+        logger.info(`Rollover notifications sent to ${notified} user(s).`);
+        return { success: true, notified };
+    } catch (e) {
+        logger.error("Error in sendRolloverNotification:", e);
+        throw new HttpsError("internal", "An error occurred while sending notifications");
     }
 });
