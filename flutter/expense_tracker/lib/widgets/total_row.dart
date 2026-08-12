@@ -1,5 +1,5 @@
 import 'package:expense_tracker/constants/strings.dart';
-import 'package:expense_tracker/providers/budget_provider.dart';
+import 'package:expense_tracker/providers/rollover_provider.dart';
 import 'package:expense_tracker/providers/filter_provider.dart';
 import 'package:expense_tracker/providers/filtered_expenses_provider.dart';
 import 'package:expense_tracker/services/local_storage.service.dart';
@@ -21,8 +21,9 @@ class _TotalRowState extends ConsumerState<TotalRow> {
 
   @override
   Widget build(BuildContext context) {
+    // Budgets net of the selected month's rollover allocations.
     final categoryConfigs =
-        ref.watch(activeBudgetCategoryProvider).valueOrNull ?? [];
+        ref.watch(selectedMonthCategoriesProvider).valueOrNull ?? [];
     final expenses = ref.watch(filteredExpensesProvider).valueOrNull ?? [];
     final List<String> usedCategoryIds = ref.watch(usedCategoryIdsProvider);
     final selectedCategories =

@@ -389,17 +389,20 @@ final latestSummaryDateProvider = StreamProvider<DateTime?>((ref) {
   });
 });
 
-final currentSummaryProvider = StreamProvider<List<SummaryEntry>>((ref) {
+/// Summaries for a single calendar month, keyed by the first instant of that
+/// month (only the year and month components are significant).
+///
+/// Bounds the query to the requested month only. The 24h buffer on each side
+/// absorbs the timezone skew in how `startDate` is written (local midnight of
+/// the 1st, stored as a UTC instant). Without the upper bound, other months'
+/// summaries (e.g. amortized expenses spread across months) leak in and the
+/// form's per-category "Remaining" reflects an arbitrary month's total.
+final monthSummaryProvider =
+    StreamProvider.family<List<SummaryEntry>, DateTime>((ref, month) {
   final user = ref.watch(userProvider).value;
   final firestore = ref.read(backendProvider);
-  final now = DateTime.now();
-  // Bound the query to the current month only. The 24h buffer on each side
-  // absorbs the timezone skew in how `startDate` is written (local midnight of
-  // the 1st, stored as a UTC instant). Without the upper bound, future-month
-  // summaries (e.g. amortized expenses spread across months) leak in and the
-  // form's per-category "Remaining" reflects an arbitrary month's total.
-  final DateTime start = DateTime(now.year, now.month).subtract(const Duration(hours: 24));
-  final DateTime end = DateTime(now.year, now.month + 1).subtract(const Duration(hours: 24));
+  final DateTime start = DateTime(month.year, month.month).subtract(const Duration(hours: 24));
+  final DateTime end = DateTime(month.year, month.month + 1).subtract(const Duration(hours: 24));
 
   if (user == null) {
     return Stream.value([]);
@@ -424,4 +427,18 @@ final currentSummaryProvider = StreamProvider<List<SummaryEntry>>((ref) {
               'lastUpdate': lastUpdate.toIso8601String(),
             });
           }).toList());
+});
+
+/// Summaries for the month in progress.
+final currentSummaryProvider = Provider<AsyncValue<List<SummaryEntry>>>((ref) {
+  final now = DateTime.now();
+  return ref.watch(monthSummaryProvider(DateTime(now.year, now.month)));
+});
+
+/// Summaries for the month that just closed. `DateTime` normalises month 0 to
+/// December of the prior year, so no year-boundary special case is needed.
+final previousMonthSummaryProvider =
+    Provider<AsyncValue<List<SummaryEntry>>>((ref) {
+  final now = DateTime.now();
+  return ref.watch(monthSummaryProvider(DateTime(now.year, now.month - 1)));
 });

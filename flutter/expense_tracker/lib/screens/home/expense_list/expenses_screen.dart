@@ -5,6 +5,7 @@ import 'package:expense_tracker/models/expense_user.dart';
 import 'package:expense_tracker/models/notification.dart';
 import 'package:expense_tracker/providers/expense_stream_provider.dart';
 import 'package:expense_tracker/providers/filter_provider.dart';
+import 'package:expense_tracker/providers/rollover_provider.dart';
 import 'package:expense_tracker/providers/user_provider.dart';
 import 'package:expense_tracker/screens/home/expense_list/expense_list.dart';
 import 'package:expense_tracker/services/account_link.service.dart';
@@ -12,6 +13,7 @@ import 'package:expense_tracker/widgets/app_bar_action_menu.dart';
 import 'package:expense_tracker/screens/home/expense_list/bar_chart.dart';
 import 'package:expense_tracker/widgets/expense_form.dart';
 import 'package:expense_tracker/widgets/filter_row.dart';
+import 'package:expense_tracker/widgets/rollover_modal.dart';
 import 'package:expense_tracker/widgets/show_dialog.dart';
 import 'package:expense_tracker/widgets/time_row.dart';
 import 'package:expense_tracker/widgets/total_row.dart';
@@ -189,22 +191,63 @@ class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
     return;
   }
 
-  void linkRequestNotificationListener() {
+  /// Returns whether an account-link dialog was raised, so the rollover prompt
+  /// can stand aside for it.
+  bool linkRequestNotificationListener() {
     final notification = widget.user.notification;
     if (notification != null) {
       if (notification.type == 'pendingRequest') {
         _handlePendingRequest(widget.user.id, notification);
+        return true;
       }
       // If a secondary user unlinks from a primary user
       if (notification.type == 'primaryUnlink') {
         _handlePrimaryUnlinkRequest(widget.user.id, notification);
+        return true;
       }
 
       // If a secondary user unlinks from a primary user
       if (notification.type == 'secondaryUnlink') {
         _handleSecondaryUnlinkRequest(widget.user.id, notification);
+        return true;
       }
     }
+    return false;
+  }
+
+  ProviderSubscription<RolloverPrompt?>? _rolloverSubscription;
+  bool _rolloverOffered = false;
+
+  /// Watches for the monthly rollover becoming offerable, unless an
+  /// account-link dialog already owns the screen.
+  ///
+  /// This subscribes rather than sampling once. The providers behind the
+  /// prompt are cold at launch, so a single read would only ever see them
+  /// loading and the modal would never appear.
+  void _watchForRollover() {
+    if (linkRequestNotificationListener()) return;
+    if (!mounted) return;
+
+    _rolloverSubscription = ref.listenManual<RolloverPrompt?>(
+      rolloverPromptProvider,
+      (previous, next) => _offerRollover(next),
+      fireImmediately: true,
+    );
+  }
+
+  void _offerRollover(RolloverPrompt? prompt) {
+    if (prompt == null || _rolloverOffered || !mounted) return;
+    _rolloverOffered = true;
+
+    showModalBottomSheet(
+      useSafeArea: true,
+      isScrollControlled: true,
+      context: context,
+      builder: (ctx) => RolloverModal(
+        pool: prompt.pool,
+        candidates: prompt.candidates,
+      ),
+    );
   }
 
   Widget listContent() {
@@ -217,7 +260,13 @@ class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(seconds: 3), linkRequestNotificationListener);
+    Future.delayed(const Duration(seconds: 3), _watchForRollover);
+  }
+
+  @override
+  void dispose() {
+    _rolloverSubscription?.close();
+    super.dispose();
   }
 
   @override
