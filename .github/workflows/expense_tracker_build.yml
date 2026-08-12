@@ -153,10 +153,28 @@ jobs:
                   KEY_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
                   KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
                   KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-              run: flutter build appbundle
+              # The version code comes from the run number rather than
+              # pubspec.yaml: Play rejects a duplicate, and run numbers are
+              # monotonic, so a release can no longer fail because someone
+              # forgot to bump. This overrides the +N in pubspec for CI builds
+              # only; local builds still use it.
+              run: flutter build appbundle --build-number=${{ github.run_number }}
 
             - name: Upload Android Build
               uses: actions/upload-artifact@v4
               with:
                   name: expense_tracker_android
                   path: ./flutter/expense_tracker/build/app/outputs/bundle/release/app-release.aab # Adjust this path
+
+            # The Android counterpart to the iOS TestFlight upload above.
+            # Targets the internal track deliberately: that is the analogue of
+            # TestFlight, so a push to main reaches testers, not real users.
+            - name: Release to Google Play (internal testing)
+              uses: r0adkll/upload-google-play@v1
+              with:
+                  serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+                  packageName: com.rwss.expense_tracker
+                  releaseFiles: ./flutter/expense_tracker/build/app/outputs/bundle/release/app-release.aab
+                  track: internal
+                  status: completed
+                  mappingFile: ./flutter/expense_tracker/build/app/outputs/mapping/release/mapping.txt
