@@ -50,7 +50,11 @@ void main() {
     when(() => objectRef.child(any())).thenReturn(objectRef);
     when(() => objectRef.delete()).thenAnswer((_) async {});
 
-    service = ReceiptService(storage: storage, firestore: firestore);
+    service = ReceiptService(
+      storage: storage,
+      firestore: firestore,
+      undoWindow: const Duration(milliseconds: 50),
+    );
   });
 
   Future<Map<String, dynamic>?> readMarker(String id) async {
@@ -105,7 +109,8 @@ void main() {
 
   group('release', () {
     test('writes a marker without deleting the object', () async {
-      await service.release(ledgerId: ledgerId, receiptId: receiptId);
+      await service.release(
+          ledgerId: ledgerId, receiptId: receiptId, scheduleCommitAfter: false);
 
       final marker = await readMarker(receiptId);
       expect(marker, isNotNull);
@@ -121,6 +126,7 @@ void main() {
         ledgerId: ledgerId,
         receiptId: receiptId,
         now: now,
+        scheduleCommitAfter: false,
       );
 
       final deleteAfter =
@@ -135,6 +141,7 @@ void main() {
         ledgerId: ledgerId,
         receiptId: receiptId,
         now: first,
+        scheduleCommitAfter: false,
       );
 
       // A later release must not push the original eligibility out.
@@ -142,6 +149,7 @@ void main() {
         ledgerId: ledgerId,
         receiptId: receiptId,
         now: first.add(const Duration(hours: 6)),
+        scheduleCommitAfter: false,
       );
 
       final all = await firestore
@@ -156,7 +164,8 @@ void main() {
 
   group('commitDeletion', () {
     test('deletes the object and then the marker', () async {
-      await service.release(ledgerId: ledgerId, receiptId: receiptId);
+      await service.release(
+          ledgerId: ledgerId, receiptId: receiptId, scheduleCommitAfter: false);
 
       await service.commitDeletion(ledgerId: ledgerId, receiptId: receiptId);
 
@@ -168,7 +177,8 @@ void main() {
       when(() => objectRef.delete()).thenThrow(
         FirebaseException(plugin: 'storage', code: 'object-not-found'),
       );
-      await service.release(ledgerId: ledgerId, receiptId: receiptId);
+      await service.release(
+          ledgerId: ledgerId, receiptId: receiptId, scheduleCommitAfter: false);
 
       await service.commitDeletion(ledgerId: ledgerId, receiptId: receiptId);
 
@@ -179,7 +189,8 @@ void main() {
       when(() => objectRef.delete()).thenThrow(
         FirebaseException(plugin: 'storage', code: 'retry-limit-exceeded'),
       );
-      await service.release(ledgerId: ledgerId, receiptId: receiptId);
+      await service.release(
+          ledgerId: ledgerId, receiptId: receiptId, scheduleCommitAfter: false);
 
       await service.commitDeletion(ledgerId: ledgerId, receiptId: receiptId);
 
@@ -188,9 +199,103 @@ void main() {
     });
   });
 
+  group('scheduled commit', () {
+    test('release schedules a commit that fires after the undo window',
+        () async {
+      await service.release(ledgerId: ledgerId, receiptId: receiptId);
+
+      // Nothing deleted yet: the undo window is still open.
+      verifyNever(() => objectRef.delete());
+      expect(await readMarker(receiptId), isNotNull);
+
+      await Future<void>.delayed(
+        service.undoWindow + const Duration(milliseconds: 150),
+      );
+
+      verify(() => objectRef.delete()).called(1);
+      expect(await readMarker(receiptId), isNull);
+    });
+
+    test('undo cancels the scheduled commit, so the object survives', () async {
+      // The race that matters: clearing the marker without cancelling the timer
+      // would still delete the object the restored expense points at.
+      await service.release(ledgerId: ledgerId, receiptId: receiptId);
+      await service.clearMarker(receiptId);
+
+      await Future<void>.delayed(
+        service.undoWindow + const Duration(milliseconds: 150),
+      );
+
+      verifyNever(() => objectRef.delete());
+      expect(await readMarker(receiptId), isNull);
+    });
+
+    test('releasing twice does not schedule two deletions', () async {
+      await service.release(ledgerId: ledgerId, receiptId: receiptId);
+      await service.release(ledgerId: ledgerId, receiptId: receiptId);
+
+      await Future<void>.delayed(
+        service.undoWindow + const Duration(milliseconds: 150),
+      );
+
+      verify(() => objectRef.delete()).called(1);
+    });
+
+    test('scheduleCommitAfter: false leaves the object to the sweep', () async {
+      await service.release(
+        ledgerId: ledgerId,
+        receiptId: receiptId,
+        scheduleCommitAfter: false,
+      );
+
+      await Future<void>.delayed(
+        service.undoWindow + const Duration(milliseconds: 150),
+      );
+
+      verifyNever(() => objectRef.delete());
+      expect(await readMarker(receiptId), isNotNull);
+    });
+  });
+
+  group('commit failure diagnostics', () {
+    test('records why a commit failed onto the marker', () async {
+      // Without this the only trace is a debugPrint, which is unreadable
+      // without a device attached.
+      when(() => objectRef.delete()).thenThrow(
+        FirebaseException(
+            plugin: 'storage', code: 'unauthorized', message: 'denied'),
+      );
+      await service.release(
+        ledgerId: ledgerId,
+        receiptId: receiptId,
+        scheduleCommitAfter: false,
+      );
+
+      await service.commitDeletion(ledgerId: ledgerId, receiptId: receiptId);
+
+      final marker = await readMarker(receiptId);
+      expect(marker, isNotNull);
+      expect(marker!['lastCommitError'], contains('unauthorized'));
+      expect(marker.containsKey('lastCommitAttempt'), isTrue);
+    });
+
+    test('a successful commit leaves no marker behind to annotate', () async {
+      await service.release(
+        ledgerId: ledgerId,
+        receiptId: receiptId,
+        scheduleCommitAfter: false,
+      );
+
+      await service.commitDeletion(ledgerId: ledgerId, receiptId: receiptId);
+
+      expect(await readMarker(receiptId), isNull);
+    });
+  });
+
   group('clearMarker', () {
     test('removes the marker and leaves the object alone', () async {
-      await service.release(ledgerId: ledgerId, receiptId: receiptId);
+      await service.release(
+          ledgerId: ledgerId, receiptId: receiptId, scheduleCommitAfter: false);
 
       await service.clearMarker(receiptId);
 

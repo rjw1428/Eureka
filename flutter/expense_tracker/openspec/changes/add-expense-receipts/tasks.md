@@ -59,7 +59,7 @@
 
 ## 7. Ledger claim and access control
 
-- [x] 7.1 Add a Cloud Function that sets the `ledgerId` custom claim for a user, as the sole authority for that claim (design D5) — `syncLedgerClaim` in `firebase/functions/index.js`. No backfill function: there are no existing users to backfill, so the trigger alone covers every account
+- [x] 7.1 Add a Cloud Function that sets the `ledgerId` custom claim for a user (design D5) — `syncLedgerClaim` in `firebase/functions/index.js`, plus `backfillLedgerClaims` for accounts predating it. **The project has 38 existing users**, so the backfill is required, not optional; an earlier assumption that there were none to backfill was wrong. Deployed as an IAM-private `onRequest` rather than a callable: an operator task that grants auth claims for every user should not be invocable by any signed-in user
 - [x] 7.2 Trigger a claim refresh on account link and on unlink in both directions, covering every path that changes a user's ledger — implemented as an `onDocumentWritten` trigger on `expenseUsers/{userId}` rather than by patching each call site, so link, unlink in either direction, promotion, account creation and any future path are all covered without having to enumerate them
 - [x] 7.3 Force a client-side ID token refresh after a membership change so the new claim applies without re-login — `userProvider` watches `ledgerId` on the user document and calls `refreshAuthClaims`
 - [x] 7.4 Handle a permission failure on a receipt request by forcing a token refresh and retrying once before reporting an error — `ReceiptService.onPermissionDenied`, wired in `receiptServiceProvider`
@@ -94,7 +94,7 @@
 ## 10. Release
 
 - [x] 10.1 Enable Cloud Storage on the `taskr-1428` project and provision the default bucket; enable Cloud Scheduler for the sweep
-- [x] 10.2 Deploy `syncLedgerClaim` — live as `google.cloud.firestore.document.v1.written`, nodejs20. No backfill needed. **Still to sanity-check: that a freshly created account actually receives a `ledgerId` claim** (folded into 10.6)
+- [x] 10.2 Deploy `syncLedgerClaim` and `backfillLedgerClaims`; claims minted for all 38 existing users. **Two bugs surfaced here, both worth remembering**: (a) the trigger originally short-circuited when `ledgerId` was unchanged, making it impossible to mint a claim for an account whose ledger never changes — i.e. every pre-existing account; (b) Firestore emits no document-written event when a write changes nothing, so "touch the document to fix it" only works with a *real* value change. **Still to sanity-check: that a freshly created account receives a claim at signup** (folded into 10.6)
 - [x] 10.3 Deploy the scheduled backstop sweep ahead of the client — live as `scheduled`, nodejs20; a no-op until markers exist
 - [x] 10.4 Apply the Storage rules manually in the Firebase console — published, along with the `receipt_deletions` Firestore rules and removal of the stray POC `match /receipts/{fileName}` block
 - [ ] 10.5 Run the manual rule conformance pass against the deployed bucket: member read, member upload, **member delete** (the case a single `allow write` silently breaks, since `request.resource` is null on delete), non-member denied, unauthenticated denied, over-10 MB denied, non-image denied, non-receipt paths denied — the emulator does not enforce these

@@ -1,3 +1,4 @@
+import 'dart:async' show Timer;
 import 'dart:typed_data' show Uint8List;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -149,10 +150,15 @@ class ReceiptService {
     required FirebaseFirestore firestore,
     ImagePicker? picker,
     Uuid? uuid,
+    Duration? undoWindow,
   })  : _storage = storage,
         _firestore = firestore,
         _picker = picker ?? ImagePicker(),
-        _uuid = uuid ?? const Uuid();
+        _uuid = uuid ?? const Uuid(),
+        undoWindow = undoWindow ?? defaultUndoWindow;
+
+  /// Injectable so tests can collapse the wait instead of sleeping through it.
+  final Duration undoWindow;
 
   final FirebaseStorage _storage;
   final FirebaseFirestore _firestore;
@@ -269,14 +275,24 @@ class ReceiptService {
   }
 
   /// Marks an object for deletion without removing it, so an undo can still
-  /// restore a working receipt.
+  /// restore a working receipt, and schedules the deletion for once the undo
+  /// window has passed.
+  ///
+  /// Scheduling here rather than at the call site means no caller can release
+  /// an object and forget to commit it — the previous arrangement, where the
+  /// UI was responsible for committing, left objects stranded whenever that
+  /// path did not complete.
   ///
   /// Idempotent: releasing an already-released object neither duplicates the
   /// marker nor pushes its backstop further out.
+  ///
+  /// Pass [scheduleCommitAfter] as false only when the caller genuinely wants
+  /// the object left to the nightly sweep.
   Future<void> release({
     required String ledgerId,
     required String receiptId,
     DateTime? now,
+    bool scheduleCommitAfter = true,
   }) async {
     final doc = _markers.doc(receiptId);
     final deleteAfter = (now ?? DateTime.now()).add(backstop);
@@ -291,13 +307,46 @@ class ReceiptService {
         'createdAt': FieldValue.serverTimestamp(),
       });
     });
+
+    if (scheduleCommitAfter) {
+      scheduleCommit(ledgerId: ledgerId, receiptId: receiptId);
+    }
+  }
+
+  /// How long a released object is held before its deletion is committed.
+  /// Comfortably longer than the undo snackbar, so an undo always wins the
+  /// race, and short enough that storage tracks what is actually referenced.
+  static const Duration defaultUndoWindow = Duration(seconds: 6);
+
+  /// Pending commits, keyed by receipt id, so an undo can cancel one.
+  final Map<String, Timer> _pendingCommits = {};
+
+  /// Schedules the deletion of a released object once the undo window closes.
+  ///
+  /// Deliberately driven by a timer owned by this service rather than by
+  /// awaiting the undo snackbar's `closed` future. Cleanup must not depend on a
+  /// widget staying mounted, a route surviving, or a UI future resolving — an
+  /// earlier version tied it to the snackbar and cleanup silently never ran.
+  ///
+  /// Best effort by design: if the app dies before the timer fires, the marker
+  /// remains and the nightly sweep reclaims the object.
+  void scheduleCommit({
+    required String ledgerId,
+    required String receiptId,
+  }) {
+    _pendingCommits.remove(receiptId)?.cancel();
+    _pendingCommits[receiptId] = Timer(undoWindow, () {
+      _pendingCommits.remove(receiptId);
+      commitDeletion(ledgerId: ledgerId, receiptId: receiptId);
+    });
   }
 
   /// Commits a released object's deletion: removes the object, then its marker.
   ///
-  /// Called when the undo window closes without being used. Failures are
-  /// swallowed on purpose — the marker survives and the nightly sweep retries,
-  /// and there is nothing useful to tell the user about a background cleanup.
+  /// Never throws — a background cleanup failure is not the user's problem, and
+  /// the marker surviving means the sweep will retry. But it is recorded on the
+  /// marker so the failure is diagnosable from Firestore without a device
+  /// attached, which an earlier log-only version was not.
   Future<void> commitDeletion({
     required String ledgerId,
     required String receiptId,
@@ -310,12 +359,32 @@ class ReceiptService {
         'Receipt deletion not committed for $receiptId; '
         'marker retained for the sweep: $e',
       );
+      await _recordCommitFailure(receiptId, e);
+    }
+  }
+
+  /// Annotates a marker with why its commit failed, so the next failure can be
+  /// diagnosed by reading Firestore rather than by reproducing on a device.
+  ///
+  /// The marker's `update` rule denies client writes, so this is attempted and
+  /// allowed to fail; it is diagnostics, not correctness.
+  Future<void> _recordCommitFailure(String receiptId, Object error) async {
+    try {
+      await _markers.doc(receiptId).set({
+        'lastCommitAttempt': FieldValue.serverTimestamp(),
+        'lastCommitError': error.toString(),
+      }, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint('Could not record commit failure for $receiptId: $e');
     }
   }
 
   /// Cancels a pending deletion, returning the object to active use. Called on
   /// undo.
   Future<void> clearMarker(String receiptId) async {
+    // Cancel the scheduled commit first: an undo that only removed the marker
+    // would still lose the object when the timer fired.
+    _pendingCommits.remove(receiptId)?.cancel();
     try {
       await _markers.doc(receiptId).delete();
     } catch (e) {

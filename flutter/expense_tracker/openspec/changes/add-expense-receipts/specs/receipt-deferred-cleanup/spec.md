@@ -47,15 +47,9 @@ When an expense deletion is presented with an undo affordance, the system SHALL 
 
 ### Requirement: Deletion markers are writable only by the owning ledger
 
-A marker causes the sweep to delete the object it names, so the marker
-collection is a deletion-trigger surface and SHALL be protected accordingly.
-Firestore rules SHALL permit a client to read, create, and delete a marker only
-when its `ledgerId` matches the requester's `ledgerId` claim. Markers SHALL NOT
-be updatable, and the collection SHALL NOT be queryable by clients.
+A marker causes the sweep to delete the object it names, so the marker collection is a deletion-trigger surface and SHALL be protected accordingly. Firestore rules SHALL permit a client to read, create, and delete a marker only when its `ledgerId` matches the requester's ledger. Markers SHALL NOT be updatable, and the collection SHALL NOT be queryable by clients.
 
-Because the release path reads a marker inside a transaction and usually finds
-none, reading a non-existent marker SHALL be permitted — otherwise releasing
-throws and the object is never reclaimed.
+Because the release path reads a marker inside a transaction and usually finds none, reading a non-existent marker SHALL be permitted — otherwise releasing throws and the object is never reclaimed.
 
 #### Scenario: Member marks their own ledger's object
 

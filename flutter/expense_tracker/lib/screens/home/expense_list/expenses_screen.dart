@@ -4,7 +4,6 @@ import 'package:expense_tracker/constants/strings.dart';
 import 'package:expense_tracker/models/expense.dart';
 import 'package:expense_tracker/models/expense_user.dart';
 import 'package:expense_tracker/models/notification.dart';
-import 'package:expense_tracker/providers/backend_provider.dart';
 import 'package:expense_tracker/providers/expense_stream_provider.dart';
 import 'package:expense_tracker/providers/filter_provider.dart';
 import 'package:expense_tracker/providers/rollover_provider.dart';
@@ -136,14 +135,17 @@ class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
   void _removeExpense(ExpenseWithCategoryData expense) async {
     ScaffoldMessenger.of(context).clearSnackBars();
 
-    // Releases the receipt rather than deleting it, so the undo below can still
-    // restore a working image.
+    // Releases the receipt rather than deleting it, and schedules the actual
+    // deletion for once the undo window has passed. That scheduling lives in
+    // ReceiptService, not here: cleanup tied to this widget's lifecycle — or to
+    // the snackbar's `closed` future — silently never ran if anything
+    // interrupted the route. Undo cancels it via clearMarker.
     await ref.read(expenseModifierProvider.notifier).removeExpense(expense);
 
     final title = expense.title;
     if (!mounted) return;
 
-    final controller = ScaffoldMessenger.of(context).showSnackBar(
+    ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         duration: const Duration(seconds: 3),
         content: Text('Expense for $title deleted!'),
@@ -154,25 +156,6 @@ class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
         persist: false,
       ),
     );
-
-    final receiptId = expense.receiptId;
-    if (receiptId == null) return;
-
-    // The undo window is exactly the life of this snackbar. `action` means the
-    // user undid the delete — `_addExpense` clears the marker itself. Every
-    // other reason (timeout, swipe, or being cleared by a later deletion) means
-    // they did not, so the deletion is committed now rather than waiting a day
-    // for the backstop sweep.
-    final reason = await controller.closed;
-    if (reason == SnackBarClosedReason.action) return;
-
-    final ledgerId = ref.read(userProvider).value?.ledgerId;
-    if (ledgerId == null) return;
-
-    await ref.read(receiptServiceProvider).commitDeletion(
-          ledgerId: ledgerId,
-          receiptId: receiptId,
-        );
   }
 
   void _handlePendingRequest(

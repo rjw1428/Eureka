@@ -1,4 +1,4 @@
-const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { onCall, onRequest, HttpsError } = require("firebase-functions/v2/https");
 const logger = require("firebase-functions/logger");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
@@ -984,16 +984,19 @@ exports.syncLedgerClaim = onDocumentWritten(
     async (event) => {
         const userId = event.params.userId;
         const after = event.data.after.exists ? event.data.after.data() : null;
-        const before = event.data.before.exists ? event.data.before.data() : null;
 
         if (!after) {
             logger.info(`User ${userId} deleted; leaving claims alone.`);
             return;
         }
-        if (before && before.ledgerId === after.ledgerId) {
-            return; // Nothing ledger-related changed.
-        }
 
+        // Deliberately NOT short-circuiting on `before.ledgerId === after.ledgerId`.
+        // That would be a reasonable optimisation for keeping a claim in sync,
+        // but it makes minting one impossible for an account whose ledger never
+        // changes — which is every account that predates this trigger. The
+        // claim comparison below is the real idempotency guard; skipping the
+        // work here would only save a getUser() call while breaking the one
+        // recovery mechanism available (touch the document to mint the claim).
         const ledgerId = after.ledgerId;
         if (!ledgerId) {
             logger.warn(`User ${userId} has no ledgerId; cannot set claim.`);
@@ -1004,6 +1007,7 @@ exports.syncLedgerClaim = onDocumentWritten(
             const auth = getAuth();
             const existing = (await auth.getUser(userId)).customClaims || {};
             if (existing.ledgerId === ledgerId) {
+                logger.debug(`Claim for ${userId} already correct; nothing to do.`);
                 return;
             }
             // Merge rather than replace: this function owns `ledgerId` only.
@@ -1015,6 +1019,66 @@ exports.syncLedgerClaim = onDocumentWritten(
         }
     }
 );
+
+/**
+ * Mints the `ledgerId` claim for every existing user.
+ *
+ * `syncLedgerClaim` only fires when a user document is *written*, so accounts
+ * that predate it never get a claim on their own — and Firestore does not even
+ * emit an event for a write that changes nothing, so "touch the document" is
+ * not a reliable workaround. Without this pass those users hit a bare
+ * permission error on their first receipt upload with no way to self-recover.
+ *
+ * Idempotent: skips users whose claim is already correct, so it is safe to
+ * re-run at any time.
+ *
+ * Deployed with `invoker: "private"` so Cloud Run IAM is the gate: only a
+ * project-authorized identity can call it, and no app client can reach it at
+ * all. An operator task granting auth claims for every user has no business
+ * being invocable by any signed-in user, which a callable would allow.
+ *
+ *   TOKEN=$(gcloud auth print-access-token)   # or the firebase CLI's token
+ *   curl -H "Authorization: Bearer $TOKEN" \
+ *     https://us-central1-taskr-1428.cloudfunctions.net/backfillLedgerClaims
+ */
+exports.backfillLedgerClaims = onRequest({ invoker: "private" }, async (req, res) => {
+    const auth = getAuth();
+    const snapshot = await getFirestore().collection("expenseUsers").get();
+
+    let updated = 0;
+    let skipped = 0;
+    let failed = 0;
+
+    for (const doc of snapshot.docs) {
+        const ledgerId = doc.data().ledgerId;
+        if (!ledgerId) {
+            logger.warn(`User ${doc.id} has no ledgerId; skipping.`);
+            skipped++;
+            continue;
+        }
+        try {
+            const existing = (await auth.getUser(doc.id)).customClaims || {};
+            if (existing.ledgerId === ledgerId) {
+                skipped++;
+                continue;
+            }
+            // Merge rather than replace: this function owns `ledgerId` only.
+            await auth.setCustomUserClaims(doc.id, { ...existing, ledgerId });
+            logger.info(`Backfilled ledgerId claim for ${doc.id}.`);
+            updated++;
+        } catch (e) {
+            // One bad user must not abort the rest of the sweep.
+            logger.error(`Backfill failed for ${doc.id}:`, e);
+            failed++;
+        }
+    }
+
+    const summary =
+        `Ledger claim backfill: ${updated} updated, ${skipped} already correct ` +
+        `or unusable, ${failed} failed, ${snapshot.size} total.`;
+    logger.info(summary);
+    res.json({ updated, skipped, failed, total: snapshot.size, summary });
+});
 
 /**
  * Backstop for receipt objects whose deletion never completed.
