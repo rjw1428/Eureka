@@ -4,6 +4,7 @@ import 'package:expense_tracker/models/category.dart';
 import 'package:expense_tracker/models/summary_entry.dart';
 import 'package:expense_tracker/providers/backend_provider.dart';
 import 'package:expense_tracker/providers/expense_stream_provider.dart';
+import 'package:expense_tracker/providers/rollover_provider.dart';
 import 'package:expense_tracker/providers/user_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rxdart/rxdart.dart';
@@ -49,7 +50,11 @@ final activeBudgetCategoryProvider =
 
 final activeBudgetCategoriesWithSpend =
     Provider<AsyncValue<List<CategoryDataWithIdAndDelta>>>((ref) {
-  final activeCategories = ref.watch(activeBudgetCategoryProvider);
+  // Budgets net of this month's rollover allocations, so "Remaining" reflects
+  // what is actually left to spend after last month's overspend was carried.
+  final now = DateTime.now();
+  final activeCategories =
+      ref.watch(adjustedCategoriesProvider(DateTime(now.year, now.month)));
   final summaries = ref.watch(currentSummaryProvider);
   return activeCategories.when(
     error: (err, stack) => AsyncError(err, stack),

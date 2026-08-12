@@ -3,6 +3,8 @@ import 'package:expense_tracker/constants/strings.dart';
 import 'package:expense_tracker/providers/budget_provider.dart';
 import 'package:expense_tracker/providers/expense_provider.dart' show formatMonth;
 import 'package:expense_tracker/providers/expense_stream_provider.dart';
+import 'package:expense_tracker/providers/rollover_provider.dart';
+import 'package:expense_tracker/services/rollover_calculator.dart';
 import 'package:expense_tracker/providers/user_provider.dart';
 import 'package:expense_tracker/screens/summary/summary_item.dart';
 import 'package:expense_tracker/screens/summary/summary_chart.dart';
@@ -67,12 +69,30 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
         (categoryId: categoryId, start: start, end: null)));
     final budgetConfig = ref.watch(budgetProvider.select((configs) =>
         configs.value!.firstWhere((config) => config.id == categoryId)));
+    // A month carrying a rollover allocation had a smaller budget than the
+    // configured figure, so every budget comparison below is per month.
+    final allocationsByMonth = ref.watch(rolloverStatusesProvider).valueOrNull ?? const {};
+    double budgetForMonth(DateTime month) {
+      final raw = allocationsByMonth[formatMonth(DateTime(month.year, month.month))]
+          ?['allocations'];
+      final allocation = raw is Map ? (raw[categoryId] as num?)?.toDouble() ?? 0 : 0.0;
+      return effectiveBudget(
+        configuredBudget: budgetConfig.budget,
+        allocation: allocation,
+      );
+    }
+
     return summary$.when(
         error: (error, stack) => Text(error.toString()),
         loading: () => const Loading(),
         data: (summary) {
+          final budgetByMonth = <DateTime, double>{
+            for (final data in summary)
+              DateTime(data.startDate.year, data.startDate.month):
+                  budgetForMonth(data.startDate),
+          };
           final totalDelta = summary.fold(
-              0.0, (sum, data) => sum + (budgetConfig.budget - data.total));
+              0.0, (sum, data) => sum + (budgetForMonth(data.startDate) - data.total));
           final totalSpend = summary.fold(0.0, (sum, data) => sum + data.total);
 
           return SafeArea(
@@ -124,6 +144,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
                       child: ReportChart(
                         data: summary,
                         budgetData: budgetConfig,
+                        budgetByMonth: budgetByMonth,
                       ),
                     ),
                   ),
@@ -160,7 +181,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
                         children: summary.map((data) {
                           return SummaryItem(
                               reportData: data,
-                              budgetAmount: budgetConfig.budget);
+                              budgetAmount: budgetForMonth(data.startDate));
                         }).toList(),
                       ),
                     ),

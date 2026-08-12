@@ -10,9 +10,24 @@ import 'package:intl/intl.dart';
 final formatter = DateFormat('MMM');
 
 class ReportChart extends ConsumerWidget {
-  const ReportChart({super.key, required this.data, required this.budgetData});
+  const ReportChart({
+    super.key,
+    required this.data,
+    required this.budgetData,
+    this.budgetByMonth = const {},
+  });
   final List<SummaryEntry> data;
   final CategoryDataWithId budgetData;
+
+  /// Effective budget per month, keyed by the first of the month. Months
+  /// absent from the map fall back to the configured budget.
+  final Map<DateTime, double> budgetByMonth;
+
+  /// The budget that applied in a given month, after any rollover allocation.
+  double budgetFor(SummaryEntry entry) {
+    final month = DateTime(entry.startDate.year, entry.startDate.month);
+    return budgetByMonth[month] ?? budgetData.budget;
+  }
 
   List<LineChartBarData> lineChartBarData1(
       List<SummaryEntry> chartData, Color themeColor) {
@@ -32,7 +47,27 @@ class ReportChart extends ConsumerWidget {
         .map((entry) =>
             FlSpot((offset + entry.key).toDouble(), entry.value.total))
         .toList();
+
+    // The budget is no longer a constant: a month carrying a rollover
+    // allocation has a lower budget than its configured value, so this is
+    // drawn as a stepped series rather than a single horizontal line.
+    final budgetSpots = filteredData
+        .asMap()
+        .entries
+        .map((entry) =>
+            FlSpot((offset + entry.key).toDouble(), budgetFor(entry.value)))
+        .toList();
+
     return [
+      LineChartBarData(
+        show: true,
+        color: themeColor.withAlpha(150),
+        barWidth: 2,
+        isStepLineChart: true,
+        dotData: const FlDotData(show: false),
+        dashArray: [20, 10],
+        spots: budgetSpots,
+      ),
       LineChartBarData(
         isCurved: true,
         show: true,
@@ -88,8 +123,10 @@ class ReportChart extends ConsumerWidget {
         0, (max, entry) => max > entry.total ? max : entry.total.toInt());
     final int dataMin = data.fold(
         0, (min, entry) => min < entry.total ? min : entry.total.toInt());
-    final int yMax =
-        dataMax > budgetData.budget ? dataMax : budgetData.budget.toInt();
+    final double maxBudget = data.isEmpty
+        ? budgetData.budget
+        : data.map(budgetFor).reduce((a, b) => a > b ? a : b);
+    final int yMax = dataMax > maxBudget ? dataMax : maxBudget.ceil();
     final int yInterval = getChartInterval(yMax - dataMin);
 
     return Container(
@@ -173,12 +210,6 @@ class ReportChart extends ConsumerWidget {
           ),
           extraLinesData: ExtraLinesData(
             horizontalLines: [
-              HorizontalLine(
-                y: budgetData.budget,
-                color: themeColor.withAlpha(150),
-                strokeWidth: 2,
-                dashArray: [20, 10],
-              ),
               HorizontalLine(
                 y: 0,
                 color: Colors.black,
