@@ -20,11 +20,15 @@ env:
 jobs:
     build_ios:
         name: Build iOS App
-        runs-on: macos-15
+        # macos-15 ships Xcode 16 (iOS 18.5 SDK). App Store Connect rejects
+        # anything built with an SDK older than iOS 26, so the upload failed
+        # validation with a 409 even though the build signed correctly.
+        # macos-26 defaults to Xcode 26.6.
+        runs-on: macos-26
         # if: github.event.pull_request.merged == true
 
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v7
 
             - name: Install Apple Certificate
               env:
@@ -96,7 +100,7 @@ jobs:
                 flutter build ipa --release --export-options-plist=ios/CloudExportOptions.plist
 
             - name: Upload iOS Build
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@v7
               with:
                   name: expense_tracker_ios
                   path: ./flutter/expense_tracker/build/ios/ipa/expense_tracker.ipa
@@ -115,7 +119,7 @@ jobs:
         # if: github.event.pull_request.merged == true
 
         steps:
-            - uses: actions/checkout@v3
+            - uses: actions/checkout@v7
 
             - name: Setup Flutter
               uses: subosito/flutter-action@v2
@@ -161,7 +165,7 @@ jobs:
               run: flutter build appbundle --build-number=${{ github.run_number }}
 
             - name: Upload Android Build
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@v7
               with:
                   name: expense_tracker_android
                   path: ./flutter/expense_tracker/build/app/outputs/bundle/release/app-release.aab # Adjust this path
