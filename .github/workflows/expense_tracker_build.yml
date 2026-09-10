@@ -25,8 +25,52 @@ env:
     FLUTTER_VERSION: "3.38.7" # Adjust to your Flutter version
 
 jobs:
+    # Gate on the suites before anything is signed or uploaded: both build jobs
+    # publish straight to testers, so a red test here is the last chance to stop
+    # a broken release. Runs on ubuntu with no signing secrets, so it starts
+    # immediately and fails fast.
+    test:
+        name: Analyze & Test
+        runs-on: ubuntu-latest
+
+        steps:
+            - uses: actions/checkout@v7
+
+            - name: Setup Flutter
+              uses: subosito/flutter-action@v2
+              with:
+                  flutter-version: ${{ env.FLUTTER_VERSION }}
+                  channel: "stable"
+                  cache: true
+
+            - name: Flutter Pub Get
+              working-directory: ./flutter/expense_tracker
+              run: flutter pub get
+
+            # Errors only: the tree carries pre-existing lint info/warnings, so
+            # failing on those would block every release until they are cleared.
+            - name: Analyze
+              working-directory: ./flutter/expense_tracker
+              run: flutter analyze --no-fatal-infos --no-fatal-warnings
+
+            - name: Flutter tests
+              working-directory: ./flutter/expense_tracker
+              run: flutter test
+
+            - name: Setup Node
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "20"
+
+            # No install step: these suites are plain `node x.test.js` files
+            # over dependency-free modules.
+            - name: Cloud Function tests
+              working-directory: ./flutter/expense_tracker/firebase/functions
+              run: npm test
+
     build_ios:
         name: Build iOS App
+        needs: test
         # macos-15 ships Xcode 16 (iOS 18.5 SDK). App Store Connect rejects
         # anything built with an SDK older than iOS 26, so the upload failed
         # validation with a 409 even though the build signed correctly.
@@ -122,6 +166,7 @@ jobs:
 
     build_android:
         name: Build Android App
+        needs: test
         runs-on: ubuntu-latest
         # if: github.event.pull_request.merged == true
 
