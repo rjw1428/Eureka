@@ -37,9 +37,12 @@ class _TimeRowState extends ConsumerState<TimeRow> {
 
     final futureCount = monthsBetween(now, upperBound);
 
-    // Generate future months (excluding current month) + past months
+    // Future months, furthest first, so that the list as a whole reads as one
+    // continuous reverse-chronological timeline: ... +2, +1, current, -1 ...
+    // Generating these ascending put next month at the very top of the menu,
+    // several entries away from the current month it sits beside in time.
     final futureOptions = List<TimeFilterOption>.generate(futureCount, (i) {
-      final d = DateTime(now.year, now.month + i + 1, 1);
+      final d = DateTime(now.year, now.month + futureCount - i, 1);
       return TimeFilterOption(
           id: d, label: '${d.year} ${DateFormat('MMMM').format(d)}');
     });

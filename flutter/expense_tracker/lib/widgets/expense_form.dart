@@ -1,4 +1,3 @@
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:collection/collection.dart';
 import 'package:expense_tracker/constants/strings.dart';
 import 'package:expense_tracker/models/category.dart';
@@ -249,6 +248,20 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
     setState(() => _hideUntilDate = endOfDayDate);
   }
 
+  /// The months field, or null once the out-of-range case has been reported.
+  int? _validatedAmortizationMonths() {
+    final months = int.tryParse(_amortizationMonthsController.text);
+    if (months == null || months < 2 || months > 24) {
+      showDialogNotification(
+        'Invalid Amortization Months',
+        const Text('Amortization must be between 2 and 24 months.'),
+        context,
+      );
+      return null;
+    }
+    return months;
+  }
+
   Future<void> _submit(ExpenseUser user, CategoryDataWithIdAndDelta? spendCategory) async {
     HapticFeedback.selectionClick();
 
@@ -275,57 +288,55 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
       return;
     }
 
+    // Amortization is submitted as the *total* to divide, in every case: a new
+    // series, a plain expense being converted into one, and an existing series
+    // being edited (whose amount is displayed per-month, so it is scaled back
+    // up here). The provider does the dividing, and having one convention means
+    // one code path rather than three that disagree about what `amount` means.
+    AmortizationDetails? amortization;
+    double submittedAmount = enteredAmount;
+
+    if (_isAmortized) {
+      final months = _validatedAmortizationMonths();
+      if (months == null) {
+        return;
+      }
+      // An existing series keeps its identity; the provider replaces the
+      // placeholder group id when it builds a new one.
+      amortization = widget.initialExpense?.amortized ??
+          AmortizationDetails(groupId: "", over: months, index: 0);
+      if (_isEditingAmortized) {
+        submittedAmount = enteredAmount * amortization.over;
+      }
+    }
+
     final newExpense = Expense(
-      amount: enteredAmount,
+      amount: submittedAmount,
       note: _note.text.trim().isNotEmpty ? _note.text : null,
       date: _selectedDate,
       categoryId: _selectedCategory!,
       hideUntil: _hideUntilDate,
       notify: _notify,
+      amortized: amortization,
     );
 
-    // Case 1: Updating an existing expense. Amortization settings are locked.
     if (widget.initialExpense != null) {
       newExpense.updateId(widget.initialExpense!.id!);
-      widget.onSubmit(newExpense, _receipt.intent);
-    }
-    // Case 2: Adding a new amortized expense.
-    else if (_isAmortized) {
-      final months = int.tryParse(_amortizationMonthsController.text);
-      if (months == null || months < 2 || months > 24) {
-        showDialogNotification(
-          'Invalid Amortization Months',
-          const Text('Amortization must be between 2 and 24 months.'),
-          context,
-        );
-        return;
-      }
-      final tempAmortization = AmortizationDetails(
-        groupId: "",
-        over: months,
-        index: 0,
-      );
-      widget.onSubmit(newExpense.copyWith(amortized: tempAmortization), _receipt.intent);
-    }
-    // Case 3: Adding a new regular expense.
-    else {
-      widget.onSubmit(newExpense, _receipt.intent);
     }
 
+    widget.onSubmit(newExpense, _receipt.intent);
+
     if (spendCategory != null) {
-      // A new amortized expense only charges its monthly portion against this
-      // month's budget (the entered amount is the full, to-be-split total).
-      // A regular expense — and an amortized one being edited, whose amount is
-      // already stored as the monthly portion — charges its amount as-is.
-      final monthsOver = int.tryParse(_amortizationMonthsController.text);
-      final thisMonthCharge =
-          (_isAmortized && widget.initialExpense == null && monthsOver != null && monthsOver > 0)
-              ? newExpense.amount / monthsOver
-              : newExpense.amount;
+      // Only this month's installment is charged against the budget; the
+      // submitted amount is always the whole series' total.
+      final months = amortization?.over;
+      final thisMonthCharge = (months != null && months > 0)
+          ? newExpense.amount / months
+          : newExpense.amount;
       final newDelta = spendCategory.delta - thisMonthCharge;
       // If we go from underspent to overspent, notify
       if (spendCategory.delta >= 0 && newDelta < 0) {
-        FirebaseFunctions.instance.httpsCallable("sendBudgetNotification").call({
+        ref.read(functionsProvider).httpsCallable("sendBudgetNotification").call({
           'userIds': user.linkedAccounts.map((account) => account.id).toList(),
           'amount': thisMonthCharge,
           'categoryLabel': spendCategory.label,

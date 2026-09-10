@@ -92,43 +92,28 @@ class _TransactionScreenState extends ConsumerState<ExpenseScreen> {
         currentExpenses.firstWhere((e) => e.id == expense.id);
     final expenseNotifier = ref.read(expenseModifierProvider.notifier);
 
-    if (previousExpense.amortized != null) {
-      try {
-        // Resolves the receipt intent onto `expense`, so the template below
-        // inherits the resulting fields rather than uploading a second time.
-        await expenseNotifier.updateExpense(expense, previousExpense,
-            receipt: receipt);
-      } on ReceiptException catch (e) {
-        _showMessage(receiptServiceLabels[e.failure]!);
-        return;
-      }
-      await expenseNotifier.removeExpense(previousExpense, expense.id, false);
+    // A series edit is an ordinary update: `updateExpense` tears the old series
+    // down and rebuilds it from the submitted total. Doing that here as well —
+    // an update *plus* a manual remove-and-re-add — left the plain document
+    // that the update had already written behind as a duplicate, and counted
+    // the expense twice in the month's summary.
+    bool ok;
+    try {
+      ok = await expenseNotifier.updateExpense(expense, previousExpense,
+          receipt: receipt);
+    } on ReceiptException catch (e) {
+      _showMessage(receiptServiceLabels[e.failure]!);
+      return;
+    }
 
-      // The amount in the form is per-month, but the template needs the total.
-      final totalAmount = expense.amount * previousExpense.amortized!.over;
-      final templateExpense = expense.copyWith(amount: totalAmount);
-      await expenseNotifier.addAmortizedExpense(
-          templateExpense, previousExpense.amortized!.over, expense.id);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).clearSnackBars();
-        _showMessage('Amortized expense series updated!');
-      }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).clearSnackBars();
+    if (!ok) {
+      _showMessage('An error occurred while updating expense');
     } else {
-      bool ok;
-      try {
-        ok = await expenseNotifier.updateExpense(expense, previousExpense,
-            receipt: receipt);
-      } on ReceiptException catch (e) {
-        _showMessage(receiptServiceLabels[e.failure]!);
-        return;
-      }
-      if (mounted) {
-        ScaffoldMessenger.of(context).clearSnackBars();
-        _showMessage(
-          ok ? 'Expense updated!' : 'An error occurred while updating expense',
-        );
-      }
+      _showMessage(expense.amortized != null
+          ? 'Amortized expense series updated!'
+          : 'Expense updated!');
     }
   }
 

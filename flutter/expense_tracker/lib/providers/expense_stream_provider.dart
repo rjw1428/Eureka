@@ -27,11 +27,17 @@ class ExpenseNotifier extends Notifier<List<ExpenseWithCategoryData>> {
   late final FirebaseFirestore firestore;
   late final ReceiptService receipts;
 
+  /// Read through the provider rather than `FirebaseFunctions.instance` so the
+  /// amortization paths — which do most of their work Cloud-Function-side — can
+  /// be exercised against a double.
+  late final FirebaseFunctions functions;
+
   @override
   List<ExpenseWithCategoryData> build() {
     user = ref.read(userProvider).value!;
     firestore = ref.read(backendProvider);
     receipts = ref.read(receiptServiceProvider);
+    functions = ref.read(functionsProvider);
     return const [];
   }
 
@@ -106,11 +112,15 @@ class ExpenseNotifier extends Notifier<List<ExpenseWithCategoryData>> {
     try {
       String? id = updateId;
       final collectionRef = await _expenseCollection(firstExpense.date);
+      // The document id lives in the path, never in the payload — writing it as
+      // a field would leave a stale value behind when a reused id belongs to a
+      // different month bucket.
+      final firstExpenseData = firstExpense.toJson()..remove('id');
       if (updateId == null) {
-        final docRef = await collectionRef.add(firstExpense.toJson());
+        final docRef = await collectionRef.add(firstExpenseData);
         id = docRef.id;
       } else {
-        await collectionRef.doc(updateId).set(firstExpense.toJson());
+        await collectionRef.doc(updateId).set(firstExpenseData);
       }
       // Also update the summary for the first expense (months 2..N are handled
       // by the createAmortizedExpenses Cloud Function). Atomic create-or-increment.
@@ -121,7 +131,7 @@ class ExpenseNotifier extends Notifier<List<ExpenseWithCategoryData>> {
           countDelta: 1,
           totalDelta: firstExpense.amount,
         ),
-        FirebaseFunctions.instance.httpsCallable('createAmortizedExpenses').call({
+        functions.httpsCallable('createAmortizedExpenses').call({
           'template': templateExpense.toJson(),
           'firstExpenseId': id,
           'groupId': groupId,
@@ -264,7 +274,7 @@ class ExpenseNotifier extends Notifier<List<ExpenseWithCategoryData>> {
         await ref.doc(expense.id).delete();
       }
       // Then, in the background, delete the rest of the series
-      FirebaseFunctions.instance.httpsCallable('deleteAmortizedSeries').call({
+      functions.httpsCallable('deleteAmortizedSeries').call({
         'groupId': expense.amortized!.groupId,
         'ledgerId': user.ledgerId,
         'updateId': updateId,
@@ -371,18 +381,31 @@ class ExpenseNotifier extends Notifier<List<ExpenseWithCategoryData>> {
       return true;
     }
 
-    // UPDATING an amortized expense
+    // UPDATING an amortized expense. The old series is torn down — installment
+    // 1's document is spared by `updateId` and rewritten in place — and rebuilt
+    // from the submitted total.
     if (wasAmortized && isAmortized) {
       await removeExpense(previousExpense, previousExpense.id, false);
-      await addAmortizedExpense(expense, expense.amortized!.over, previousExpense.id);
+      final id = await addAmortizedExpense(
+          expense, expense.amortized!.over, previousExpense.id);
+      if (id == null) {
+        await rollbackReplacement();
+        return false;
+      }
       await releaseSuperseded();
       return true;
     }
 
-    // Transitioning from non-amortized to amortized
+    // Transitioning from non-amortized to amortized. The plain document is
+    // removed and rewritten under the same id as installment 1, and the Cloud
+    // Function fills in months 2..N from the template.
     if (!wasAmortized && isAmortized) {
       await removeExpense(previousExpense, null, false);
-      await addAmortizedExpense(expense, expense.amortized!.over, previousExpense.id);
+      final id = await addAmortizedExpense(expense, expense.amortized!.over, previousExpense.id);
+      if (id == null) {
+        await rollbackReplacement();
+        return false;
+      }
       await releaseSuperseded();
       return true;
     }
@@ -461,7 +484,7 @@ class ExpenseNotifier extends Notifier<List<ExpenseWithCategoryData>> {
           }))
     ];
     if (self != expense.submittedBy) {
-      futures.add(FirebaseFunctions.instance.httpsCallable("sendReactionNotification").call({
+      futures.add(functions.httpsCallable("sendReactionNotification").call({
         'id': expense.submittedBy,
         'reactionEmoji': reaction,
       }));
