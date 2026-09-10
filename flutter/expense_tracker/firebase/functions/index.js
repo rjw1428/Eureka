@@ -9,6 +9,12 @@ const { getAuth } = require("firebase-admin/auth");
 const { getStorage } = require("firebase-admin/storage");
 const { Timestamp } = require("firebase-admin/firestore");
 const { MONTH_COLLECTION_RE, monthKey, toDate } = require("./dateKey");
+const {
+    installmentAmount,
+    futureInstallments,
+    summaryId,
+    isUpdateTarget,
+} = require("./amortization");
 const { recipientsFor, buildMessage } = require("./rolloverNotification");
 const { sweepDueMarkers } = require("./receiptSweep");
 
@@ -459,7 +465,7 @@ exports.createAmortizedExpenses = onCall(async (request) => {
         throw new functions.https.HttpsError("invalid-argument", "The function must be called with all required arguments.");
     }
 
-    const monthlyAmount = template.amount / months;
+    const monthlyAmount = installmentAmount(template.amount, months);
     const templateDate = template.date && template.date._seconds
         ? new Date(template.date._seconds * 1000)
         : new Date(template.date);
@@ -478,17 +484,10 @@ exports.createAmortizedExpenses = onCall(async (request) => {
             amount: monthlyAmount,
         });
 
-        for (let i = months; i >= 2; i--) {
-            // Future amortized entries are anchored to the 1st of their month at
-            // midnight rather than inheriting the original day/time. The list is
-            // ordered by date descending, so pinning these to the earliest
-            // instant of the month keeps generated future spend at the bottom of
-            // the list once that month arrives. (The current-month entry, index
-            // 1, is written client-side and keeps its real submitted date/time.)
-            const expenseDate = new Date(originalDate.getFullYear(), originalDate.getMonth() + i - 1, 1);
-
-            const collectionName = monthKey(expenseDate);
-
+        // The schedule itself lives in amortization.js so it can be unit-tested
+        // without the Firestore runtime; see amortization.test.js.
+        for (const { index: i, date: expenseDate, collection: collectionName }
+            of futureInstallments(originalDate, months)) {
             const expenseData = {
                 ...template,
                 amount: monthlyAmount,
@@ -508,8 +507,8 @@ exports.createAmortizedExpenses = onCall(async (request) => {
 
             expensePaths.push(newDocRef.path);
 
-            const summaryId = `${collectionName}_${template.categoryId}`;
-            const summaryRef = db.collection("ledger").doc(ledgerId).collection("summaries").doc(summaryId);
+            const summaryRef = db.collection("ledger").doc(ledgerId).collection("summaries")
+                .doc(summaryId(expenseDate, template.categoryId));
             summaryUpdates.push({ path: summaryRef.path, amount: monthlyAmount });
 
             // Atomic create-or-increment: no read-then-write, no overwrite race.
@@ -570,8 +569,10 @@ exports.deleteAmortizedSeries = onCall(async (request) => {
 
         // Delete all expenses in the series
         manifestData.expensePaths.forEach(path => {
-            if (updateId && path.includes(updateId)) {
-                return
+            // Installment 1 is spared when the series is being rebuilt: its
+            // document is rewritten in place rather than deleted.
+            if (isUpdateTarget(path, updateId)) {
+                return;
             }
             batch.delete(db.doc(path));
         });
